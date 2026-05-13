@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /dashboard
+Disallow: /obras
+Disallow: /certificados
+Disallow: /equipo
+Disallow: /cuaderno
+Disallow: /calendario
+Disallow: /admin
+Disallow: /settings
+Disallow: /storage
+
+Sitemap: /sitemap.xml
