@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    // Paths para Browsershot (PDF con Chrome headless). Opcionales — si no
+    // se definen, Browsershot intenta detectar automáticamente.
+    'chrome' => [
+        'path' => env('CHROME_PATH'),
+    ],
+    'node' => [
+        'path' => env('NODE_PATH'),
+    ],
+    'npm' => [
+        'path' => env('NPM_PATH'),
+    ],
+
 ];
