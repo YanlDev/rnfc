@@ -25,6 +25,23 @@ enum TipoCertificado: string
         };
     }
 
+    /**
+     * Cargo/rol a usar en el cuerpo del certificado cuando el campo "cargo"
+     * está vacío. Diferente de label(): aquí queremos el sustantivo del rol.
+     */
+    public function cargoPorDefecto(): string
+    {
+        return match ($this) {
+            self::Trabajador => 'Trabajador',
+            self::Especialista => 'Especialista',
+            self::Residente => 'Residente de Obra',
+            self::Supervisor => 'Supervisor de Obra',
+            self::Capacitacion => 'Participante',
+            self::Participacion => 'Participante',
+            self::ServiciosProfesionales => 'Consultor',
+        };
+    }
+
     /** Texto que encabeza el certificado emitido. */
     public function titulo(): string
     {

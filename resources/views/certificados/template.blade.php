@@ -257,7 +257,7 @@
     @php
         $obraNombre = $certificado->obra_nombre_efectivo;
         $entidad = $certificado->obra_entidad_efectiva;
-        $cargo = $certificado->cargo ?: $certificado->tipo->label();
+        $cargo = $certificado->cargo ?: $certificado->tipo->cargoPorDefecto();
         $fInicio = $certificado->fecha_inicio
             ? \Carbon\Carbon::parse($certificado->fecha_inicio)->locale('es')->isoFormat('D [de] MMMM [de] YYYY')
             : null;
