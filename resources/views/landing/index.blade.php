@@ -105,7 +105,7 @@
             max-width: 100vw;
         }
         h1,h2,h3,h4,.font-display { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; letter-spacing: -0.02em; }
-        .display-tight { letter-spacing: -0.02em; line-height: 1.08; overflow-wrap: anywhere; }
+        .display-tight { letter-spacing: -0.02em; line-height: 1.1; overflow-wrap: break-word; }
 
         /* ===== fondos técnicos ===== */
         .bg-blueprint {
@@ -380,28 +380,24 @@
         <div class="glow-blue absolute -top-20 -left-20 -z-10 h-[500px] w-[500px]"></div>
         <div class="glow-gold absolute -bottom-20 -right-20 -z-10 h-[450px] w-[450px]"></div>
 
-        <div class="mx-auto grid max-w-7xl items-center gap-10 px-4 md:px-8 md:gap-12 lg:grid-cols-[1.05fr_1fr]">
+        <div class="mx-auto grid w-full max-w-7xl items-center gap-10 px-4 md:px-8 md:gap-12 lg:grid-cols-[1.05fr_1fr]" style="min-width: 0;">
 
             {{-- LADO IZQUIERDO --}}
-            <div class="hero-fade">
+            <div class="hero-fade min-w-0">
                 <div class="eyebrow">RNFC · Consultor de obras</div>
 
-                <h1 class="display-tight mt-5 text-[1.4rem] font-extrabold text-white sm:text-[1.7rem] md:text-[2rem] lg:text-[2.75rem]" style="hyphens: auto; -webkit-hyphens: auto;" lang="es">
-                    No solo supervisamos obras —
-                    <span class="text-white/70">también las formulamos, planificamos y gestionamos</span>
-                    de extremo a extremo.
+                <h1 class="display-tight mt-5 text-[1.75rem] font-extrabold text-white sm:text-[2.25rem] md:text-[2.5rem] lg:text-[3rem]" lang="es">
+                    Más que <span class="text-white/65">supervisión.</span>
                 </h1>
 
-                <p class="mt-5 max-w-xl text-sm leading-relaxed text-[var(--c-text-dim)] md:mt-7 md:text-lg">
-                    RNFC integra formulación de expedientes técnicos, planificación,
-                    supervisión, control de calidad y gestión documental digital para
-                    proyectos públicos y privados en todo el Perú. Un solo equipo, un solo
-                    estándar, del estudio a la entrega.
+                <p class="mt-5 max-w-md text-sm leading-relaxed text-[var(--c-text-dim)] md:mt-6 md:max-w-xl md:text-lg">
+                    Formulamos, planificamos y supervisamos obras públicas y privadas —
+                    con respaldo ISO y plataforma digital propia.
                 </p>
             </div>
 
             {{-- LADO DERECHO: mockup dashboard --}}
-            <div class="relative">
+            <div class="relative min-w-0">
                 <div class="glow-blue absolute -inset-10 -z-10"></div>
 
                 <div class="mock-window relative">
