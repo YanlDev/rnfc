@@ -3,282 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <title>{{ $certificado->codigo }} — {{ $certificado->tipo->titulo() }}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
     <style>
         @page { margin: 0; size: A4 portrait; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-            width: 210mm;
-            height: 297mm;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        html, body { height: auto; }
+        body {
+            font-family: DejaVu Sans, sans-serif;
             color: #1f2937;
             background: #ffffff;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
         }
 
+        /* ====================================================
+           BASE COMPACTA — Opción 3
+           Tamaños conservadores que SIEMPRE caben en 1 página.
+           ==================================================== */
         .pagina {
             position: relative;
             width: 210mm;
-            height: 297mm;
-            padding: 20mm 22mm 16mm;
+            padding: 18mm 20mm 14mm;
             background: #ffffff;
-            overflow: hidden;
+            page-break-inside: avoid;
+            page-break-after: avoid;
         }
 
-        /* Wrapper que se escala automáticamente vía JS si el contenido desborda */
-        .fit-wrapper {
-            transform-origin: top center;
-            width: 100%;
-        }
-
-        /* === ORNAMENTACIÓN DE FONDO === */
-        .ornamento-superior, .ornamento-inferior {
-            position: absolute;
-            left: 0; right: 0;
-            height: 8mm;
-            background: linear-gradient(90deg, #0b2545 0%, #145694 50%, #0b2545 100%);
-        }
-        .ornamento-superior { top: 0; }
-        .ornamento-inferior { bottom: 0; }
-        .ornamento-superior::after, .ornamento-inferior::after {
-            content: '';
-            position: absolute;
-            left: 22mm; right: 22mm;
-            height: 1px;
-            background: rgba(212, 175, 55, 0.6);
-        }
-        .ornamento-superior::after { bottom: -3mm; }
-        .ornamento-inferior::after { top: -3mm; }
-
-        /* === HEADER === */
+        /* HEADER */
         .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 9mm;
+            display: table;
+            width: 100%;
+            margin-bottom: 7mm;
         }
-        .header-logo { display: flex; align-items: center; }
-        .logo-principal { height: 16mm; }
-        .header-iso { display: flex; align-items: center; gap: 3mm; }
+        .header-cell { display: table-cell; vertical-align: middle; }
+        .header-logo { width: 50%; text-align: left; }
+        .header-iso  { width: 50%; text-align: right; white-space: nowrap; }
+        .logo-principal { height: 14mm; }
         .iso-logo {
-            height: 14mm;
-            width: 14mm;
+            height: 11mm; width: 11mm;
             object-fit: contain;
+            margin-left: 2mm;
+            vertical-align: middle;
         }
         .iso-placeholder {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 14mm; height: 14mm;
+            display: inline-block;
+            width: 11mm; height: 11mm;
+            margin-left: 2mm;
             border: 1px dashed #d1d5db;
             color: #9ca3af;
-            font-size: 6pt;
-            font-weight: 600;
+            font-size: 5pt;
+            text-align: center;
+            line-height: 11mm;
+            vertical-align: middle;
         }
 
-        /* === CÓDIGO === */
-        .codigo-row {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            gap: 2mm;
-            font-size: 9pt;
+        /* CÓDIGO */
+        .codigo {
+            text-align: right;
+            font-size: 8pt;
             color: #6b7280;
             letter-spacing: 0.8pt;
-            margin-bottom: 8mm;
+            margin-bottom: 7mm;
         }
-        .codigo-row strong {
-            font-family: 'Inter', monospace;
-            color: #0b2545;
-            font-weight: 700;
-            font-size: 10pt;
+        .codigo strong {
+            font-family: 'Courier New', monospace;
+            color: #1f2937;
+            font-size: 9pt;
             letter-spacing: 0;
-            padding: 1mm 3mm;
-            background: linear-gradient(135deg, #fef3c7, #fde68a);
-            border-radius: 2mm;
         }
 
-        /* === TÍTULO === */
-        .titulo-wrap { text-align: center; margin-bottom: 9mm; }
-        .titulo-eyebrow {
-            display: inline-block;
-            font-size: 8pt;
-            letter-spacing: 4pt;
-            color: #D4AF37;
-            font-weight: 700;
-            text-transform: uppercase;
-            margin-bottom: 3mm;
-            padding: 0 8mm;
-            position: relative;
-        }
-        .titulo-eyebrow::before, .titulo-eyebrow::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            width: 6mm;
-            height: 1px;
-            background: #D4AF37;
-        }
-        .titulo-eyebrow::before { right: 100%; }
-        .titulo-eyebrow::after  { left: 100%; }
-
+        /* TÍTULO */
         .titulo {
-            font-family: 'Playfair Display', Georgia, serif;
-            font-size: 36pt;
-            color: #0b2545;
-            font-weight: 800;
-            letter-spacing: 1pt;
-            line-height: 1.05;
+            font-size: 28pt;
+            color: #1f2937;
+            font-weight: bold;
+            letter-spacing: 1.2pt;
+            text-align: center;
+            margin-bottom: 7mm;
+            line-height: 1.1;
         }
 
-        /* === BENEFICIARIO === */
+        /* BENEFICIARIO */
         .otorgado-a {
             text-align: center;
             font-size: 9pt;
             color: #6b7280;
-            letter-spacing: 3pt;
+            letter-spacing: 2pt;
             text-transform: uppercase;
-            font-weight: 600;
-            margin-bottom: 5mm;
-            position: relative;
-        }
-        .otorgado-a::before, .otorgado-a::after {
-            content: '';
-            display: inline-block;
-            width: 14mm;
-            height: 1px;
-            background: #d1d5db;
-            vertical-align: middle;
-            margin: 0 4mm;
+            margin-bottom: 4mm;
         }
         .beneficiario {
             text-align: center;
-            font-family: 'Playfair Display', Georgia, serif;
-            font-size: 26pt;
-            font-weight: 700;
+            font-size: 18pt;
+            font-weight: bold;
             color: #0b2545;
-            letter-spacing: 0.5pt;
-            margin-bottom: 2.5mm;
-            line-height: 1.15;
+            letter-spacing: 0.8pt;
+            margin-bottom: 2mm;
+            line-height: 1.2;
         }
         .beneficiario-meta {
             text-align: center;
-            font-size: 9.5pt;
+            font-size: 9pt;
             color: #4b5563;
-            margin-bottom: 9mm;
-            font-weight: 500;
+            margin-bottom: 7mm;
         }
-        .beneficiario-meta strong { color: #0b2545; font-weight: 700; }
 
-        /* === CUERPO === */
+        /* CUERPO */
         .cuerpo {
-            font-size: 11pt;
-            line-height: 1.75;
+            font-size: 10.5pt;
+            line-height: 1.65;
             text-align: justify;
-            color: #374151;
-            margin-bottom: 5mm;
-            padding: 0 6mm;
+            color: #1f2937;
+            margin-bottom: 4mm;
         }
-        .cuerpo p { margin-bottom: 3mm; }
-        .cuerpo strong { color: #0b2545; font-weight: 700; }
+        .cuerpo p { margin-bottom: 2.5mm; }
+        .cuerpo strong { color: #1f2937; }
 
-        /* === LUGAR Y FECHA === */
+        /* LUGAR Y FECHA */
         .lugar-fecha {
             text-align: right;
-            font-size: 10pt;
+            font-size: 9.5pt;
             color: #4b5563;
-            font-style: italic;
-            margin-top: 6mm;
-            margin-bottom: 8mm;
-            padding-right: 6mm;
+            margin-top: 5mm;
+            margin-bottom: 7mm;
         }
 
-        /* === FIRMA Y QR === */
+        /* FIRMA Y QR */
         .pie {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-top: 5mm;
+            display: table;
+            width: 100%;
+            margin-top: 4mm;
         }
         .pie-firma {
-            flex: 0 0 62%;
+            display: table-cell;
+            width: 65%;
+            vertical-align: bottom;
             text-align: center;
             padding-right: 5mm;
         }
         .firma-img {
-            max-height: 22mm;
-            max-width: 60mm;
-            margin: 0 auto -1mm;
+            max-height: 18mm;
+            max-width: 55mm;
+            margin: 0 auto -1.5mm;
             display: block;
         }
-        .firma-img-placeholder { height: 20mm; }
+        .firma-img-placeholder { height: 16mm; }
         .firma-linea {
-            border-top: 1.2px solid #0b2545;
-            margin: 0 18mm 1.5mm;
+            border-top: 1px solid #1f2937;
+            margin: 0 16mm 1.2mm;
         }
         .firma-nombre {
-            font-size: 10.5pt;
-            font-weight: 700;
-            color: #0b2545;
+            font-size: 10pt;
+            font-weight: bold;
+            color: #1f2937;
         }
         .firma-cargo {
             font-size: 8.5pt;
             color: #6b7280;
             margin-top: 0.5mm;
-            font-weight: 500;
         }
-
         .pie-qr {
-            flex: 0 0 32%;
-            text-align: center;
-        }
-        .qr-box {
-            display: inline-block;
-            padding: 2mm;
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 2mm;
+            display: table-cell;
+            width: 35%;
+            vertical-align: bottom;
+            text-align: right;
         }
         .qr-img {
-            width: 26mm;
-            height: 26mm;
-            display: block;
+            width: 23mm; height: 23mm;
+            display: inline-block;
         }
         .qr-leyenda {
-            font-size: 7pt;
+            font-size: 6.5pt;
             color: #6b7280;
             text-transform: uppercase;
-            letter-spacing: 1pt;
-            margin-top: 2mm;
-            font-weight: 600;
+            letter-spacing: 0.7pt;
+            margin-top: 1mm;
         }
         .qr-url {
-            font-size: 6.5pt;
+            font-size: 6pt;
             color: #9ca3af;
-            font-family: 'Inter', monospace;
-            margin-top: 0.5mm;
+            font-family: 'Courier New', monospace;
+            margin-top: 0.4mm;
         }
 
-        /* === SELLO REVOCADO === */
+        /* SELLO REVOCADO */
         .estado-revocado {
             position: absolute;
             top: 50%; left: 50%;
-            transform: translate(-50%, -50%) rotate(-22deg);
-            font-size: 88pt;
-            color: rgba(193, 39, 45, 0.10);
-            border: 8px solid rgba(193, 39, 45, 0.15);
-            padding: 6mm 18mm;
-            font-weight: 800;
-            letter-spacing: 8pt;
-            font-family: 'Playfair Display', serif;
+            transform: translate(-50%, -50%) rotate(-25deg);
+            font-size: 72pt;
+            color: rgba(193, 39, 45, 0.12);
+            border: 5px solid rgba(193, 39, 45, 0.18);
+            padding: 3.5mm 10mm;
+            font-weight: bold;
+            letter-spacing: 5pt;
             z-index: 3;
         }
+
+        /* ====================================================
+           OPCIÓN 1 — Densidad automática según contenido.
+           "baja"  = contenido corto  → más aire visual
+           "media" = contenido medio  → base (definida arriba)
+           "alta"  = contenido largo  → todo compacto
+           ==================================================== */
+
+        /* Densidad BAJA — contenido corto: amplificamos */
+        .densidad-baja .titulo            { font-size: 32pt; margin-bottom: 9mm; }
+        .densidad-baja .beneficiario      { font-size: 22pt; margin-bottom: 3mm; }
+        .densidad-baja .beneficiario-meta { font-size: 10pt; margin-bottom: 9mm; }
+        .densidad-baja .otorgado-a        { font-size: 10pt; margin-bottom: 5mm; }
+        .densidad-baja .cuerpo            { font-size: 11.5pt; line-height: 1.8; margin-bottom: 5mm; }
+        .densidad-baja .cuerpo p          { margin-bottom: 3.5mm; }
+        .densidad-baja .header            { margin-bottom: 9mm; }
+        .densidad-baja .codigo            { margin-bottom: 9mm; }
+        .densidad-baja .lugar-fecha       { margin-top: 7mm; margin-bottom: 9mm; }
+
+        /* Densidad ALTA — contenido largo: reducimos */
+        .densidad-alta .pagina            { padding: 14mm 16mm 11mm; }
+        .densidad-alta .titulo            { font-size: 22pt; margin-bottom: 5mm; letter-spacing: 0.8pt; }
+        .densidad-alta .beneficiario      { font-size: 15pt; margin-bottom: 1.5mm; }
+        .densidad-alta .beneficiario-meta { font-size: 8.5pt; margin-bottom: 5mm; }
+        .densidad-alta .otorgado-a        { font-size: 8pt; margin-bottom: 3mm; letter-spacing: 1.5pt; }
+        .densidad-alta .cuerpo            { font-size: 9.5pt; line-height: 1.5; margin-bottom: 3mm; }
+        .densidad-alta .cuerpo p          { margin-bottom: 2mm; }
+        .densidad-alta .header            { margin-bottom: 5mm; }
+        .densidad-alta .codigo            { margin-bottom: 5mm; }
+        .densidad-alta .logo-principal    { height: 12mm; }
+        .densidad-alta .iso-logo,
+        .densidad-alta .iso-placeholder   { height: 10mm; width: 10mm; line-height: 10mm; }
+        .densidad-alta .lugar-fecha       { margin-top: 3mm; margin-bottom: 5mm; font-size: 9pt; }
+        .densidad-alta .firma-img         { max-height: 15mm; }
+        .densidad-alta .qr-img            { width: 20mm; height: 20mm; }
     </style>
 </head>
-<body>
+<body class="densidad-{{ $densidad ?? 'media' }}">
     @php
         $obraNombre = $certificado->obra_nombre_efectivo;
         $entidad = $certificado->obra_entidad_efectiva;
@@ -295,194 +250,152 @@
     @endphp
 
     <div class="pagina">
-        <div class="ornamento-superior"></div>
-        <div class="ornamento-inferior"></div>
-
         @if (! $certificado->estaVigente())
             <div class="estado-revocado">REVOCADO</div>
         @endif
 
-        <div class="fit-wrapper" id="fitWrapper">
-            {{-- Header --}}
-            <div class="header">
-                <div class="header-logo">
-                    @if ($logoBase64)
-                        <img src="{{ $logoBase64 }}" alt="RNFC" class="logo-principal">
+        {{-- Header: logo + ISOs --}}
+        <div class="header">
+            <div class="header-cell header-logo">
+                @if ($logoBase64)
+                    <img src="{{ $logoBase64 }}" alt="RNFC" class="logo-principal">
+                @endif
+            </div>
+            <div class="header-cell header-iso">
+                @foreach (['iso1', 'iso2', 'iso3'] as $iso)
+                    @if (! empty($branding[$iso]))
+                        <img src="{{ $branding[$iso] }}" alt="{{ strtoupper($iso) }}" class="iso-logo">
+                    @else
+                        <span class="iso-placeholder">{{ strtoupper($iso) }}</span>
                     @endif
-                </div>
-                <div class="header-iso">
-                    @foreach (['iso1', 'iso2', 'iso3'] as $iso)
-                        @if (! empty($branding[$iso]))
-                            <img src="{{ $branding[$iso] }}" alt="{{ strtoupper($iso) }}" class="iso-logo">
-                        @else
-                            <span class="iso-placeholder">{{ strtoupper($iso) }}</span>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- Código --}}
+        <div class="codigo">
+            N° de Certificado: <strong>{{ $certificado->codigo }}</strong>
+        </div>
+
+        {{-- Título --}}
+        <div class="titulo">{{ mb_strtoupper($certificado->tipo->titulo()) }}</div>
+
+        {{-- Beneficiario --}}
+        <div class="otorgado-a">Se otorga a</div>
+        <div class="beneficiario">{{ mb_strtoupper($certificado->beneficiario_nombre) }}</div>
+        @if ($certificado->beneficiario_documento || $certificado->beneficiario_profesion)
+            <div class="beneficiario-meta">
+                @if ($certificado->beneficiario_documento)
+                    DNI N° {{ $certificado->beneficiario_documento }}
+                @endif
+                @if ($certificado->beneficiario_documento && $certificado->beneficiario_profesion) · @endif
+                @if ($certificado->beneficiario_profesion)
+                    {{ $certificado->beneficiario_profesion }}
+                @endif
+            </div>
+        @else
+            <div style="height: 8mm;"></div>
+        @endif
+
+        {{-- Cuerpo --}}
+        <div class="cuerpo">
+            @switch($certificado->tipo)
+                @case(\App\Enums\TipoCertificado::Trabajador)
+                @case(\App\Enums\TipoCertificado::Residente)
+                @case(\App\Enums\TipoCertificado::Supervisor)
+                @case(\App\Enums\TipoCertificado::Especialista)
+                    <p>
+                        Por haber laborado en nuestra empresa como
+                        <strong>{{ mb_strtoupper($cargo) }}</strong>{{ $obraNombre ? ',' : '.' }}
+                        @if ($obraNombre)
+                            en la ejecución de la obra <strong>{{ mb_strtoupper($obraNombre) }}</strong>{{ $entidad ? ',' : '' }}
+                            @if ($entidad)
+                                ejecutada para <strong>{{ $entidad }}</strong>,
+                            @endif
                         @endif
-                    @endforeach
-                </div>
-            </div>
+                        @if ($fInicio && $fFin)
+                            durante el período comprendido entre el <strong>{{ $fInicio }}</strong>
+                            y el <strong>{{ $fFin }}</strong>,
+                        @endif
+                        demostrando durante su permanencia puntualidad, responsabilidad,
+                        honestidad y dedicación en las labores que le fueron encomendadas.
+                    </p>
+                    @break
 
-            {{-- Código --}}
-            <div class="codigo-row">
-                <span>N° de Certificado</span>
-                <strong>{{ $certificado->codigo }}</strong>
-            </div>
+                @case(\App\Enums\TipoCertificado::Capacitacion)
+                    <p>
+                        Por haber participado satisfactoriamente en la capacitación denominada
+                        <strong>{{ $cargo }}</strong>,
+                        @if ($fInicio && $fFin)
+                            realizada entre el <strong>{{ $fInicio }}</strong>
+                            y el <strong>{{ $fFin }}</strong>,
+                        @endif
+                        cumpliendo con la totalidad del programa académico establecido.
+                    </p>
+                    @break
 
-            {{-- Título --}}
-            <div class="titulo-wrap">
-                <div class="titulo-eyebrow">Certificación oficial</div>
-                <div class="titulo">{{ mb_strtoupper($certificado->tipo->titulo()) }}</div>
-            </div>
+                @case(\App\Enums\TipoCertificado::Participacion)
+                    <p>
+                        Por su participación
+                        @if ($certificado->cargo) en calidad de <strong>{{ $certificado->cargo }}</strong> @endif
+                        @if ($obraNombre)
+                            en el proyecto <strong>{{ mb_strtoupper($obraNombre) }}</strong>,
+                        @endif
+                        demostrando profesionalismo y compromiso durante toda su intervención.
+                    </p>
+                    @break
 
-            {{-- Beneficiario --}}
-            <div class="otorgado-a">Se otorga a</div>
-            <div class="beneficiario">{{ mb_strtoupper($certificado->beneficiario_nombre) }}</div>
-            @if ($certificado->beneficiario_documento || $certificado->beneficiario_profesion)
-                <div class="beneficiario-meta">
-                    @if ($certificado->beneficiario_documento)
-                        DNI N° <strong>{{ $certificado->beneficiario_documento }}</strong>
-                    @endif
-                    @if ($certificado->beneficiario_documento && $certificado->beneficiario_profesion) · @endif
-                    @if ($certificado->beneficiario_profesion)
-                        {{ $certificado->beneficiario_profesion }}
-                    @endif
-                </div>
-            @else
-                <div style="height: 8mm;"></div>
+                @case(\App\Enums\TipoCertificado::ServiciosProfesionales)
+                    <p>
+                        Por haber prestado servicios profesionales
+                        @if ($certificado->cargo) en calidad de <strong>{{ $certificado->cargo }}</strong> @endif
+                        @if ($obraNombre)
+                            para la obra <strong>{{ mb_strtoupper($obraNombre) }}</strong>
+                        @endif
+                        @if ($fInicio && $fFin)
+                            , entre el <strong>{{ $fInicio }}</strong>
+                            y el <strong>{{ $fFin }}</strong>
+                        @endif
+                        , cumpliendo a cabalidad con los términos del encargo recibido.
+                    </p>
+                    @break
+            @endswitch
+
+            @if ($certificado->descripcion)
+                <p>{{ $certificado->descripcion }}</p>
             @endif
 
-            {{-- Cuerpo --}}
-            <div class="cuerpo">
-                @switch($certificado->tipo)
-                    @case(\App\Enums\TipoCertificado::Trabajador)
-                    @case(\App\Enums\TipoCertificado::Residente)
-                    @case(\App\Enums\TipoCertificado::Supervisor)
-                    @case(\App\Enums\TipoCertificado::Especialista)
-                        <p>
-                            Por haber laborado en nuestra empresa como
-                            <strong>{{ mb_strtoupper($cargo) }}</strong>{{ $obraNombre ? ',' : '.' }}
-                            @if ($obraNombre)
-                                en la ejecución de la obra <strong>{{ mb_strtoupper($obraNombre) }}</strong>{{ $entidad ? ',' : '' }}
-                                @if ($entidad)
-                                    ejecutada para <strong>{{ $entidad }}</strong>,
-                                @endif
-                            @endif
-                            @if ($fInicio && $fFin)
-                                durante el período comprendido entre el <strong>{{ $fInicio }}</strong>
-                                y el <strong>{{ $fFin }}</strong>,
-                            @endif
-                            demostrando durante su permanencia puntualidad, responsabilidad,
-                            honestidad y dedicación en las labores que le fueron encomendadas.
-                        </p>
-                        @break
+            <p>
+                Se expide la presente a solicitud del interesado, para los fines que crea convenientes.
+            </p>
+        </div>
 
-                    @case(\App\Enums\TipoCertificado::Capacitacion)
-                        <p>
-                            Por haber participado satisfactoriamente en la capacitación denominada
-                            <strong>{{ $cargo }}</strong>,
-                            @if ($fInicio && $fFin)
-                                realizada entre el <strong>{{ $fInicio }}</strong>
-                                y el <strong>{{ $fFin }}</strong>,
-                            @endif
-                            cumpliendo con la totalidad del programa académico establecido.
-                        </p>
-                        @break
+        {{-- Lugar y fecha --}}
+        <div class="lugar-fecha">
+            {{ $certificado->lugar_emision }}, {{ $fEmision }}.
+        </div>
 
-                    @case(\App\Enums\TipoCertificado::Participacion)
-                        <p>
-                            Por su participación
-                            @if ($certificado->cargo) en calidad de <strong>{{ $certificado->cargo }}</strong> @endif
-                            @if ($obraNombre)
-                                en el proyecto <strong>{{ mb_strtoupper($obraNombre) }}</strong>,
-                            @endif
-                            demostrando profesionalismo y compromiso durante toda su intervención.
-                        </p>
-                        @break
-
-                    @case(\App\Enums\TipoCertificado::ServiciosProfesionales)
-                        <p>
-                            Por haber prestado servicios profesionales
-                            @if ($certificado->cargo) en calidad de <strong>{{ $certificado->cargo }}</strong> @endif
-                            @if ($obraNombre)
-                                para la obra <strong>{{ mb_strtoupper($obraNombre) }}</strong>
-                            @endif
-                            @if ($fInicio && $fFin)
-                                , entre el <strong>{{ $fInicio }}</strong>
-                                y el <strong>{{ $fFin }}</strong>
-                            @endif
-                            , cumpliendo a cabalidad con los términos del encargo recibido.
-                        </p>
-                        @break
-                @endswitch
-
-                @if ($certificado->descripcion)
-                    <p>{{ $certificado->descripcion }}</p>
+        {{-- Firma + QR --}}
+        <div class="pie">
+            <div class="pie-firma">
+                @if (! empty($branding['firma']))
+                    <img src="{{ $branding['firma'] }}" alt="Firma" class="firma-img">
+                @else
+                    <div class="firma-img-placeholder"></div>
                 @endif
-
-                <p>
-                    Se expide la presente a solicitud del interesado, para los fines que crea convenientes.
-                </p>
-            </div>
-
-            {{-- Lugar y fecha --}}
-            <div class="lugar-fecha">
-                {{ $certificado->lugar_emision }}, {{ $fEmision }}.
-            </div>
-
-            {{-- Firma + QR --}}
-            <div class="pie">
-                <div class="pie-firma">
-                    @if (! empty($branding['firma']))
-                        <img src="{{ $branding['firma'] }}" alt="Firma" class="firma-img">
-                    @else
-                        <div class="firma-img-placeholder"></div>
-                    @endif
-                    <div class="firma-linea"></div>
-                    <div class="firma-nombre">{{ $certificado->emisor_nombre }}</div>
-                    <div class="firma-cargo">
-                        {{ $certificado->emisor_cargo }}
-                        @if ($certificado->emisor_cip) · CIP {{ $certificado->emisor_cip }} @endif
-                    </div>
+                <div class="firma-linea"></div>
+                <div class="firma-nombre">{{ $certificado->emisor_nombre }}</div>
+                <div class="firma-cargo">
+                    {{ $certificado->emisor_cargo }}
+                    @if ($certificado->emisor_cip) · CIP {{ $certificado->emisor_cip }} @endif
                 </div>
-                <div class="pie-qr">
-                    <div class="qr-box">
-                        <img src="{{ $qrDataUri }}" alt="QR de verificación" class="qr-img">
-                    </div>
-                    <div class="qr-leyenda">Verifica autenticidad</div>
-                    <div class="qr-url">{{ str_replace(['http://','https://'], '', $urlVerificacion) }}</div>
-                </div>
+            </div>
+            <div class="pie-qr">
+                <img src="{{ $qrDataUri }}" alt="QR de verificación" class="qr-img">
+                <div class="qr-leyenda">Verifica autenticidad</div>
+                <div class="qr-url">{{ str_replace(['http://','https://'], '', $urlVerificacion) }}</div>
             </div>
         </div>
     </div>
-
-    {{-- Auto-fit: si el contenido desborda el alto disponible, lo escalamos sutilmente
-         para que siempre quepa en 1 página A4. Requiere Browsershot (Chrome headless). --}}
-    <script>
-        (function () {
-            const wrapper = document.getElementById('fitWrapper');
-            const pagina = document.querySelector('.pagina');
-            if (!wrapper || !pagina) return;
-
-            // Padding en mm convertido a px (1mm ≈ 3.7795275591 px @ 96dpi)
-            const mmToPx = (mm) => mm * 3.7795275591;
-            const padTop = mmToPx(20);
-            const padBottom = mmToPx(16);
-            const pageHeight = mmToPx(297);
-            const available = pageHeight - padTop - padBottom;
-
-            // Mide el contenido natural
-            const natural = wrapper.scrollHeight;
-            if (natural <= available) return; // ya cabe, no hacemos nada
-
-            // Calcula el factor de escala con un pequeño margen de seguridad
-            let scale = available / natural;
-            if (scale > 0.99) scale = 0.99;
-            if (scale < 0.72) scale = 0.72; // suelo: nunca tan pequeño que sea ilegible
-
-            wrapper.style.transform = `scale(${scale})`;
-            wrapper.style.transformOrigin = 'top center';
-            wrapper.style.width = (100 / scale) + '%';
-            wrapper.style.marginLeft = ((100 - 100 / scale) / 2) + '%';
-        })();
-    </script>
 </body>
 </html>

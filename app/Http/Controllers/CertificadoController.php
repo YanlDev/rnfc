@@ -11,12 +11,11 @@ use App\Models\User;
 use App\Notifications\CertificadoRevocado as CertificadoRevocadoNotif;
 use App\Services\BrandingService;
 use App\Services\QrService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Inertia\Inertia;
-use Spatie\Browsershot\Browsershot;
 
 class CertificadoController extends Controller
 {
@@ -142,31 +141,9 @@ class CertificadoController extends Controller
     {
         $this->authorize('view', $certificado);
 
-        $html = View::make('certificados.template', $this->datosTemplate($certificado, $qr, $branding))->render();
-
-        $browsershot = Browsershot::html($html)
-            ->format('A4')
-            ->showBackground()
-            ->margins(0, 0, 0, 0)
-            ->emulateMedia('print')
-            ->waitUntilNetworkIdle();
-
-        if ($chromePath = config('services.chrome.path')) {
-            $browsershot->setChromePath($chromePath);
-        }
-        if ($nodePath = config('services.node.path')) {
-            $browsershot->setNodeBinary($nodePath);
-        }
-        if ($npmPath = config('services.npm.path')) {
-            $browsershot->setNpmBinary($npmPath);
-        }
-
-        $pdfBinary = $browsershot->pdf();
-
-        return new Response($pdfBinary, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="certificado-'.$certificado->codigo.'.pdf"',
-        ]);
+        return Pdf::loadView('certificados.template', $this->datosTemplate($certificado, $qr, $branding))
+            ->setPaper('a4', 'portrait')
+            ->download("certificado-{$certificado->codigo}.pdf");
     }
 
     public function preview(Certificado $certificado, QrService $qr, BrandingService $branding): \Illuminate\Contracts\View\View
@@ -213,6 +190,29 @@ class CertificadoController extends Controller
             'urlVerificacion' => $url,
             'logoBase64' => $logoBase64,
             'branding' => $branding->dataUris(),
+            'densidad' => $this->calcularDensidad($certificado),
         ];
+    }
+
+    /**
+     * Calcula la densidad del certificado para que siempre quepa en 1 página.
+     * Devuelve 'baja' (más aire), 'media' (estándar), 'alta' (compacto).
+     */
+    private function calcularDensidad(Certificado $certificado): string
+    {
+        $caracteres = mb_strlen((string) $certificado->beneficiario_nombre)
+            + mb_strlen((string) $certificado->obra_nombre_efectivo)
+            + mb_strlen((string) $certificado->obra_entidad_efectiva)
+            + mb_strlen((string) $certificado->cargo)
+            + mb_strlen((string) $certificado->descripcion);
+
+        if ($caracteres > 280) {
+            return 'alta';
+        }
+        if ($caracteres > 150) {
+            return 'media';
+        }
+
+        return 'baja';
     }
 }
