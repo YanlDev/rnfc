@@ -16,16 +16,18 @@
         .pagina {
             position: relative;
             width: 210mm;
-            height: 297mm;
             padding: 22mm 22mm 18mm;
             background: #ffffff;
+            page-break-inside: avoid;
+            page-break-after: avoid;
         }
+        html, body { height: auto; }
 
         /* === HEADER === */
         .header {
             display: table;
             width: 100%;
-            margin-bottom: 14mm;
+            margin-bottom: 10mm;
         }
         .header-cell { display: table-cell; vertical-align: middle; }
         .header-logo { width: 50%; text-align: left; }
@@ -57,7 +59,7 @@
             font-size: 8.5pt;
             color: #6b7280;
             letter-spacing: 1pt;
-            margin-bottom: 14mm;
+            margin-bottom: 10mm;
         }
         .codigo strong {
             font-family: 'Courier New', monospace;
@@ -68,12 +70,12 @@
 
         /* === TÍTULO === */
         .titulo {
-            font-size: 36pt;
+            font-size: 34pt;
             color: #1f2937;
             font-weight: bold;
             letter-spacing: 1.5pt;
             text-align: center;
-            margin-bottom: 12mm;
+            margin-bottom: 9mm;
         }
 
         /* === BENEFICIARIO === */
