@@ -231,6 +231,26 @@
         .densidad-alta .lugar-fecha       { margin-top: 3mm; margin-bottom: 5mm; font-size: 9pt; }
         .densidad-alta .firma-img         { max-height: 15mm; }
         .densidad-alta .qr-img            { width: 20mm; height: 20mm; }
+
+        /* Densidad EXTREMA — fallback para contenido muy largo */
+        .densidad-extrema .pagina            { padding: 10mm 12mm 8mm; }
+        .densidad-extrema .titulo            { font-size: 18pt; margin-bottom: 3mm; letter-spacing: 0.5pt; }
+        .densidad-extrema .beneficiario      { font-size: 13pt; margin-bottom: 1mm; }
+        .densidad-extrema .beneficiario-meta { font-size: 7.5pt; margin-bottom: 3mm; }
+        .densidad-extrema .otorgado-a        { font-size: 7pt; margin-bottom: 2mm; letter-spacing: 1pt; }
+        .densidad-extrema .cuerpo            { font-size: 8.5pt; line-height: 1.4; margin-bottom: 2mm; }
+        .densidad-extrema .cuerpo p          { margin-bottom: 1.5mm; }
+        .densidad-extrema .header            { margin-bottom: 3mm; }
+        .densidad-extrema .codigo            { margin-bottom: 3mm; font-size: 7pt; }
+        .densidad-extrema .codigo strong     { font-size: 8pt; }
+        .densidad-extrema .logo-principal    { height: 10mm; }
+        .densidad-extrema .iso-logo,
+        .densidad-extrema .iso-placeholder   { height: 8mm; width: 8mm; line-height: 8mm; }
+        .densidad-extrema .lugar-fecha       { margin-top: 2mm; margin-bottom: 3mm; font-size: 8pt; }
+        .densidad-extrema .firma-img         { max-height: 12mm; }
+        .densidad-extrema .qr-img            { width: 17mm; height: 17mm; }
+        .densidad-extrema .firma-nombre      { font-size: 9pt; }
+        .densidad-extrema .firma-cargo       { font-size: 7.5pt; }
     </style>
 </head>
 <body class="densidad-{{ $densidad ?? 'media' }}">
