@@ -6,157 +6,159 @@
     <style>
         @page { margin: 0; size: A4 portrait; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: auto; }
         body {
             font-family: DejaVu Sans, sans-serif;
             color: #1f2937;
             background: #ffffff;
-            font-size: 11pt;
-            line-height: 1.5;
         }
+
+        /* ====================================================
+           BASE COMPACTA — Opción 3
+           Tamaños conservadores que SIEMPRE caben en 1 página.
+           ==================================================== */
         .pagina {
             position: relative;
             width: 210mm;
-            padding: 22mm 22mm 18mm;
+            padding: 18mm 20mm 14mm;
             background: #ffffff;
             page-break-inside: avoid;
             page-break-after: avoid;
         }
-        html, body { height: auto; }
 
-        /* === HEADER === */
+        /* HEADER */
         .header {
             display: table;
             width: 100%;
-            margin-bottom: 10mm;
+            margin-bottom: 7mm;
         }
         .header-cell { display: table-cell; vertical-align: middle; }
         .header-logo { width: 50%; text-align: left; }
         .header-iso  { width: 50%; text-align: right; white-space: nowrap; }
-
-        .logo-principal { height: 16mm; }
+        .logo-principal { height: 14mm; }
         .iso-logo {
-            height: 13mm;
-            width: 13mm;
+            height: 11mm; width: 11mm;
             object-fit: contain;
-            margin-left: 2.5mm;
+            margin-left: 2mm;
             vertical-align: middle;
         }
         .iso-placeholder {
             display: inline-block;
-            width: 13mm; height: 13mm;
-            margin-left: 2.5mm;
+            width: 11mm; height: 11mm;
+            margin-left: 2mm;
             border: 1px dashed #d1d5db;
             color: #9ca3af;
-            font-size: 5.5pt;
+            font-size: 5pt;
             text-align: center;
-            line-height: 13mm;
+            line-height: 11mm;
             vertical-align: middle;
         }
 
-        /* === CÓDIGO === */
+        /* CÓDIGO */
         .codigo {
             text-align: right;
-            font-size: 8.5pt;
+            font-size: 8pt;
             color: #6b7280;
-            letter-spacing: 1pt;
-            margin-bottom: 10mm;
+            letter-spacing: 0.8pt;
+            margin-bottom: 7mm;
         }
         .codigo strong {
             font-family: 'Courier New', monospace;
             color: #1f2937;
-            font-size: 9.5pt;
+            font-size: 9pt;
             letter-spacing: 0;
         }
 
-        /* === TÍTULO === */
+        /* TÍTULO */
         .titulo {
-            font-size: 34pt;
+            font-size: 28pt;
             color: #1f2937;
             font-weight: bold;
-            letter-spacing: 1.5pt;
+            letter-spacing: 1.2pt;
             text-align: center;
-            margin-bottom: 9mm;
+            margin-bottom: 7mm;
+            line-height: 1.1;
         }
 
-        /* === BENEFICIARIO === */
+        /* BENEFICIARIO */
         .otorgado-a {
             text-align: center;
-            font-size: 10pt;
+            font-size: 9pt;
             color: #6b7280;
-            letter-spacing: 2.5pt;
+            letter-spacing: 2pt;
             text-transform: uppercase;
-            margin-bottom: 6mm;
+            margin-bottom: 4mm;
         }
         .beneficiario {
             text-align: center;
-            font-size: 22pt;
+            font-size: 18pt;
             font-weight: bold;
             color: #0b2545;
-            letter-spacing: 1pt;
-            margin-bottom: 3mm;
+            letter-spacing: 0.8pt;
+            margin-bottom: 2mm;
+            line-height: 1.2;
         }
         .beneficiario-meta {
             text-align: center;
-            font-size: 10pt;
+            font-size: 9pt;
             color: #4b5563;
-            margin-bottom: 10mm;
+            margin-bottom: 7mm;
         }
 
-        /* === CUERPO === */
+        /* CUERPO */
         .cuerpo {
-            font-size: 11.5pt;
-            line-height: 1.85;
+            font-size: 10.5pt;
+            line-height: 1.65;
             text-align: justify;
             color: #1f2937;
-            margin-bottom: 6mm;
+            margin-bottom: 4mm;
         }
-        .cuerpo p { margin-bottom: 3.5mm; }
+        .cuerpo p { margin-bottom: 2.5mm; }
         .cuerpo strong { color: #1f2937; }
 
-        /* === LUGAR Y FECHA === */
+        /* LUGAR Y FECHA */
         .lugar-fecha {
             text-align: right;
-            font-size: 10pt;
+            font-size: 9.5pt;
             color: #4b5563;
-            margin-top: 8mm;
-            margin-bottom: 10mm;
+            margin-top: 5mm;
+            margin-bottom: 7mm;
         }
 
-        /* === FIRMA Y QR === */
+        /* FIRMA Y QR */
         .pie {
             display: table;
             width: 100%;
-            margin-top: 6mm;
+            margin-top: 4mm;
         }
         .pie-firma {
             display: table-cell;
             width: 65%;
             vertical-align: bottom;
             text-align: center;
-            padding-right: 6mm;
+            padding-right: 5mm;
         }
         .firma-img {
-            max-height: 22mm;
-            max-width: 60mm;
-            margin: 0 auto -2mm;
+            max-height: 18mm;
+            max-width: 55mm;
+            margin: 0 auto -1.5mm;
             display: block;
         }
-        .firma-img-placeholder { height: 20mm; }
+        .firma-img-placeholder { height: 16mm; }
         .firma-linea {
             border-top: 1px solid #1f2937;
-            margin: 0 18mm 1.5mm;
+            margin: 0 16mm 1.2mm;
         }
         .firma-nombre {
-            font-size: 10.5pt;
+            font-size: 10pt;
             font-weight: bold;
             color: #1f2937;
         }
         .firma-cargo {
-            font-size: 9pt;
+            font-size: 8.5pt;
             color: #6b7280;
             margin-top: 0.5mm;
         }
-
         .pie-qr {
             display: table-cell;
             width: 35%;
@@ -164,40 +166,74 @@
             text-align: right;
         }
         .qr-img {
-            width: 26mm;
-            height: 26mm;
+            width: 23mm; height: 23mm;
             display: inline-block;
         }
         .qr-leyenda {
-            font-size: 7pt;
+            font-size: 6.5pt;
             color: #6b7280;
             text-transform: uppercase;
-            letter-spacing: 0.8pt;
-            margin-top: 1.5mm;
+            letter-spacing: 0.7pt;
+            margin-top: 1mm;
         }
         .qr-url {
-            font-size: 6.5pt;
+            font-size: 6pt;
             color: #9ca3af;
             font-family: 'Courier New', monospace;
-            margin-top: 0.5mm;
+            margin-top: 0.4mm;
         }
 
-        /* === SELLO REVOCADO === */
+        /* SELLO REVOCADO */
         .estado-revocado {
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%) rotate(-25deg);
-            font-size: 80pt;
+            font-size: 72pt;
             color: rgba(193, 39, 45, 0.12);
-            border: 6px solid rgba(193, 39, 45, 0.18);
-            padding: 4mm 12mm;
+            border: 5px solid rgba(193, 39, 45, 0.18);
+            padding: 3.5mm 10mm;
             font-weight: bold;
-            letter-spacing: 6pt;
+            letter-spacing: 5pt;
             z-index: 3;
         }
+
+        /* ====================================================
+           OPCIÓN 1 — Densidad automática según contenido.
+           "baja"  = contenido corto  → más aire visual
+           "media" = contenido medio  → base (definida arriba)
+           "alta"  = contenido largo  → todo compacto
+           ==================================================== */
+
+        /* Densidad BAJA — contenido corto: amplificamos */
+        .densidad-baja .titulo            { font-size: 32pt; margin-bottom: 9mm; }
+        .densidad-baja .beneficiario      { font-size: 22pt; margin-bottom: 3mm; }
+        .densidad-baja .beneficiario-meta { font-size: 10pt; margin-bottom: 9mm; }
+        .densidad-baja .otorgado-a        { font-size: 10pt; margin-bottom: 5mm; }
+        .densidad-baja .cuerpo            { font-size: 11.5pt; line-height: 1.8; margin-bottom: 5mm; }
+        .densidad-baja .cuerpo p          { margin-bottom: 3.5mm; }
+        .densidad-baja .header            { margin-bottom: 9mm; }
+        .densidad-baja .codigo            { margin-bottom: 9mm; }
+        .densidad-baja .lugar-fecha       { margin-top: 7mm; margin-bottom: 9mm; }
+
+        /* Densidad ALTA — contenido largo: reducimos */
+        .densidad-alta .pagina            { padding: 14mm 16mm 11mm; }
+        .densidad-alta .titulo            { font-size: 22pt; margin-bottom: 5mm; letter-spacing: 0.8pt; }
+        .densidad-alta .beneficiario      { font-size: 15pt; margin-bottom: 1.5mm; }
+        .densidad-alta .beneficiario-meta { font-size: 8.5pt; margin-bottom: 5mm; }
+        .densidad-alta .otorgado-a        { font-size: 8pt; margin-bottom: 3mm; letter-spacing: 1.5pt; }
+        .densidad-alta .cuerpo            { font-size: 9.5pt; line-height: 1.5; margin-bottom: 3mm; }
+        .densidad-alta .cuerpo p          { margin-bottom: 2mm; }
+        .densidad-alta .header            { margin-bottom: 5mm; }
+        .densidad-alta .codigo            { margin-bottom: 5mm; }
+        .densidad-alta .logo-principal    { height: 12mm; }
+        .densidad-alta .iso-logo,
+        .densidad-alta .iso-placeholder   { height: 10mm; width: 10mm; line-height: 10mm; }
+        .densidad-alta .lugar-fecha       { margin-top: 3mm; margin-bottom: 5mm; font-size: 9pt; }
+        .densidad-alta .firma-img         { max-height: 15mm; }
+        .densidad-alta .qr-img            { width: 20mm; height: 20mm; }
     </style>
 </head>
-<body>
+<body class="densidad-{{ $densidad ?? 'media' }}">
     @php
         $obraNombre = $certificado->obra_nombre_efectivo;
         $entidad = $certificado->obra_entidad_efectiva;

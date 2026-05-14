@@ -190,6 +190,29 @@ class CertificadoController extends Controller
             'urlVerificacion' => $url,
             'logoBase64' => $logoBase64,
             'branding' => $branding->dataUris(),
+            'densidad' => $this->calcularDensidad($certificado),
         ];
+    }
+
+    /**
+     * Calcula la densidad del certificado para que siempre quepa en 1 página.
+     * Devuelve 'baja' (más aire), 'media' (estándar), 'alta' (compacto).
+     */
+    private function calcularDensidad(Certificado $certificado): string
+    {
+        $caracteres = mb_strlen((string) $certificado->beneficiario_nombre)
+            + mb_strlen((string) $certificado->obra_nombre_efectivo)
+            + mb_strlen((string) $certificado->obra_entidad_efectiva)
+            + mb_strlen((string) $certificado->cargo)
+            + mb_strlen((string) $certificado->descripcion);
+
+        if ($caracteres > 280) {
+            return 'alta';
+        }
+        if ($caracteres > 150) {
+            return 'media';
+        }
+
+        return 'baja';
     }
 }
