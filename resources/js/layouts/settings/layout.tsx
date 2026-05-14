@@ -31,6 +31,11 @@ const sidebarNavItems: NavItem[] = [
         href: '/settings/branding',
         icon: null,
     },
+    {
+        title: 'Galería del home',
+        href: '/settings/home',
+        icon: null,
+    },
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {

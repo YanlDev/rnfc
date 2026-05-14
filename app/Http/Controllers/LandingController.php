@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\EnviarMensajeContactoRequest;
 use App\Mail\MensajeContacto;
+use App\Models\GaleriaHome;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Mail;
@@ -12,7 +13,9 @@ class LandingController extends Controller
 {
     public function home(): View
     {
-        return view('landing.index');
+        $galeria = GaleriaHome::orderBy('orden')->orderBy('id')->get();
+
+        return view('landing.index', compact('galeria'));
     }
 
     public function enviarMensaje(EnviarMensajeContactoRequest $request): RedirectResponse
