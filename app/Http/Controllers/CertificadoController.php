@@ -11,10 +11,8 @@ use App\Models\User;
 use App\Notifications\CertificadoRevocado as CertificadoRevocadoNotif;
 use App\Services\BrandingService;
 use App\Services\QrService;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Response;
 use Inertia\Inertia;
 
 class CertificadoController extends Controller
@@ -137,75 +135,26 @@ class CertificadoController extends Controller
             ->with('success', 'Certificado eliminado.');
     }
 
-    public function pdf(Certificado $certificado, QrService $qr, BrandingService $branding): Response
+    /**
+     * "PDF": devolvemos el HTML print-ready con auto-print.
+     * El navegador del usuario abre el diálogo de impresión → "Guardar como PDF".
+     * Sin DomPDF, sin Browsershot, sin Chrome en el servidor.
+     */
+    public function pdf(Certificado $certificado, QrService $qr, BrandingService $branding): \Illuminate\Contracts\View\View
     {
         $this->authorize('view', $certificado);
 
         $datos = $this->datosTemplate($certificado, $qr, $branding);
-        $densidadInicial = $this->estimarDensidad($certificado);
-        $pdf = $this->renderizarUnaPagina($datos, $densidadInicial);
+        $datos['autoPrint'] = true;
 
-        return new Response($pdf->output(), 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="certificado-'.$certificado->codigo.'.pdf"',
-        ]);
+        return view('certificados.template', $datos);
     }
 
     public function preview(Certificado $certificado, QrService $qr, BrandingService $branding): \Illuminate\Contracts\View\View
     {
         $this->authorize('view', $certificado);
 
-        $datos = $this->datosTemplate($certificado, $qr, $branding);
-        // Preview usa heurística rápida (sin generar PDF), aproximada al render real.
-        $datos['densidad'] = $this->estimarDensidad($certificado);
-
-        return view('certificados.template', $datos);
-    }
-
-    /**
-     * Renderiza el PDF probando densidades de menor a mayor compactación hasta
-     * obtener exactamente 1 página. Mide page_count real con la API de DomPDF.
-     */
-    private function renderizarUnaPagina(array $datos, string $desde = 'baja')
-    {
-        $orden = ['baja', 'media', 'alta', 'extrema'];
-        $inicio = array_search($desde, $orden, true);
-        $secuencia = $inicio === false ? $orden : array_slice($orden, $inicio);
-
-        $pdf = null;
-        foreach ($secuencia as $densidad) {
-            $datos['densidad'] = $densidad;
-
-            $pdf = Pdf::loadView('certificados.template', $datos)
-                ->setPaper('a4', 'portrait');
-            $pdf->render();
-
-            if ($pdf->getDomPDF()->getCanvas()->get_page_count() <= 1) {
-                return $pdf;
-            }
-        }
-
-        // Si ni con extrema cabe (caso patológico), devolvemos lo último renderizado.
-        return $pdf;
-    }
-
-    /**
-     * Heurística rápida para el preview HTML (sin generar PDF).
-     */
-    private function estimarDensidad(Certificado $certificado): string
-    {
-        $caracteres = mb_strlen((string) $certificado->beneficiario_nombre)
-            + mb_strlen((string) $certificado->obra_nombre_efectivo)
-            + mb_strlen((string) $certificado->obra_entidad_efectiva)
-            + mb_strlen((string) $certificado->cargo)
-            + mb_strlen((string) $certificado->descripcion);
-
-        return match (true) {
-            $caracteres > 400 => 'extrema',
-            $caracteres > 280 => 'alta',
-            $caracteres > 150 => 'media',
-            default            => 'baja',
-        };
+        return view('certificados.template', $this->datosTemplate($certificado, $qr, $branding));
     }
 
     public function revocar(Certificado $certificado): RedirectResponse
