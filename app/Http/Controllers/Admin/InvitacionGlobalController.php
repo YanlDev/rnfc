@@ -18,7 +18,7 @@ class InvitacionGlobalController extends Controller
     public function store(InvitarGlobalRequest $request): RedirectResponse
     {
         $email = strtolower($request->validated('email'));
-        $rolGlobal = RolGlobal::from($request->validated('rol_global'));
+        $rolGlobal = RolGlobal::from($request->validated('rol_globAal'));
 
         $yaInvitado = Invitacion::where('email', $email)
             ->whereNotNull('rol_global')
