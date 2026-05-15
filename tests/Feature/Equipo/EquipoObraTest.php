@@ -6,25 +6,21 @@ use App\Mail\InvitacionObra;
 use App\Models\Invitacion;
 use App\Models\Obra;
 use App\Models\User;
+use App\Notifications\InvitacionRecibida;
 use Database\Seeders\RolesSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 
-uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(RolesSeeder::class);
     Mail::fake();
+    Notification::fake();
 });
 
-function admin(): User
-{
-    $u = User::factory()->create(['email_verified_at' => now()]);
-    $u->assignRole(RolGlobal::Admin->value);
-
-    return $u;
-}
-
-it('admin puede vincular directo a un usuario que ya tiene cuenta', function () {
+it('admin puede vincular directo a un usuario que ya tiene cuenta y recibe notificación', function () {
     $obra = Obra::factory()->create();
     $existente = User::factory()->create(['email' => 'colaborador@rnfc.test']);
 
@@ -36,7 +32,8 @@ it('admin puede vincular directo a un usuario que ya tiene cuenta', function () 
         ->assertRedirect();
 
     expect($obra->usuarios()->where('users.id', $existente->id)->exists())->toBeTrue();
-    Mail::assertNothingSent();
+
+    Notification::assertSentTo($existente, InvitacionRecibida::class);
 });
 
 it('al invitar a un correo nuevo se crea invitación y se envía mail', function () {

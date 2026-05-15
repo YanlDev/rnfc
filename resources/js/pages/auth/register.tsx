@@ -1,5 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
-import { Lock, ShieldCheck } from 'lucide-react';
+import { Lock, ShieldCheck, Users } from 'lucide-react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
@@ -10,19 +10,28 @@ import { Spinner } from '@/components/ui/spinner';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
 
-type Invitacion = {
+type InvitacionObra = {
     email: string;
     obra: string;
     rol: string;
 };
 
+type InvitacionGlobal = {
+    email: string;
+    rol: string;
+};
+
 export default function Register({
     invitacion = null,
+    invitacionGlobal = null,
 }: {
-    invitacion?: Invitacion | null;
+    invitacion?: InvitacionObra | null;
+    invitacionGlobal?: InvitacionGlobal | null;
 }) {
+    const invitacionActiva = invitacion ?? invitacionGlobal ?? null;
+
     // === SIN INVITACIÓN: bloqueo de acceso ===
-    if (!invitacion) {
+    if (!invitacionActiva) {
         return (
             <>
                 <Head title="Acceso restringido" />
@@ -53,21 +62,33 @@ export default function Register({
         );
     }
 
+    const esGlobal = invitacionGlobal !== null;
+
     // === CON INVITACIÓN: formulario con email pre-llenado ===
     return (
         <>
             <Head title="Crear cuenta" />
 
             <div className="mb-5 flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
-                <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" />
+                {esGlobal ? (
+                    <Users className="mt-0.5 size-5 shrink-0 text-primary" />
+                ) : (
+                    <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" />
+                )}
                 <div className="space-y-1 text-sm">
                     <div className="font-semibold text-foreground">
                         Aceptando invitación
                     </div>
-                    <div className="text-muted-foreground">
-                        Obra: <strong className="text-foreground">{invitacion.obra}</strong>
-                        {' '}· Rol: <strong className="text-foreground">{invitacion.rol}</strong>
-                    </div>
+                    {esGlobal ? (
+                        <div className="text-muted-foreground">
+                            Rol: <strong className="text-foreground">{invitacionActiva.rol}</strong>
+                        </div>
+                    ) : (
+                        <div className="text-muted-foreground">
+                            Obra: <strong className="text-foreground">{invitacionActiva.obra}</strong>
+                            {' '}· Rol: <strong className="text-foreground">{invitacionActiva.rol}</strong>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -108,7 +129,7 @@ export default function Register({
                                     autoComplete="email"
                                     name="email"
                                     placeholder="correo@ejemplo.com"
-                                    defaultValue={invitacion.email}
+                                    defaultValue={invitacionActiva.email}
                                     readOnly
                                     className="bg-muted/40"
                                 />

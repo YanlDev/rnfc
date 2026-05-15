@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RolGlobal;
 use App\Enums\RolObra;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +16,7 @@ class Invitacion extends Model
         'obra_id',
         'email',
         'rol_obra',
+        'rol_global',
         'token',
         'invitado_por',
         'expira_at',
@@ -26,6 +28,7 @@ class Invitacion extends Model
     {
         return [
             'rol_obra' => RolObra::class,
+            'rol_global' => RolGlobal::class,
             'expira_at' => 'datetime',
             'aceptada_at' => 'datetime',
             'cancelada_at' => 'datetime',
@@ -40,6 +43,11 @@ class Invitacion extends Model
     public function invitador(): BelongsTo
     {
         return $this->belongsTo(User::class, 'invitado_por');
+    }
+
+    public function esGlobal(): bool
+    {
+        return $this->rol_global !== null;
     }
 
     public function estaActiva(): bool

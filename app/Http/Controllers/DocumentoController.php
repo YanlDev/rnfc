@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Carpeta;
 use App\Models\Documento;
 use App\Models\Obra;
+use App\Models\User;
 use App\Notifications\DocumentoSubido;
 use App\Services\DocumentoService;
 use Illuminate\Http\RedirectResponse;
@@ -47,7 +48,7 @@ class DocumentoController extends Controller
 
         $this->avisarMiembros($obra, $actualizado, $request->user());
 
-        return back()->with('success', "Nueva versión guardada.");
+        return back()->with('success', 'Nueva versión guardada.');
     }
 
     public function destroy(Obra $obra, Documento $documento): RedirectResponse
@@ -77,7 +78,7 @@ class DocumentoController extends Controller
      * Notifica a los miembros de la obra (excepto al autor) sobre un nuevo
      * documento o nueva versión.
      */
-    private function avisarMiembros(Obra $obra, Documento $documento, ?\App\Models\User $autor): void
+    private function avisarMiembros(Obra $obra, Documento $documento, ?User $autor): void
     {
         $miembros = $obra->usuarios()
             ->when($autor, fn ($q) => $q->where('users.id', '!=', $autor->id))

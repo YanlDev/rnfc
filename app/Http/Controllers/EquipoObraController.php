@@ -8,8 +8,8 @@ use App\Mail\InvitacionObra;
 use App\Models\Invitacion;
 use App\Models\Obra;
 use App\Models\User;
+use App\Notifications\InvitacionRecibida;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
 class EquipoObraController extends Controller
@@ -38,6 +38,10 @@ class EquipoObraController extends Controller
                 'rol_obra' => $rolObra->value,
                 'asignado_at' => now(),
             ]);
+
+            $usuarioExistente->notify(
+                new InvitacionRecibida($obra, $rolObra, $request->user()),
+            );
 
             return back()->with(
                 'success',

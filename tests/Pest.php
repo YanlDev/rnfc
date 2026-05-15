@@ -16,7 +16,7 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
-    ->beforeEach(fn () => $this->seed(\Database\Seeders\RolesSeeder::class))
+    ->beforeEach(fn () => $this->seed(RolesSeeder::class))
     ->in('Feature');
 
 /*
@@ -55,6 +55,7 @@ use App\Enums\RolGlobal;
 use App\Enums\RolObra;
 use App\Models\Obra;
 use App\Models\User;
+use Database\Seeders\RolesSeeder;
 
 /**
  * Crea un usuario con un rol global dado y email verificado.
@@ -63,6 +64,17 @@ function usuarioConRol(RolGlobal $rol): User
 {
     $u = User::factory()->create(['email_verified_at' => now()]);
     $u->assignRole($rol->value);
+
+    return $u;
+}
+
+/**
+ * Crea un usuario con rol Admin y email verificado.
+ */
+function admin(): User
+{
+    $u = User::factory()->create(['email_verified_at' => now()]);
+    $u->assignRole(RolGlobal::Admin->value);
 
     return $u;
 }

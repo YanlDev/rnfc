@@ -2,7 +2,9 @@
 
 namespace App\Notifications;
 
-use App\Models\Invitacion;
+use App\Enums\RolObra;
+use App\Models\Obra;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -17,7 +19,9 @@ class InvitacionRecibida extends Notification implements ShouldQueue
     use Queueable;
 
     public function __construct(
-        public readonly Invitacion $invitacion,
+        public readonly Obra $obra,
+        public readonly RolObra $rolObra,
+        public readonly ?User $invitadoPor = null,
     ) {}
 
     /**
@@ -30,14 +34,18 @@ class InvitacionRecibida extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $obra = $this->invitacion->obra;
-        $url = route('obras.show', $obra->id);
+        $url = route('obras.show', $this->obra->id);
 
-        return (new MailMessage)
-            ->subject("Te agregaron al equipo de la obra: {$obra->nombre}")
+        $mailMessage = (new MailMessage)
+            ->subject("Te agregaron al equipo de la obra: {$this->obra->nombre}")
             ->greeting("Hola {$notifiable->name},")
-            ->line("Has sido agregado(a) al equipo de la obra **{$obra->nombre}** como **{$this->invitacion->rol_obra->label()}**.")
-            ->action('Ver obra', $url);
+            ->line("Has sido agregado(a) al equipo de la obra **{$this->obra->nombre}** como **{$this->rolObra->label()}**.");
+
+        if ($this->invitadoPor) {
+            $mailMessage->line("Invitado por: {$this->invitadoPor->name}");
+        }
+
+        return $mailMessage->action('Ver obra', $url);
     }
 
     /**
@@ -48,10 +56,10 @@ class InvitacionRecibida extends Notification implements ShouldQueue
         return [
             'tipo' => 'invitacion_recibida',
             'titulo' => 'Te agregaron al equipo de una obra',
-            'mensaje' => "Rol: {$this->invitacion->rol_obra->label()}",
-            'obra_codigo' => $this->invitacion->obra?->codigo,
-            'obra_nombre' => $this->invitacion->obra?->nombre,
-            'url' => route('obras.show', $this->invitacion->obra_id),
+            'mensaje' => "{$this->obra->nombre} — Rol: {$this->rolObra->label()}",
+            'obra_codigo' => $this->obra->codigo,
+            'obra_nombre' => $this->obra->nombre,
+            'url' => route('obras.show', $this->obra->id),
             'icono' => 'UserPlus',
             'color' => '#1aa39c',
         ];

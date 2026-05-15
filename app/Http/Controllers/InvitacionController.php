@@ -29,9 +29,15 @@ class InvitacionController extends Controller
 
         $user = request()->user();
 
-        // Mismo correo y sesión activa → aceptar de inmediato y enviar a la obra.
+        // Mismo correo y sesión activa → aceptar de inmediato.
         if ($user && strcasecmp($user->email, $invitacion->email) === 0) {
             $this->aceptar($invitacion);
+
+            if ($invitacion->esGlobal()) {
+                return redirect()
+                    ->route('dashboard')
+                    ->with('success', 'Te uniste a la plataforma como '.$invitacion->rol_global->label().'.');
+            }
 
             return redirect()
                 ->route('obras.show', $invitacion->obra_id)
@@ -43,7 +49,9 @@ class InvitacionController extends Controller
             return Inertia::render('invitaciones/conflicto', [
                 'invitacion' => [
                     'email' => $invitacion->email,
-                    'obra' => $invitacion->obra->nombre,
+                    'obra' => $invitacion->esGlobal()
+                        ? null
+                        : $invitacion->obra->nombre,
                 ],
                 'usuarioActual' => $user->email,
             ]);
@@ -51,6 +59,17 @@ class InvitacionController extends Controller
 
         // No autenticado: guardamos el token en sesión y mostramos la pantalla pública.
         session(['invitacion_token' => $invitacion->token]);
+
+        if ($invitacion->esGlobal()) {
+            return Inertia::render('invitaciones/aceptar-global', [
+                'invitacion' => [
+                    'email' => $invitacion->email,
+                    'rol' => $invitacion->rol_global->label(),
+                    'invitador' => $invitacion->invitador?->name,
+                    'expira_at' => $invitacion->expira_at->format('d/m/Y H:i'),
+                ],
+            ]);
+        }
 
         return Inertia::render('invitaciones/aceptar', [
             'invitacion' => [
@@ -79,23 +98,35 @@ class InvitacionController extends Controller
 
         $this->aceptar($invitacion);
 
+        if ($invitacion->esGlobal()) {
+            return redirect()
+                ->route('dashboard')
+                ->with('success', 'Te uniste a la plataforma como '.$invitacion->rol_global->label().'.');
+        }
+
         return redirect()
             ->route('obras.show', $invitacion->obra_id)
             ->with('success', "Te uniste a la obra {$invitacion->obra->nombre}.");
     }
 
     /**
-     * Marca la invitación como aceptada y crea el vínculo en el pivot.
+     * Marca la invitación como aceptada y crea el vínculo.
      */
     private function aceptar(Invitacion $invitacion): void
     {
         $user = request()->user();
 
-        if (! $invitacion->obra->usuarios()->where('users.id', $user->id)->exists()) {
-            $invitacion->obra->usuarios()->attach($user->id, [
-                'rol_obra' => $invitacion->rol_obra->value,
-                'asignado_at' => now(),
-            ]);
+        if ($invitacion->esGlobal()) {
+            if (! $user->hasRole($invitacion->rol_global->value)) {
+                $user->assignRole($invitacion->rol_global->value);
+            }
+        } else {
+            if (! $invitacion->obra->usuarios()->where('users.id', $user->id)->exists()) {
+                $invitacion->obra->usuarios()->attach($user->id, [
+                    'rol_obra' => $invitacion->rol_obra->value,
+                    'asignado_at' => now(),
+                ]);
+            }
         }
 
         $invitacion->update(['aceptada_at' => now()]);

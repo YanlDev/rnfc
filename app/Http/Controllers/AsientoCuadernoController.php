@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\RolGlobal;
 use App\Enums\TipoAutorCuaderno;
 use App\Http\Requests\StoreAsientoCuadernoRequest;
 use App\Models\AsientoCuaderno;
@@ -61,7 +62,7 @@ class AsientoCuadernoController extends Controller
             'asientos' => $asientos,
             'siguienteNumero' => AsientoCuaderno::siguienteNumero($obra->id, $tipo),
             'puedeEscribir' => request()->user()?->can('createEn', [AsientoCuaderno::class, $obra, $tipo]) ?? false,
-            'puedeEliminar' => request()->user()?->hasAnyRole(\App\Enums\RolGlobal::rolesAdministrativos()) ?? false,
+            'puedeEliminar' => request()->user()?->hasAnyRole(RolGlobal::rolesAdministrativos()) ?? false,
         ]);
     }
 

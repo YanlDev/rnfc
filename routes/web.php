@@ -1,13 +1,15 @@
 <?php
 
+use App\Http\Controllers\Admin\InvitacionGlobalController;
+use App\Http\Controllers\Admin\UsuariosController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AsientoCuadernoController;
 use App\Http\Controllers\CalendarioSelectorController;
 use App\Http\Controllers\CarpetaController;
-use App\Http\Controllers\CuadernoSelectorController;
 use App\Http\Controllers\CertificadoController;
-use App\Http\Controllers\DocumentoController;
+use App\Http\Controllers\CuadernoSelectorController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\EquipoGlobalController;
 use App\Http\Controllers\EquipoObraController;
 use App\Http\Controllers\EventoCalendarioController;
@@ -43,12 +45,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('admin', AdminController::class)->name('admin.index');
 
     // Gestión de usuarios (admin / gerente general)
-    Route::get('admin/usuarios', [\App\Http\Controllers\Admin\UsuariosController::class, 'index'])
+    Route::get('admin/usuarios', [UsuariosController::class, 'index'])
         ->name('admin.usuarios.index');
-    Route::patch('admin/usuarios/{usuario}/toggle-activo', [\App\Http\Controllers\Admin\UsuariosController::class, 'toggleActivo'])
+    Route::patch('admin/usuarios/{usuario}/toggle-activo', [UsuariosController::class, 'toggleActivo'])
         ->name('admin.usuarios.toggle-activo');
-    Route::patch('admin/usuarios/{usuario}/rol', [\App\Http\Controllers\Admin\UsuariosController::class, 'cambiarRol'])
+    Route::patch('admin/usuarios/{usuario}/rol', [UsuariosController::class, 'cambiarRol'])
         ->name('admin.usuarios.rol');
+    Route::post('admin/invitar', [InvitacionGlobalController::class, 'store'])
+        ->name('admin.invitar');
 
     // Obras
     Route::resource('obras', ObraController::class);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\RolGlobal;
 use App\Services\BrandingService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -42,7 +43,7 @@ class HandleInertiaRequests extends Middleware
         if ($user) {
             $userArray = $user->toArray();
             $userArray['rol_global'] = $user->roles->first()?->name;
-            $userArray['es_admin'] = $user->hasAnyRole(\App\Enums\RolGlobal::rolesAdministrativos());
+            $userArray['es_admin'] = $user->hasAnyRole(RolGlobal::rolesAdministrativos());
         }
 
         return [

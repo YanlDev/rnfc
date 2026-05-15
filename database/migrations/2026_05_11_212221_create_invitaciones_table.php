@@ -10,9 +10,10 @@ return new class extends Migration
     {
         Schema::create('invitaciones', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('obra_id')->constrained('obras')->cascadeOnDelete();
+            $table->foreignId('obra_id')->nullable()->constrained('obras')->cascadeOnDelete();
             $table->string('email');
-            $table->string('rol_obra', 30);
+            $table->string('rol_obra', 30)->nullable();
+            $table->string('rol_global', 30)->nullable();
             $table->string('token', 64)->unique();
             $table->foreignId('invitado_por')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('expira_at');

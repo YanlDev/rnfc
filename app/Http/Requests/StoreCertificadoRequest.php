@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\TipoCertificado;
+use App\Models\Certificado;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -10,7 +11,7 @@ class StoreCertificadoRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('create', \App\Models\Certificado::class) ?? false;
+        return $this->user()?->can('create', Certificado::class) ?? false;
     }
 
     /**

@@ -2,22 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\RolGlobal;
 use App\Enums\TipoCertificado;
 use App\Http\Requests\StoreCertificadoRequest;
 use App\Models\Certificado;
 use App\Models\Obra;
-use App\Enums\RolGlobal;
 use App\Models\User;
 use App\Notifications\CertificadoRevocado as CertificadoRevocadoNotif;
 use App\Services\BrandingService;
 use App\Services\QrService;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class CertificadoController extends Controller
 {
-    public function index(): \Inertia\Response
+    public function index(): Response
     {
         $this->authorize('viewAny', Certificado::class);
 
@@ -46,7 +48,7 @@ class CertificadoController extends Controller
         ]);
     }
 
-    public function create(): \Inertia\Response
+    public function create(): Response
     {
         $this->authorize('create', Certificado::class);
 
@@ -80,7 +82,7 @@ class CertificadoController extends Controller
             ->with('success', "Certificado {$certificado->codigo} emitido correctamente.");
     }
 
-    public function show(Certificado $certificado): \Inertia\Response
+    public function show(Certificado $certificado): Response
     {
         $this->authorize('view', $certificado);
 
@@ -140,7 +142,7 @@ class CertificadoController extends Controller
      * El navegador del usuario abre el diálogo de impresión → "Guardar como PDF".
      * Sin DomPDF, sin Browsershot, sin Chrome en el servidor.
      */
-    public function pdf(Certificado $certificado, QrService $qr, BrandingService $branding): \Illuminate\Contracts\View\View
+    public function pdf(Certificado $certificado, QrService $qr, BrandingService $branding): View
     {
         $this->authorize('view', $certificado);
 
@@ -150,7 +152,7 @@ class CertificadoController extends Controller
         return view('certificados.template', $datos);
     }
 
-    public function preview(Certificado $certificado, QrService $qr, BrandingService $branding): \Illuminate\Contracts\View\View
+    public function preview(Certificado $certificado, QrService $qr, BrandingService $branding): View
     {
         $this->authorize('view', $certificado);
 

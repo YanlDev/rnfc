@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Models\Invitacion;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -69,23 +70,32 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::registerView(function (Request $request) {
             $token = $request->session()->get('invitacion_token');
             $invitacion = null;
+            $invitacionGlobal = null;
 
             if ($token) {
-                $inv = \App\Models\Invitacion::with('obra:id,codigo,nombre')
+                $inv = Invitacion::with('obra:id,codigo,nombre')
                     ->where('token', $token)
                     ->first();
 
                 if ($inv && $inv->estaActiva()) {
-                    $invitacion = [
-                        'email' => $inv->email,
-                        'obra' => $inv->obra->nombre,
-                        'rol' => $inv->rol_obra->label(),
-                    ];
+                    if ($inv->esGlobal()) {
+                        $invitacionGlobal = [
+                            'email' => $inv->email,
+                            'rol' => $inv->rol_global->label(),
+                        ];
+                    } else {
+                        $invitacion = [
+                            'email' => $inv->email,
+                            'obra' => $inv->obra->nombre,
+                            'rol' => $inv->rol_obra->label(),
+                        ];
+                    }
                 }
             }
 
             return Inertia::render('auth/register', [
                 'invitacion' => $invitacion,
+                'invitacionGlobal' => $invitacionGlobal,
             ]);
         });
 

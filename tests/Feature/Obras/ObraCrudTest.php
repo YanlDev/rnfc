@@ -2,12 +2,14 @@
 
 use App\Enums\EstadoObra;
 use App\Enums\RolGlobal;
+use App\Models\Certificado;
 use App\Models\Obra;
 use App\Models\User;
 use Database\Seeders\RolesSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 
-uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(RolesSeeder::class);
@@ -106,14 +108,14 @@ it('admin puede actualizar una obra', function () {
 
 it('admin puede eliminar una obra (cascada a certificados)', function () {
     $obra = Obra::factory()->create();
-    $cert = App\Models\Certificado::factory()->create(['obra_id' => $obra->id]);
+    $cert = Certificado::factory()->create(['obra_id' => $obra->id]);
 
     $this->actingAs(adminUser())
         ->delete(route('obras.destroy', $obra))
         ->assertRedirect();
 
     expect(Obra::find($obra->id))->toBeNull();
-    expect(App\Models\Certificado::find($cert->id))->toBeNull();
+    expect(Certificado::find($cert->id))->toBeNull();
 });
 
 it('invitado no puede crear obras', function () {

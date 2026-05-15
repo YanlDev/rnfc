@@ -16,7 +16,7 @@ class QrService
     public function dataUri(string $contenido, int $size = 220): string
     {
         $builder = new Builder(
-            writer: new PngWriter(),
+            writer: new PngWriter,
             data: $contenido,
             encoding: new Encoding('UTF-8'),
             errorCorrectionLevel: ErrorCorrectionLevel::High,

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\TipoAutorCuaderno;
+use App\Models\AsientoCuaderno;
 use App\Models\Obra;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -16,7 +17,7 @@ class StoreAsientoCuadernoRequest extends FormRequest
 
         return $obra instanceof Obra
             && $tipo !== null
-            && ($this->user()?->can('createEn', [\App\Models\AsientoCuaderno::class, $obra, $tipo]) ?? false);
+            && ($this->user()?->can('createEn', [AsientoCuaderno::class, $obra, $tipo]) ?? false);
     }
 
     /**

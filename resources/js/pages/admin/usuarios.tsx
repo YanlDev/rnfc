@@ -9,6 +9,7 @@ import {
     Search,
     ShieldAlert,
     ShieldCheck,
+    UserPlus,
     UserX,
     Users,
 } from 'lucide-react';
@@ -113,6 +114,11 @@ export default function AdminUsuarios({ usuarios, filtros, roles, kpis }: Props)
     const [usuarioRol, setUsuarioRol] = useState<Usuario | null>(null);
     const [nuevoRol, setNuevoRol] = useState<string>('');
 
+    // Modal invitar usuario global
+    const [invitarOpen, setInvitarOpen] = useState(false);
+    const [invitarEmail, setInvitarEmail] = useState('');
+    const [invitarRol, setInvitarRol] = useState<string>('');
+
     useEffect(() => {
         const t = setTimeout(() => {
             router.get(
@@ -160,6 +166,25 @@ export default function AdminUsuarios({ usuarios, filtros, roles, kpis }: Props)
                 },
                 onError: (errors) => {
                     if (errors.rol) toast.error(errors.rol);
+                },
+            },
+        );
+    };
+
+    const confirmarInvitacionGlobal = () => {
+        if (!invitarEmail || !invitarRol) return;
+        router.post(
+            '/admin/invitar',
+            { email: invitarEmail, rol_global: invitarRol },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setInvitarOpen(false);
+                    setInvitarEmail('');
+                    setInvitarRol('');
+                },
+                onError: (errors) => {
+                    if (errors.email) toast.error(errors.email);
                 },
             },
         );
@@ -228,6 +253,10 @@ export default function AdminUsuarios({ usuarios, filtros, roles, kpis }: Props)
                             ))}
                         </SelectContent>
                     </Select>
+                    <Button variant="default" onClick={() => setInvitarOpen(true)}>
+                        <UserPlus className="mr-2 size-4" />
+                        Invitar usuario
+                    </Button>
                 </div>
 
                 {/* Tabla */}
@@ -517,6 +546,76 @@ export default function AdminUsuarios({ usuarios, filtros, roles, kpis }: Props)
                             disabled={!nuevoRol || nuevoRol === usuarioRol?.rol}
                         >
                             Confirmar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* === Modal: invitar usuario global === */}
+            <Dialog
+                open={invitarOpen}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setInvitarOpen(false);
+                        setInvitarEmail('');
+                        setInvitarRol('');
+                    }
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Invitar usuario a la plataforma</DialogTitle>
+                        <DialogDescription>
+                            Envía una invitación por correo para que se registre con un rol
+                            global. El enlace expira en 7 días.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="invitar-email">Correo electrónico</Label>
+                            <Input
+                                id="invitar-email"
+                                type="email"
+                                value={invitarEmail}
+                                onChange={(e) => setInvitarEmail(e.target.value)}
+                                placeholder="correo@ejemplo.com"
+                                autoFocus
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>Rol global</Label>
+                            <Select value={invitarRol} onValueChange={setInvitarRol}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecciona un rol" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {roles.map((r) => (
+                                        <SelectItem key={r.value} value={r.value}>
+                                            {r.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setInvitarOpen(false);
+                                setInvitarEmail('');
+                                setInvitarRol('');
+                            }}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={confirmarInvitacionGlobal}
+                            disabled={!invitarEmail || !invitarRol}
+                        >
+                            Enviar invitación
                         </Button>
                     </DialogFooter>
                 </DialogContent>

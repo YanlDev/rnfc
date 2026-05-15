@@ -63,6 +63,7 @@ class CreateNewUser implements CreatesNewUsers
     /**
      * Si la persona se registra con un correo que tiene invitaciones activas,
      * la vincula a esas obras y marca las invitaciones como aceptadas.
+     * Si la invitación es global, asigna el rol de plataforma.
      */
     private function vincularInvitacionesPendientes(User $user): void
     {
@@ -79,6 +80,14 @@ class CreateNewUser implements CreatesNewUsers
         $invitaciones = $query->get();
 
         foreach ($invitaciones as $invitacion) {
+            if ($invitacion->esGlobal()) {
+                $user->assignRole($invitacion->rol_global->value);
+
+                $invitacion->update(['aceptada_at' => now()]);
+
+                continue;
+            }
+
             $yaVinculado = $invitacion->obra->usuarios()
                 ->where('users.id', $user->id)
                 ->exists();
