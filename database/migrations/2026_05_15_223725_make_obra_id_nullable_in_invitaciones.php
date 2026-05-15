@@ -23,6 +23,7 @@ return new class extends Migration
     {
         Schema::table('invitaciones', function (Blueprint $table) {
             $table->unsignedBigInteger('obra_id')->nullable(false)->change();
+            $table->string('rol_obra')->nullable()->change();  
         });
     }
 };
