@@ -7,6 +7,14 @@ import { logout } from '@/routes';
 import { send } from '@/routes/verification';
 
 export default function VerifyEmail({ status }: { status?: string }) {
+    const handleLogout = () => {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = logout().url;
+        document.body.appendChild(form);
+        form.submit();
+    };
+
     return (
         <>
             <Head title="Verificar correo" />
@@ -26,12 +34,13 @@ export default function VerifyEmail({ status }: { status?: string }) {
                             Reenviar correo de verificación
                         </Button>
 
-                        <TextLink
-                            href={logout()}
-                            className="mx-auto block text-sm"
+                        <button
+                            type="button"
+                            onClick={handleLogout}
+                            className="mx-auto block text-sm text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current dark:decoration-neutral-500"
                         >
                             Cerrar sesión
-                        </TextLink>
+                        </button>
                     </>
                 )}
             </Form>

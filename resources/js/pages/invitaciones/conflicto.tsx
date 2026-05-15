@@ -1,8 +1,9 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { LogOut, ShieldAlert } from 'lucide-react';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { logout } from '@/routes';
 
 type Props = {
     invitacion: { email: string; obra: string };
@@ -14,7 +15,11 @@ export default function InvitacionConflicto({
     usuarioActual,
 }: Props) {
     const cerrarSesion = () => {
-        router.post('/logout');
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = logout().url;
+        document.body.appendChild(form);
+        form.submit();
     };
 
     return (

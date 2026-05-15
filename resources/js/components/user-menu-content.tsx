@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { LogOut, Settings } from 'lucide-react';
 import {
     DropdownMenuGroup,
@@ -19,9 +19,14 @@ type Props = {
 export function UserMenuContent({ user }: Props) {
     const cleanup = useMobileNavigation();
 
-    const handleLogout = () => {
+    const handleLogout = (e: React.MouseEvent) => {
+        e.preventDefault();
         cleanup();
-        router.flushAll();
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = logout().url;
+        document.body.appendChild(form);
+        form.submit();
     };
 
     return (
