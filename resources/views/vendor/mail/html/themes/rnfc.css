@@ -106,7 +106,8 @@ img {
 }
 
 .header img {
-    height: 28px;
+    height: 24px;
+    max-width: 180px;
     width: auto;
 }
 
