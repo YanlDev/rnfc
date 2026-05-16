@@ -21,10 +21,11 @@
     {{-- Footer --}}
     <x-slot:footer>
         <x-mail::footer>
-            RNFC &mdash; Plataforma Web
-            &copy; {{ date('Y') }} RNFC. @lang('Todos los derechos reservados.')
+RNFC — Plataforma Web · Sistema automatizado de gestión
 
-            {{ __('Este correo fue generado automáticamente. Por favor no respondas a este mensaje.') }}
+Este correo fue generado automáticamente. Por favor no respondas a este mensaje.
+
+&copy; {{ date('Y') }} RNFC. @lang('Todos los derechos reservados.')
         </x-mail::footer>
     </x-slot:footer>
 </x-mail::layout>

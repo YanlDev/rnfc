@@ -56,14 +56,14 @@ h3 {
     font-size: 14px;
     font-weight: bold;
     margin-top: 0;
-    text-align: left;
+    text-align: start;
 }
 
 p {
     font-size: 16px;
     line-height: 1.5em;
     margin-top: 0;
-    text-align: left;
+    text-align: start;
 }
 
 p.sub {
@@ -76,16 +76,7 @@ img {
 
 /* Layout */
 
-.wrapper {
-    -premailer-cellpadding: 0;
-    -premailer-cellspacing: 0;
-    -premailer-width: 100%;
-    background-color: #f4f6f9;
-    margin: 0;
-    padding: 0;
-    width: 100%;
-}
-
+.wrapper,
 .content {
     -premailer-cellpadding: 0;
     -premailer-cellspacing: 0;
@@ -93,6 +84,10 @@ img {
     margin: 0;
     padding: 0;
     width: 100%;
+}
+
+.wrapper {
+    background-color: #f4f6f9;
 }
 
 /* Header */
@@ -112,7 +107,6 @@ img {
 
 .header img {
     height: 50px;
-    max-height: 50px;
     width: auto;
 }
 
@@ -190,7 +184,6 @@ img {
 
 .footer-brand img {
     height: 40px;
-    max-height: 40px;
     width: auto;
     opacity: 0.85;
 }
@@ -202,8 +195,21 @@ img {
 
 .footer-isos img {
     height: 48px;
-    max-height: 48px;
     width: auto;
+}
+
+.footer-auto {
+    color: #a1a1aa;
+    font-size: 11px;
+    margin: 6px 0 4px;
+    text-align: center;
+}
+
+.footer-auto-note {
+    color: #a1a1aa;
+    font-size: 11px;
+    margin: 0 0 12px;
+    text-align: center;
 }
 
 /* Tables */
@@ -245,7 +251,6 @@ img {
     padding: 0;
     text-align: center;
     width: 100%;
-    float: unset;
 }
 
 .button {
@@ -278,10 +283,10 @@ img {
 .button-red,
 .button-error {
     background-color: #dc2626;
-    border-bottom: 8px solid #dc2626;
-    border-left: 18px solid #dc2626;
-    border-right: 18px solid #dc2626;
-    border-top: 8px solid #dc2626;
+    border-bottom: 10px solid #dc2626;
+    border-left: 22px solid #dc2626;
+    border-right: 22px solid #dc2626;
+    border-top: 10px solid #dc2626;
 }
 
 /* Panels */

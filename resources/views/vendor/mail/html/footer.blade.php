@@ -4,16 +4,11 @@
 <tr>
 <td class="content-cell" align="center">
 <div class="footer-isos">
-<img src="{{ rtrim(config('app.url'), '/') }}/brand/isos.png" alt="ISO 9001 · ISO 14001 · ISO 37001" style="height: 48px; max-height: 48px; width: auto;">
+<img src="{{ rtrim(config('app.url'), '/') }}/brand/isos.png" alt="ISO 9001 &middot; ISO 14001 &middot; ISO 37001">
 </div>
 
-<p style="color: #a1a1aa; font-size: 11px; margin: 6px 0 4px;">
-RNFC &mdash; Plataforma Web &middot; Sistema automatizado de gesti&oacute;n
-</p>
-
-<p style="color: #a1a1aa; font-size: 11px; margin: 0 0 12px;">
-Este correo fue generado autom&aacute;ticamente. Por favor no respondas a este mensaje.
-</p>
+<p class="footer-auto">RNFC &mdash; Plataforma Web &middot; Sistema automatizado de gesti&oacute;n</p>
+<p class="footer-auto-note">Este correo fue generado autom&aacute;ticamente. Por favor no respondas a este mensaje.</p>
 
 {{ Illuminate\Mail\Markdown::parse($slot) }}
 </td>

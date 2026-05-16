@@ -36,16 +36,12 @@ class InvitacionRecibida extends Notification implements ShouldQueue
     {
         $url = route('obras.show', $this->obra->id);
 
-        $mailMessage = (new MailMessage)
+        return (new MailMessage)
             ->subject("Te agregaron al equipo de la obra: {$this->obra->nombre}")
             ->greeting("Hola {$notifiable->name},")
-            ->line("Has sido agregado(a) al equipo de la obra **{$this->obra->nombre}** como **{$this->rolObra->label()}**.");
-
-        if ($this->invitadoPor) {
-            $mailMessage->line("Invitado por: {$this->invitadoPor->name}");
-        }
-
-        return $mailMessage->action('Ver obra', $url);
+            ->line("Has sido agregado(a) al equipo de la obra **{$this->obra->nombre}** como **{$this->rolObra->label()}**.")
+            ->when($this->invitadoPor, fn (MailMessage $m) => $m->line("Invitado por: {$this->invitadoPor->name}"))
+            ->action('Ver obra', $url);
     }
 
     /**

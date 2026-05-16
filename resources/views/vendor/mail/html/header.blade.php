@@ -2,7 +2,7 @@
 <tr>
 <td class="header">
 <a href="{{ $url }}" style="display: inline-block;">
-<img src="{{ rtrim($url, '/') }}/brand/rnfc-logo.png" alt="RNFC" style="height: 50px; max-height: 50px; width: auto;">
+<img src="{{ rtrim($url, '/') }}/brand/rnfc-logo.png" alt="RNFC">
 </a>
 </td>
 </tr>
