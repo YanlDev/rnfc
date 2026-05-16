@@ -23,7 +23,7 @@ class InvitarGlobalRequest extends FormRequest
     {
         return [
             'email' => ['required', 'email', 'max:255'],
-            'rol_global' => ['required', Rule::enum(RolGlobal::class)],
+            'rol_global' => ['required', Rule::in(RolGlobal::rolesAdministrativos())],
         ];
     }
 

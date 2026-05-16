@@ -48,4 +48,34 @@ class InvitacionGlobalController extends Controller
             "Invitación global enviada a {$email} como {$rolGlobal->label()}. El enlace expira en 7 días.",
         );
     }
+
+    /**
+     * Cancela una invitación global pendiente.
+     */
+    public function cancelar(Invitacion $invitacion): RedirectResponse
+    {
+        abort_unless($invitacion->esGlobal(), 404);
+
+        $invitacion->update(['cancelada_at' => now()]);
+
+        return back()->with('success', 'Invitación global cancelada.');
+    }
+
+    /**
+     * Reenvía una invitación global, renovando token y expiración.
+     */
+    public function reenviar(Invitacion $invitacion): RedirectResponse
+    {
+        abort_unless($invitacion->esGlobal(), 404);
+
+        $invitacion->update([
+            'token' => Invitacion::generarToken(),
+            'expira_at' => now()->addDays(7),
+            'cancelada_at' => null,
+        ]);
+
+        Mail::to($invitacion->email)->send(new InvitacionGlobal($invitacion));
+
+        return back()->with('success', 'Invitación global reenviada.');
+    }
 }

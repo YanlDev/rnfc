@@ -53,6 +53,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('admin.usuarios.rol');
     Route::post('admin/invitar', [InvitacionGlobalController::class, 'store'])
         ->name('admin.invitar');
+    Route::delete('admin/invitaciones/{invitacion}', [InvitacionGlobalController::class, 'cancelar'])
+        ->name('admin.invitaciones.cancelar');
+    Route::post('admin/invitaciones/{invitacion}/reenviar', [InvitacionGlobalController::class, 'reenviar'])
+        ->name('admin.invitaciones.reenviar');
 
     // Obras
     Route::resource('obras', ObraController::class);

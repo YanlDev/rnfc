@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\RolGlobal;
 use App\Http\Controllers\Controller;
+use App\Models\Invitacion;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -110,7 +111,27 @@ class UsuariosController extends Controller implements HasMiddleware
                 'value' => $r->value,
                 'label' => $r->label(),
             ])->all(),
+            'rolesGlobales' => collect(RolGlobal::rolesAdministrativos())->map(fn (string $r) => [
+                'value' => $r,
+                'label' => RolGlobal::from($r)->label(),
+            ])->all(),
             'kpis' => $kpis,
+            'invitacionesPendientes' => Invitacion::with('invitador:id,name')
+                ->whereNotNull('rol_global')
+                ->whereNull('aceptada_at')
+                ->whereNull('cancelada_at')
+                ->where('expira_at', '>', now())
+                ->latest()
+                ->get()
+                ->map(fn (Invitacion $i) => [
+                    'id' => $i->id,
+                    'email' => $i->email,
+                    'rol_global' => $i->rol_global->value,
+                    'rol_global_label' => $i->rol_global->label(),
+                    'expira_at' => $i->expira_at->toIso8601String(),
+                    'invitador' => $i->invitador?->name,
+                ])
+                ->all(),
         ]);
     }
 

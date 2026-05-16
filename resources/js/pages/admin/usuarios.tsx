@@ -6,9 +6,11 @@ import {
     Mail,
     MoreVertical,
     Power,
+    RotateCcw,
     Search,
     ShieldAlert,
     ShieldCheck,
+    Trash2,
     UserPlus,
     UserX,
     Users,
@@ -63,6 +65,15 @@ type Usuario = {
 
 type RolOpcion = { value: string; label: string };
 
+type InvitacionPendienteGlobal = {
+    id: number;
+    email: string;
+    rol_global: string;
+    rol_global_label: string;
+    expira_at: string;
+    invitador: string | null;
+};
+
 type Paginado<T> = {
     data: T[];
     links: { url: string | null; label: string; active: boolean }[];
@@ -79,12 +90,14 @@ type Props = {
     usuarios: Paginado<Usuario>;
     filtros: { q: string; estado: string; rol: string };
     roles: RolOpcion[];
+    rolesGlobales: RolOpcion[];
     kpis: {
         total: number;
         activos: number;
         desactivados: number;
         admins: number;
     };
+    invitacionesPendientes: InvitacionPendienteGlobal[];
 };
 
 const ROL_COLOR: Record<string, string> = {
@@ -101,7 +114,7 @@ const ROL_COLOR: Record<string, string> = {
         'bg-slate-100 text-slate-700 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300',
 };
 
-export default function AdminUsuarios({ usuarios, filtros, roles, kpis }: Props) {
+export default function AdminUsuarios({ usuarios, filtros, roles, rolesGlobales, kpis, invitacionesPendientes }: Props) {
     const [busqueda, setBusqueda] = useState(filtros.q);
     const [estado, setEstado] = useState(filtros.estado);
     const [rol, setRol] = useState(filtros.rol);
@@ -190,6 +203,21 @@ export default function AdminUsuarios({ usuarios, filtros, roles, kpis }: Props)
         );
     };
 
+    const cancelarGlobal = (invitacion: InvitacionPendienteGlobal) => {
+        if (!confirm(`¿Cancelar la invitación a ${invitacion.email}?`)) return;
+        router.delete(`/admin/invitaciones/${invitacion.id}`, {
+            preserveScroll: true,
+        });
+    };
+
+    const reenviarGlobal = (invitacion: InvitacionPendienteGlobal) => {
+        router.post(
+            `/admin/invitaciones/${invitacion.id}/reenviar`,
+            {},
+            { preserveScroll: true },
+        );
+    };
+
     return (
         <>
             <Head title="Usuarios" />
@@ -258,6 +286,59 @@ export default function AdminUsuarios({ usuarios, filtros, roles, kpis }: Props)
                         Invitar usuario
                     </Button>
                 </div>
+
+                {/* Invitaciones globales pendientes */}
+                {invitacionesPendientes.length > 0 && (
+                    <Card>
+                        <CardContent className="space-y-2 p-4">
+                            <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                                Invitaciones globales pendientes
+                            </h3>
+                            <ul className="divide-y divide-border rounded-md border border-dashed border-border">
+                                {invitacionesPendientes.map((i) => (
+                                    <li
+                                        key={i.id}
+                                        className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"
+                                    >
+                                        <div>
+                                            <div className="flex items-center gap-2 text-sm font-medium">
+                                                <Mail className="size-4 text-muted-foreground" />
+                                                {i.email}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                                {i.rol_global_label} · Expira el{' '}
+                                                {new Date(i.expira_at).toLocaleDateString(
+                                                    'es-PE',
+                                                )}
+                                                {i.invitador && (
+                                                    <> · Invitó {i.invitador}</>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => reenviarGlobal(i)}
+                                                title="Reenviar"
+                                            >
+                                                <RotateCcw className="size-4" />
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => cancelarGlobal(i)}
+                                                title="Cancelar"
+                                            >
+                                                <Trash2 className="size-4 text-destructive" />
+                                            </Button>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Tabla */}
                 {usuarios.data.length === 0 ? (
@@ -590,7 +671,7 @@ export default function AdminUsuarios({ usuarios, filtros, roles, kpis }: Props)
                                     <SelectValue placeholder="Selecciona un rol" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {roles.map((r) => (
+                                    {rolesGlobales.map((r) => (
                                         <SelectItem key={r.value} value={r.value}>
                                             {r.label}
                                         </SelectItem>
