@@ -16,5 +16,5 @@
 
 Puedes responder directamente a este correo para contactar al remitente.
 
-**RNFC Consultor de Obras**
+**RNFC**
 </x-mail::message>

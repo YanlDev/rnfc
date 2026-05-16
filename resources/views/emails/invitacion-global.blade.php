@@ -6,7 +6,7 @@
 @else
 Has sido invitado(a)
 @endif
-a colaborar en la plataforma **RNFC Consultor de Obras** con el rol de:
+a colaborar en la plataforma **RNFC** con el rol de:
 
 **{{ $rol }}**
 
@@ -20,5 +20,5 @@ guiaremos para crearla con este mismo correo y se te asignará el rol correspond
 Este enlace expira el **{{ $invitacion->expira_at->format('d/m/Y H:i') }}**.
 
 Gracias,<br>
-**RNFC Consultor de Obras**
+**RNFC**
 </x-mail::message>

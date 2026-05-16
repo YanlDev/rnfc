@@ -4,6 +4,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Mail Theme
+    |--------------------------------------------------------------------------
+    |
+    | Here you may specify the CSS theme that should be used when sending
+    | HTML emails. Themes are located in resources/views/vendor/mail/html/themes.
+    |
+    */
+
+    'theme' => 'rnfc',
+
+    /*
+    |--------------------------------------------------------------------------
     | Default Mailer
     |--------------------------------------------------------------------------
     |

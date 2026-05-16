@@ -38,7 +38,7 @@ class DocumentoSubido extends Notification implements ShouldQueue
             ->line("**{$this->documento->nombre_original}**")
             ->when($this->autorNombre, fn ($m) => $m->line("Subido por {$this->autorNombre}."))
             ->action('Ver documentos', $url)
-            ->line('Gracias por usar RNFC Consultor de Obras.');
+            ->line('Este es un mensaje autom&aacute;tico de RNFC.');
     }
 
     /**

@@ -26,5 +26,5 @@ a la obra.
 Este enlace expira el **{{ $invitacion->expira_at->format('d/m/Y H:i') }}**.
 
 Gracias,<br>
-**RNFC Consultor de Obras**
+**RNFC**
 </x-mail::message>

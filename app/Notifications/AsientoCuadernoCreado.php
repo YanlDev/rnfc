@@ -35,7 +35,7 @@ class AsientoCuadernoCreado extends Notification implements ShouldQueue
             ->line("Se registró el asiento **N° {$this->asiento->numero}** en el cuaderno de {$this->asiento->tipo_autor->labelCorto()} de la obra **{$obra->nombre}**.")
             ->line("Fecha del asiento: {$this->asiento->fecha->format('d/m/Y')}")
             ->action('Ver cuaderno', $url)
-            ->line('Gracias por usar RNFC Consultor de Obras.');
+            ->line('Este es un mensaje autom&aacute;tico de RNFC.');
     }
 
     /**
