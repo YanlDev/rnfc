@@ -194,6 +194,43 @@ it('reenviar reactiva una invitación global previamente cancelada', function ()
     Mail::assertQueued(InvitacionGlobal::class, fn ($m) => $m->hasTo('reactivar@externo.com'));
 });
 
+it('un no-admin no puede cancelar invitaciones globales', function (string $rol) {
+    $inv = Invitacion::create([
+        'email' => 'protegida@externo.com',
+        'rol_global' => RolGlobal::Admin->value,
+        'token' => Invitacion::generarToken(),
+        'expira_at' => now()->addDays(7),
+    ]);
+
+    $this->actingAs(usuarioConRol(RolGlobal::from($rol)))
+        ->delete(route('admin.invitaciones.cancelar', $inv))
+        ->assertForbidden();
+
+    expect($inv->fresh()->cancelada_at)->toBeNull();
+})->with([
+    RolGlobal::Residente->value,
+    RolGlobal::Ingeniero->value,
+    RolGlobal::Invitado->value,
+]);
+
+it('un no-admin no puede reenviar invitaciones globales', function () {
+    $tokenOriginal = Invitacion::generarToken();
+    $inv = Invitacion::create([
+        'email' => 'protegida2@externo.com',
+        'rol_global' => RolGlobal::Admin->value,
+        'token' => $tokenOriginal,
+        'expira_at' => now()->addDays(7),
+    ]);
+
+    $this->actingAs(usuarioConRol(RolGlobal::Ingeniero))
+        ->post(route('admin.invitaciones.reenviar', $inv))
+        ->assertForbidden();
+
+    // El token no debe haberse regenerado ni reenviado el correo.
+    expect($inv->fresh()->token)->toBe($tokenOriginal);
+    Mail::assertNothingQueued();
+});
+
 it('no se puede cancelar una invitación que no es global', function () {
     $adminUser = admin();
 

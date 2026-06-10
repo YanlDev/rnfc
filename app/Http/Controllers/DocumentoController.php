@@ -10,6 +10,7 @@ use App\Notifications\DocumentoSubido;
 use App\Services\DocumentoService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -58,6 +59,14 @@ class DocumentoController extends Controller
         $this->authorize('delete', $documento);
 
         $nombre = $documento->nombre_original;
+
+        Log::info('Documento eliminado', [
+            'documento_id' => $documento->id,
+            'obra_id' => $obra->id,
+            'nombre' => $nombre,
+            'por' => request()->user()?->id,
+        ]);
+
         $this->service->eliminar($documento);
 
         return back()->with('success', "Documento «{$nombre}» eliminado.");
@@ -68,7 +77,10 @@ class DocumentoController extends Controller
         abort_unless($documento->obra_id === $obra->id, 404);
         $this->authorize('view', $documento);
 
-        return Storage::disk('documentos')->download(
+        $disk = Storage::disk('documentos');
+        abort_unless($disk->exists($documento->archivo_path), 404, 'El archivo ya no está disponible.');
+
+        return $disk->download(
             $documento->archivo_path,
             $documento->nombre_original,
         );
@@ -100,6 +112,7 @@ class DocumentoController extends Controller
         $this->authorize('view', $documento);
 
         $disk = Storage::disk('documentos');
+        abort_unless($disk->exists($documento->archivo_path), 404, 'El archivo ya no está disponible.');
 
         return $disk->response(
             $documento->archivo_path,

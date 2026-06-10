@@ -8,10 +8,32 @@ use App\Http\Requests\InvitarGlobalRequest;
 use App\Mail\InvitacionGlobal;
 use App\Models\Invitacion;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Mail;
 
-class InvitacionGlobalController extends Controller
+class InvitacionGlobalController extends Controller implements HasMiddleware
 {
+    /**
+     * Todas las acciones de invitaciones globales son exclusivas de roles
+     * administrativos. `store` ya lo valida vía InvitarGlobalRequest, pero
+     * `cancelar` y `reenviar` no tenían gate: lo centralizamos aquí.
+     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware(function (Request $request, \Closure $next) {
+                abort_unless(
+                    $request->user()?->hasAnyRole(RolGlobal::rolesAdministrativos()),
+                    403,
+                );
+
+                return $next($request);
+            }),
+        ];
+    }
+
     /**
      * Envía una invitación global (rol de plataforma) a un correo que no tiene cuenta.
      */

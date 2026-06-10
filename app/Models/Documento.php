@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Bytes;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -73,17 +74,6 @@ class Documento extends Model
 
     public function tamanoFormateado(): string
     {
-        $bytes = (int) $this->tamano;
-        if ($bytes < 1024) {
-            return $bytes.' B';
-        }
-        if ($bytes < 1024 ** 2) {
-            return number_format($bytes / 1024, 1).' KB';
-        }
-        if ($bytes < 1024 ** 3) {
-            return number_format($bytes / (1024 ** 2), 1).' MB';
-        }
-
-        return number_format($bytes / (1024 ** 3), 2).' GB';
+        return Bytes::humano((int) $this->tamano);
     }
 }

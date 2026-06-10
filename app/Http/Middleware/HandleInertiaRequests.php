@@ -41,9 +41,17 @@ class HandleInertiaRequests extends Middleware
         $userArray = null;
 
         if ($user) {
-            $userArray = $user->toArray();
-            $userArray['rol_global'] = $user->roles->first()?->name;
-            $userArray['es_admin'] = $user->hasAnyRole(RolGlobal::rolesAdministrativos());
+            // Whitelist explícita: sólo exponemos al frontend los campos que la
+            // UI necesita, en vez de volcar toda la fila con $user->toArray().
+            $userArray = [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'email_verified_at' => $user->email_verified_at?->toIso8601String(),
+                'two_factor_confirmed_at' => $user->two_factor_confirmed_at?->toIso8601String(),
+                'rol_global' => $user->roles->first()?->name,
+                'es_admin' => $user->hasAnyRole(RolGlobal::rolesAdministrativos()),
+            ];
         }
 
         return [

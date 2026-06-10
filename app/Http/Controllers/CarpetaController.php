@@ -8,9 +8,9 @@ use App\Http\Requests\UpdateCarpetaRequest;
 use App\Models\Carpeta;
 use App\Models\Documento;
 use App\Models\Obra;
+use App\Services\CarpetaService;
 use App\Services\PlantillaCarpetasService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -116,53 +116,19 @@ class CarpetaController extends Controller
         return back()->with('success', "Carpeta «{$data['nombre']}» creada.");
     }
 
-    public function update(UpdateCarpetaRequest $request, Obra $obra, Carpeta $carpeta): RedirectResponse
-    {
+    public function update(
+        UpdateCarpetaRequest $request,
+        Obra $obra,
+        Carpeta $carpeta,
+        CarpetaService $service,
+    ): RedirectResponse {
         abort_unless($carpeta->obra_id === $obra->id, 404);
 
-        $nuevoNombre = $request->validated('nombre');
-        $nuevoSlug = Carpeta::slugify($nuevoNombre);
-        $parentRuta = $carpeta->parent_id
-            ? Carpeta::where('id', $carpeta->parent_id)->value('ruta')
-            : null;
-        $nuevaRuta = $parentRuta ? "{$parentRuta}/{$nuevoSlug}" : $nuevoSlug;
+        $cambio = $service->renombrar($carpeta, $request->validated('nombre'));
 
-        // Si no cambia la ruta efectiva, sólo actualizamos el nombre.
-        if ($nuevaRuta === $carpeta->ruta && $nuevoNombre === $carpeta->nombre) {
-            return back();
-        }
-
-        // Verificar conflicto: que la nueva ruta no exista ya en la obra.
-        $existe = Carpeta::where('obra_id', $obra->id)
-            ->where('ruta', $nuevaRuta)
-            ->where('id', '!=', $carpeta->id)
-            ->exists();
-        if ($existe) {
-            return back()->withErrors([
-                'nombre' => 'Ya existe una carpeta con ese nombre en la misma ubicación.',
-            ]);
-        }
-
-        DB::transaction(function () use ($carpeta, $nuevoNombre, $nuevaRuta) {
-            $rutaVieja = $carpeta->ruta;
-            $carpeta->update(['nombre' => $nuevoNombre, 'ruta' => $nuevaRuta]);
-
-            // Recalcular la ruta de TODOS los descendientes reemplazando
-            // el prefijo viejo por el nuevo. Esto mantiene la metadata
-            // organizativa; los archivos físicos no se mueven (archivo_path
-            // queda con su ubicación original — el carpeta_id es la fuente
-            // de verdad lógica).
-            Carpeta::where('obra_id', $carpeta->obra_id)
-                ->where('ruta', 'like', $rutaVieja.'/%')
-                ->get()
-                ->each(function (Carpeta $hijo) use ($rutaVieja, $nuevaRuta) {
-                    $hijo->update([
-                        'ruta' => $nuevaRuta.substr($hijo->ruta, strlen($rutaVieja)),
-                    ]);
-                });
-        });
-
-        return back()->with('success', 'Carpeta renombrada.');
+        return $cambio
+            ? back()->with('success', 'Carpeta renombrada.')
+            : back();
     }
 
     public function destroy(Obra $obra, Carpeta $carpeta): RedirectResponse

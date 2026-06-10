@@ -14,8 +14,13 @@ class Certificado extends Model
     /** @use HasFactory<CertificadoFactory> */
     use HasFactory, SoftDeletes;
 
+    /**
+     * Campos asignables por el usuario al emitir un certificado.
+     * Los campos generados por el servidor (codigo, hash_verificacion,
+     * emitido_por, revocado_at) se asignan SIEMPRE de forma explícita en el
+     * controlador para impedir su falsificación vía mass assignment.
+     */
     protected $fillable = [
-        'codigo',
         'tipo',
         'beneficiario_nombre',
         'beneficiario_documento',
@@ -32,10 +37,7 @@ class Certificado extends Model
         'emisor_cargo',
         'emisor_cip',
         'fecha_emision',
-        'hash_verificacion',
-        'revocado_at',
         'motivo_revocacion',
-        'emitido_por',
     ];
 
     protected function casts(): array
@@ -74,6 +76,28 @@ class Certificado extends Model
     public function emisor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'emitido_por');
+    }
+
+    /**
+     * Documento del beneficiario enmascarado para superficies públicas
+     * (página de verificación): deja visibles sólo los dos primeros y los
+     * dos últimos caracteres. Ej: "12345678" -> "12••••78".
+     */
+    public function getBeneficiarioDocumentoEnmascaradoAttribute(): ?string
+    {
+        $doc = trim((string) $this->beneficiario_documento);
+
+        if ($doc === '') {
+            return null;
+        }
+
+        if (mb_strlen($doc) <= 4) {
+            return str_repeat('•', mb_strlen($doc));
+        }
+
+        return mb_substr($doc, 0, 2)
+            .str_repeat('•', mb_strlen($doc) - 4)
+            .mb_substr($doc, -2);
     }
 
     public function estaVigente(): bool

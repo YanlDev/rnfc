@@ -12,6 +12,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -76,23 +77,26 @@ class UsuariosController extends Controller implements HasMiddleware
 
         return Inertia::render('admin/usuarios', [
             'usuarios' => [
-                'data' => $usuarios->getCollection()->map(fn (User $u) => [
-                    'id' => $u->id,
-                    'name' => $u->name,
-                    'email' => $u->email,
-                    'rol' => $u->roles->first()?->name,
-                    'rol_label' => $u->roles->first()
-                        ? RolGlobal::from($u->roles->first()->name)->label()
-                        : '—',
-                    'obras_count' => $u->obras_count,
-                    'last_login_at' => $u->last_login_at?->format('Y-m-d H:i'),
-                    'activo' => $u->estaActivo(),
-                    'desactivado_at' => $u->desactivado_at?->format('Y-m-d H:i'),
-                    'desactivado_por' => $u->desactivadoPor?->name,
-                    'motivo_desactivacion' => $u->motivo_desactivacion,
-                    'created_at' => $u->created_at?->format('Y-m-d'),
-                    'es_yo' => $u->id === Auth::id(),
-                ])->all(),
+                'data' => $usuarios->getCollection()->map(function (User $u) {
+                    $rolNombre = $u->roles->first()?->name;
+                    $rolEnum = $rolNombre ? RolGlobal::tryFrom($rolNombre) : null;
+
+                    return [
+                        'id' => $u->id,
+                        'name' => $u->name,
+                        'email' => $u->email,
+                        'rol' => $rolNombre,
+                        'rol_label' => $rolEnum?->label() ?? '—',
+                        'obras_count' => $u->obras_count,
+                        'last_login_at' => $u->last_login_at?->format('Y-m-d H:i'),
+                        'activo' => $u->estaActivo(),
+                        'desactivado_at' => $u->desactivado_at?->format('Y-m-d H:i'),
+                        'desactivado_por' => $u->desactivadoPor?->name,
+                        'motivo_desactivacion' => $u->motivo_desactivacion,
+                        'created_at' => $u->created_at?->format('Y-m-d'),
+                        'es_yo' => $u->id === Auth::id(),
+                    ];
+                })->all(),
                 'links' => $usuarios->linkCollection()->all(),
                 'meta' => [
                     'current_page' => $usuarios->currentPage(),
@@ -176,6 +180,12 @@ class UsuariosController extends Controller implements HasMiddleware
                 ->where('user_id', $usuario->id)
                 ->delete();
 
+            Log::warning('Usuario desactivado', [
+                'usuario_id' => $usuario->id,
+                'por' => $request->user()->id,
+                'motivo' => $request->input('motivo'),
+            ]);
+
             $mensaje = "Usuario {$usuario->name} desactivado.";
         } else {
             $usuario->forceFill([
@@ -183,6 +193,11 @@ class UsuariosController extends Controller implements HasMiddleware
                 'desactivado_por' => null,
                 'motivo_desactivacion' => null,
             ])->save();
+
+            Log::info('Usuario reactivado', [
+                'usuario_id' => $usuario->id,
+                'por' => $request->user()->id,
+            ]);
 
             $mensaje = "Usuario {$usuario->name} reactivado.";
         }
@@ -221,6 +236,13 @@ class UsuariosController extends Controller implements HasMiddleware
         }
 
         $usuario->syncRoles([$nuevoRol]);
+
+        Log::info('Rol global actualizado', [
+            'usuario_id' => $usuario->id,
+            'rol_anterior' => $rolActual,
+            'rol_nuevo' => $nuevoRol,
+            'por' => $request->user()->id,
+        ]);
 
         return redirect()->route('admin.usuarios.index')
             ->with('success', "Rol de {$usuario->name} actualizado a ".RolGlobal::from($nuevoRol)->label().'.');

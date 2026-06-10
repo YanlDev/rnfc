@@ -8,6 +8,7 @@ use App\Http\Requests\StoreAsientoCuadernoRequest;
 use App\Models\AsientoCuaderno;
 use App\Models\Obra;
 use App\Notifications\AsientoCuadernoCreado;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -38,18 +39,21 @@ class AsientoCuadernoController extends Controller
             ->map(fn (AsientoCuaderno $a) => $this->serializar($a))
             ->all();
 
-        $resumenPorTipo = collect(TipoAutorCuaderno::cases())->map(function (TipoAutorCuaderno $t) use ($obra) {
-            $total = AsientoCuaderno::where('obra_id', $obra->id)
-                ->where('tipo_autor', $t->value)
-                ->count();
+        // Conteo de todos los tipos en una sola consulta agregada (evita una
+        // query por cada caso del enum).
+        $totales = AsientoCuaderno::query()
+            ->where('obra_id', $obra->id)
+            ->selectRaw('tipo_autor, count(*) as total')
+            ->groupBy('tipo_autor')
+            ->pluck('total', 'tipo_autor')
+            ->all();
 
-            return [
-                'value' => $t->value,
-                'label' => $t->label(),
-                'label_corto' => $t->labelCorto(),
-                'total' => $total,
-            ];
-        })->all();
+        $resumenPorTipo = collect(TipoAutorCuaderno::cases())->map(fn (TipoAutorCuaderno $t) => [
+            'value' => $t->value,
+            'label' => $t->label(),
+            'label_corto' => $t->labelCorto(),
+            'total' => (int) ($totales[$t->value] ?? 0),
+        ])->all();
 
         return Inertia::render('obras/cuaderno/index', [
             'obra' => [
@@ -71,32 +75,33 @@ class AsientoCuadernoController extends Controller
         $data = $request->validated();
         $tipo = TipoAutorCuaderno::from($data['tipo_autor']);
 
-        $asiento = DB::transaction(function () use ($obra, $tipo, $data, $request) {
-            $asiento = new AsientoCuaderno([
-                'obra_id' => $obra->id,
-                'tipo_autor' => $tipo->value,
-                'fecha' => $data['fecha'],
-                'contenido' => $data['contenido'],
-                'autor_id' => $request->user()?->id,
-            ]);
-            $asiento->numero = AsientoCuaderno::siguienteNumero($obra->id, $tipo);
+        // 1. Si hay archivo, lo persistimos en disco ANTES de la BD (filesystem
+        //    no transaccional). Guardamos la metadata para reusarla en reintentos.
+        $archivoMeta = null;
+        if ($archivo = $request->file('archivo')) {
+            $ext = strtolower($archivo->getClientOriginalExtension()) ?: 'bin';
+            $nombre = Str::ulid().'.'.$ext;
+            $directorio = "obras/{$obra->id}/_cuaderno/{$tipo->value}";
+            $ruta = Storage::disk(self::DISCO)->putFileAs($directorio, $archivo, $nombre);
 
-            if ($archivo = $request->file('archivo')) {
-                $ext = strtolower($archivo->getClientOriginalExtension()) ?: 'bin';
-                $nombre = Str::ulid().'.'.$ext;
-                $directorio = "obras/{$obra->id}/_cuaderno/{$tipo->value}";
-                $ruta = Storage::disk(self::DISCO)->putFileAs($directorio, $archivo, $nombre);
+            abort_if($ruta === false || $ruta === '', 500, 'No se pudo almacenar el archivo del asiento.');
 
-                $asiento->archivo_path = $ruta;
-                $asiento->archivo_nombre_original = $archivo->getClientOriginalName();
-                $asiento->archivo_mime = $archivo->getMimeType() ?? 'application/octet-stream';
-                $asiento->archivo_tamano = $archivo->getSize() ?? 0;
+            $archivoMeta = [
+                'archivo_path' => $ruta,
+                'archivo_nombre_original' => $archivo->getClientOriginalName(),
+                'archivo_mime' => $archivo->getMimeType() ?? 'application/octet-stream',
+                'archivo_tamano' => $archivo->getSize() ?? 0,
+            ];
+        }
+
+        try {
+            $asiento = $this->guardarConNumeroSecuencial($obra, $tipo, $data, $archivoMeta, $request->user()?->id);
+        } catch (\Throwable $e) {
+            if ($archivoMeta) {
+                Storage::disk(self::DISCO)->delete($archivoMeta['archivo_path']);
             }
-
-            $asiento->save();
-
-            return $asiento;
-        });
+            throw $e;
+        }
 
         // Notificar a miembros de la obra (excepto al autor).
         $miembros = $obra->usuarios()
@@ -109,6 +114,49 @@ class AsientoCuadernoController extends Controller
         return redirect()
             ->route('obras.cuaderno.index', ['obra' => $obra->id, 'tipo' => $tipo->value])
             ->with('success', 'Asiento registrado.');
+    }
+
+    /**
+     * Guarda el asiento calculando el siguiente número de forma secuencial.
+     * La constraint unique(obra_id, tipo_autor, numero) garantiza integridad
+     * ante concurrencia; aquí reintentamos un par de veces si dos asientos
+     * simultáneos colisionan, en lugar de devolver un 500.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>|null  $archivoMeta
+     */
+    private function guardarConNumeroSecuencial(
+        Obra $obra,
+        TipoAutorCuaderno $tipo,
+        array $data,
+        ?array $archivoMeta,
+        ?int $autorId,
+    ): AsientoCuaderno {
+        $intentos = 0;
+
+        do {
+            try {
+                return DB::transaction(function () use ($obra, $tipo, $data, $archivoMeta, $autorId) {
+                    $asiento = new AsientoCuaderno([
+                        'obra_id' => $obra->id,
+                        'tipo_autor' => $tipo->value,
+                        'fecha' => $data['fecha'],
+                        'contenido' => $data['contenido'],
+                        'autor_id' => $autorId,
+                        ...($archivoMeta ?? []),
+                    ]);
+                    $asiento->numero = AsientoCuaderno::siguienteNumero($obra->id, $tipo);
+                    $asiento->save();
+
+                    return $asiento;
+                });
+            } catch (QueryException $e) {
+                // 23505 (Postgres) / 23000 (MySQL) = violación de unicidad.
+                if (! in_array($e->getCode(), ['23505', '23000'], true) || ++$intentos >= 3) {
+                    throw $e;
+                }
+            }
+        } while (true);
     }
 
     public function destroy(Obra $obra, AsientoCuaderno $asiento): RedirectResponse
@@ -127,7 +175,10 @@ class AsientoCuadernoController extends Controller
         $this->authorize('view', $asiento);
         abort_unless($asiento->tieneArchivo(), 404);
 
-        return Storage::disk(self::DISCO)->download(
+        $disk = Storage::disk(self::DISCO);
+        abort_unless($disk->exists($asiento->archivo_path), 404, 'El archivo ya no está disponible.');
+
+        return $disk->download(
             $asiento->archivo_path,
             $asiento->archivo_nombre_original ?? 'asiento.pdf',
         );
@@ -139,7 +190,10 @@ class AsientoCuadernoController extends Controller
         $this->authorize('view', $asiento);
         abort_unless($asiento->tieneArchivo(), 404);
 
-        return Storage::disk(self::DISCO)->response(
+        $disk = Storage::disk(self::DISCO);
+        abort_unless($disk->exists($asiento->archivo_path), 404, 'El archivo ya no está disponible.');
+
+        return $disk->response(
             $asiento->archivo_path,
             $asiento->archivo_nombre_original ?? 'asiento.pdf',
             ['Content-Type' => $asiento->archivo_mime ?? 'application/pdf'],

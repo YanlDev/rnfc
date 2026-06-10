@@ -448,7 +448,7 @@
 
                                 @if ($certificado->beneficiario_documento)
                                     <dt>DNI / Documento</dt>
-                                    <dd>{{ $certificado->beneficiario_documento }}</dd>
+                                    <dd>{{ $certificado->beneficiario_documento_enmascarado }}</dd>
                                 @endif
 
                                 @if ($certificado->beneficiario_profesion)

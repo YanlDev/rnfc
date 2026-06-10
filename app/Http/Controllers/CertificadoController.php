@@ -13,6 +13,8 @@ use App\Services\BrandingService;
 use App\Services\QrService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -159,13 +161,25 @@ class CertificadoController extends Controller
         return view('certificados.template', $this->datosTemplate($certificado, $qr, $branding));
     }
 
-    public function revocar(Certificado $certificado): RedirectResponse
+    public function revocar(Request $request, Certificado $certificado): RedirectResponse
     {
         $this->authorize('delete', $certificado);
 
-        $certificado->update([
+        $validated = $request->validate([
+            'motivo' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        // revocado_at no es fillable (campo server-only): se asigna directo.
+        $certificado->forceFill([
             'revocado_at' => now(),
-            'motivo_revocacion' => request('motivo'),
+            'motivo_revocacion' => $validated['motivo'] ?? null,
+        ])->save();
+
+        Log::info('Certificado revocado', [
+            'certificado_id' => $certificado->id,
+            'codigo' => $certificado->codigo,
+            'revocado_por' => $request->user()?->id,
+            'motivo' => $validated['motivo'] ?? null,
         ]);
 
         // Notificar in-app a todos los administradores (auditoría interna).
