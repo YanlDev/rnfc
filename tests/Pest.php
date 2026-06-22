@@ -16,7 +16,11 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
-    ->beforeEach(fn () => $this->seed(RolesSeeder::class))
+    ->beforeEach(function () {
+        $this->seed(RolesSeeder::class);
+        // La matriz de permisos se cachea; limpiar entre tests evita fugas de estado.
+        Cache::forget('permisos_obra_map');
+    })
     ->in('Feature');
 
 /*
@@ -56,6 +60,7 @@ use App\Enums\RolObra;
 use App\Models\Obra;
 use App\Models\User;
 use Database\Seeders\RolesSeeder;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Crea un usuario con un rol global dado y email verificado.
@@ -81,11 +86,11 @@ function admin(): User
 
 /**
  * Crea un usuario asignado a una obra con un rol_obra específico.
- * El rol global queda como Ingeniero por defecto (no tiene visión global).
+ * El rol global queda como Usuario por defecto (sin visión global).
  */
 function usuarioEnObra(Obra $obra, RolObra $rolObra, ?RolGlobal $rolGlobal = null): User
 {
-    $u = usuarioConRol($rolGlobal ?? RolGlobal::Ingeniero);
+    $u = usuarioConRol($rolGlobal ?? RolGlobal::Usuario);
 
     $obra->usuarios()->attach($u->id, [
         'rol_obra' => $rolObra->value,

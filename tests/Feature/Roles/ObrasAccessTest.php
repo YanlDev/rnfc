@@ -24,19 +24,19 @@ it('admin ve el listado de obras', function () {
 });
 
 it('gerente general ve el listado de obras', function () {
-    $this->actingAs(usuarioConRol(RolGlobal::GerenteGeneral))
+    $this->actingAs(usuarioConRol(RolGlobal::Admin))
         ->get(route('obras.index'))
         ->assertOk();
 });
 
 it('ingeniero puede entrar al listado (verá solo las suyas)', function () {
-    $this->actingAs(usuarioConRol(RolGlobal::Ingeniero))
+    $this->actingAs(usuarioConRol(RolGlobal::Usuario))
         ->get(route('obras.index'))
         ->assertOk();
 });
 
 it('invitado puede entrar al listado (verá solo aquellas a las que fue invitado)', function () {
-    $this->actingAs(usuarioConRol(RolGlobal::Invitado))
+    $this->actingAs(usuarioConRol(RolGlobal::Usuario))
         ->get(route('obras.index'))
         ->assertOk();
 });
@@ -52,14 +52,14 @@ it('admin puede ver cualquier obra', function () {
 
 it('ingeniero NO puede ver una obra ajena', function () {
     $obra = Obra::factory()->create();
-    $this->actingAs(usuarioConRol(RolGlobal::Ingeniero))
+    $this->actingAs(usuarioConRol(RolGlobal::Usuario))
         ->get(route('obras.show', $obra))
         ->assertForbidden();
 });
 
 it('administrador de obra puede ver su obra', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::AdministradorObra);
+    $user = usuarioEnObra($obra, RolObra::Administrador);
 
     $this->actingAs($user)
         ->get(route('obras.show', $obra))
@@ -68,7 +68,7 @@ it('administrador de obra puede ver su obra', function () {
 
 it('invitado de obra puede ver la obra a la que fue invitado', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::Invitado, RolGlobal::Invitado);
+    $user = usuarioEnObra($obra, RolObra::Asistente, RolGlobal::Usuario);
 
     $this->actingAs($user)
         ->get(route('obras.show', $obra))
@@ -84,20 +84,20 @@ it('admin puede crear obras', function () {
 });
 
 it('gerente general puede crear obras', function () {
-    $this->actingAs(usuarioConRol(RolGlobal::GerenteGeneral))
+    $this->actingAs(usuarioConRol(RolGlobal::Admin))
         ->get(route('obras.create'))
         ->assertOk();
 });
 
 it('ingeniero NO puede crear obras', function () {
-    $this->actingAs(usuarioConRol(RolGlobal::Ingeniero))
+    $this->actingAs(usuarioConRol(RolGlobal::Usuario))
         ->get(route('obras.create'))
         ->assertForbidden();
 });
 
 it('administrador de obra NO puede crear obras nuevas (solo edita la suya)', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::AdministradorObra);
+    $user = usuarioEnObra($obra, RolObra::Administrador);
 
     $this->actingAs($user)
         ->get(route('obras.create'))
@@ -108,7 +108,7 @@ it('administrador de obra NO puede crear obras nuevas (solo edita la suya)', fun
 
 it('administrador de obra puede editar su obra', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::AdministradorObra);
+    $user = usuarioEnObra($obra, RolObra::Administrador);
 
     $this->actingAs($user)
         ->get(route('obras.edit', $obra))
@@ -118,7 +118,7 @@ it('administrador de obra puede editar su obra', function () {
 it('administrador de obra NO puede editar una obra ajena', function () {
     $miObra = Obra::factory()->create();
     $obraAjena = Obra::factory()->create();
-    $user = usuarioEnObra($miObra, RolObra::AdministradorObra);
+    $user = usuarioEnObra($miObra, RolObra::Administrador);
 
     $this->actingAs($user)
         ->get(route('obras.edit', $obraAjena))
@@ -127,7 +127,7 @@ it('administrador de obra NO puede editar una obra ajena', function () {
 
 it('residente de obra NO puede editar la obra', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::ResidenteObra);
+    $user = usuarioEnObra($obra, RolObra::Residente);
 
     $this->actingAs($user)
         ->get(route('obras.edit', $obra))
@@ -136,7 +136,7 @@ it('residente de obra NO puede editar la obra', function () {
 
 it('invitado de obra NO puede editar la obra', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::Invitado, RolGlobal::Invitado);
+    $user = usuarioEnObra($obra, RolObra::Asistente, RolGlobal::Usuario);
 
     $this->actingAs($user)
         ->get(route('obras.edit', $obra))
@@ -155,7 +155,7 @@ it('admin puede eliminar obras', function () {
 
 it('administrador de obra NO puede eliminar su propia obra', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::AdministradorObra);
+    $user = usuarioEnObra($obra, RolObra::Administrador);
 
     $this->actingAs($user)
         ->delete(route('obras.destroy', $obra))
@@ -164,7 +164,7 @@ it('administrador de obra NO puede eliminar su propia obra', function () {
 
 it('ingeniero NO puede eliminar obras', function () {
     $obra = Obra::factory()->create();
-    $this->actingAs(usuarioConRol(RolGlobal::Ingeniero))
+    $this->actingAs(usuarioConRol(RolGlobal::Usuario))
         ->delete(route('obras.destroy', $obra))
         ->assertForbidden();
 });

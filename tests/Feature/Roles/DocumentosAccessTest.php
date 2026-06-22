@@ -54,7 +54,7 @@ it('admin puede subir documentos a cualquier obra', function () {
 it('administrador de obra puede subir documentos en su obra', function () {
     $obra = Obra::factory()->create();
     $carpeta = crearCarpetaRaiz($obra);
-    $user = usuarioEnObra($obra, RolObra::AdministradorObra);
+    $user = usuarioEnObra($obra, RolObra::Administrador);
 
     subirDocumento($obra, $carpeta, $this->actingAs($user))->assertRedirect();
 });
@@ -62,7 +62,7 @@ it('administrador de obra puede subir documentos en su obra', function () {
 it('residente de obra puede subir documentos', function () {
     $obra = Obra::factory()->create();
     $carpeta = crearCarpetaRaiz($obra);
-    $user = usuarioEnObra($obra, RolObra::ResidenteObra);
+    $user = usuarioEnObra($obra, RolObra::Residente);
 
     subirDocumento($obra, $carpeta, $this->actingAs($user))->assertRedirect();
 });
@@ -70,24 +70,24 @@ it('residente de obra puede subir documentos', function () {
 it('especialista puede subir documentos', function () {
     $obra = Obra::factory()->create();
     $carpeta = crearCarpetaRaiz($obra);
-    $user = usuarioEnObra($obra, RolObra::EspecialistaCalidad);
+    $user = usuarioEnObra($obra, RolObra::Especialista);
 
     subirDocumento($obra, $carpeta, $this->actingAs($user))->assertRedirect();
 });
 
-it('invitado en obra NO puede subir documentos', function () {
+it('asistente en obra puede subir documentos (por defecto)', function () {
     $obra = Obra::factory()->create();
     $carpeta = crearCarpetaRaiz($obra);
-    $user = usuarioEnObra($obra, RolObra::Invitado, RolGlobal::Invitado);
+    $user = usuarioEnObra($obra, RolObra::Asistente);
 
-    subirDocumento($obra, $carpeta, $this->actingAs($user))->assertForbidden();
+    subirDocumento($obra, $carpeta, $this->actingAs($user))->assertRedirect();
 });
 
 it('usuario sin asignación NO puede subir documentos', function () {
     $obra = Obra::factory()->create();
     $carpeta = crearCarpetaRaiz($obra);
 
-    subirDocumento($obra, $carpeta, $this->actingAs(usuarioConRol(RolGlobal::Ingeniero)))
+    subirDocumento($obra, $carpeta, $this->actingAs(usuarioConRol(RolGlobal::Usuario)))
         ->assertForbidden();
 });
 
@@ -125,14 +125,14 @@ it('administrador de obra puede eliminar documentos de su obra', function () {
         'mime' => 'application/pdf',
         'tamano' => 100,
     ]);
-    $user = usuarioEnObra($obra, RolObra::AdministradorObra);
+    $user = usuarioEnObra($obra, RolObra::Administrador);
 
     $this->actingAs($user)
         ->delete(route('obras.documentos.destroy', [$obra, $doc]))
         ->assertRedirect();
 });
 
-it('residente de obra NO puede eliminar documentos', function () {
+it('residente de obra puede eliminar documentos (por defecto)', function () {
     $obra = Obra::factory()->create();
     $carpeta = crearCarpetaRaiz($obra);
     $doc = Documento::create([
@@ -145,11 +145,11 @@ it('residente de obra NO puede eliminar documentos', function () {
         'mime' => 'application/pdf',
         'tamano' => 100,
     ]);
-    $user = usuarioEnObra($obra, RolObra::ResidenteObra);
+    $user = usuarioEnObra($obra, RolObra::Residente);
 
     $this->actingAs($user)
         ->delete(route('obras.documentos.destroy', [$obra, $doc]))
-        ->assertForbidden();
+        ->assertRedirect();
 });
 
 it('especialista NO puede eliminar documentos', function () {
@@ -165,7 +165,7 @@ it('especialista NO puede eliminar documentos', function () {
         'mime' => 'application/pdf',
         'tamano' => 100,
     ]);
-    $user = usuarioEnObra($obra, RolObra::EspecialistaCalidad);
+    $user = usuarioEnObra($obra, RolObra::Especialista);
 
     $this->actingAs($user)
         ->delete(route('obras.documentos.destroy', [$obra, $doc]))
@@ -176,7 +176,7 @@ it('especialista NO puede eliminar documentos', function () {
 
 it('administrador de obra puede crear carpetas', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::AdministradorObra);
+    $user = usuarioEnObra($obra, RolObra::Administrador);
 
     $this->actingAs($user)
         ->post(route('obras.carpetas.store', $obra), [
@@ -186,9 +186,9 @@ it('administrador de obra puede crear carpetas', function () {
         ->assertRedirect();
 });
 
-it('residente NO puede crear carpetas', function () {
+it('especialista NO puede crear carpetas', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::ResidenteObra);
+    $user = usuarioEnObra($obra, RolObra::Especialista);
 
     $this->actingAs($user)
         ->post(route('obras.carpetas.store', $obra), [

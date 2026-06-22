@@ -27,7 +27,7 @@ it('admin puede vincular directo a un usuario que ya tiene cuenta y recibe notif
     $this->actingAs(admin())
         ->post(route('obras.equipo.invitar', $obra), [
             'email' => 'colaborador@rnfc.test',
-            'rol_obra' => RolObra::ResidenteObra->value,
+            'rol_obra' => RolObra::Residente->value,
         ])
         ->assertRedirect();
 
@@ -77,7 +77,7 @@ it('aceptar invitación al registrarse vincula automáticamente a la obra', func
     $invitacion = Invitacion::create([
         'obra_id' => $obra->id,
         'email' => 'recluta@externo.com',
-        'rol_obra' => RolObra::ResidenteObra->value,
+        'rol_obra' => RolObra::Residente->value,
         'token' => Invitacion::generarToken(),
         'expira_at' => now()->addDays(7),
     ]);
@@ -92,14 +92,14 @@ it('aceptar invitación al registrarse vincula automáticamente a la obra', func
     $user = User::where('email', 'recluta@externo.com')->first();
     expect($user)->not->toBeNull();
     expect($obra->usuarios()->where('users.id', $user->id)->exists())->toBeTrue();
-    expect($obra->usuarios()->wherePivot('rol_obra', RolObra::ResidenteObra->value)->exists())->toBeTrue();
+    expect($obra->usuarios()->wherePivot('rol_obra', RolObra::Residente->value)->exists())->toBeTrue();
     expect($invitacion->fresh()->aceptada_at)->not->toBeNull();
 });
 
 it('un invitado global (no admin/supervisor) no puede ver obras a las que no pertenece', function () {
     $obra = Obra::factory()->create();
     $invitado = User::factory()->create(['email_verified_at' => now()]);
-    $invitado->assignRole(RolGlobal::Invitado->value);
+    $invitado->assignRole(RolGlobal::Usuario->value);
 
     $this->actingAs($invitado)
         ->get(route('obras.show', $obra))
@@ -109,7 +109,7 @@ it('un invitado global (no admin/supervisor) no puede ver obras a las que no per
 it('un usuario vinculado a una obra puede verla aunque no sea admin', function () {
     $obra = Obra::factory()->create();
     $miembro = User::factory()->create(['email_verified_at' => now()]);
-    $miembro->assignRole(RolGlobal::Ingeniero->value);
+    $miembro->assignRole(RolGlobal::Usuario->value);
     $obra->usuarios()->attach($miembro->id, [
         'rol_obra' => RolObra::Asistente->value,
         'asignado_at' => now(),

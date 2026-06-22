@@ -66,9 +66,9 @@ it('numeración es independiente por tipo de cuaderno', function () {
 it('administrador de obra puede escribir en ambos cuadernos de su obra', function () {
     $obra = Obra::factory()->create();
     $adminObra = User::factory()->create(['email_verified_at' => now()]);
-    $adminObra->assignRole(RolGlobal::Ingeniero->value);
+    $adminObra->assignRole(RolGlobal::Usuario->value);
     $obra->usuarios()->attach($adminObra->id, [
-        'rol_obra' => RolObra::AdministradorObra->value,
+        'rol_obra' => RolObra::Administrador->value,
         'asignado_at' => now(),
     ]);
 
@@ -85,12 +85,12 @@ it('administrador de obra puede escribir en ambos cuadernos de su obra', functio
     expect(AsientoCuaderno::count())->toBe(2);
 });
 
-it('residente de obra NO puede escribir en el cuaderno (solo admin de obra puede)', function () {
+it('residente de obra puede escribir en el cuaderno (por defecto)', function () {
     $obra = Obra::factory()->create();
     $residente = User::factory()->create(['email_verified_at' => now()]);
-    $residente->assignRole(RolGlobal::Ingeniero->value);
+    $residente->assignRole(RolGlobal::Usuario->value);
     $obra->usuarios()->attach($residente->id, [
-        'rol_obra' => RolObra::ResidenteObra->value,
+        'rol_obra' => RolObra::Residente->value,
         'asignado_at' => now(),
     ]);
 
@@ -99,29 +99,28 @@ it('residente de obra NO puede escribir en el cuaderno (solo admin de obra puede
             ->post(route('obras.cuaderno.store', $obra), [
                 'tipo_autor' => $tipo->value,
                 'fecha' => '2026-05-10',
-                'contenido' => 'Intento',
+                'contenido' => 'Asiento del residente',
             ])
-            ->assertForbidden();
+            ->assertRedirect();
     }
 
-    // Pero sí puede ver el cuaderno
     $this->actingAs($residente)
         ->get(route('obras.cuaderno.index', $obra))
         ->assertOk();
 });
 
-it('un invitado de la obra NO puede ver ni escribir en el cuaderno', function () {
+it('un asistente ve el cuaderno pero NO puede escribir (por defecto)', function () {
     $obra = Obra::factory()->create();
     $invitado = User::factory()->create(['email_verified_at' => now()]);
-    $invitado->assignRole(RolGlobal::Invitado->value);
+    $invitado->assignRole(RolGlobal::Usuario->value);
     $obra->usuarios()->attach($invitado->id, [
-        'rol_obra' => RolObra::Invitado->value,
+        'rol_obra' => RolObra::Asistente->value,
         'asignado_at' => now(),
     ]);
 
     $this->actingAs($invitado)
         ->get(route('obras.cuaderno.index', $obra))
-        ->assertForbidden();
+        ->assertOk();
 
     $this->actingAs($invitado)
         ->post(route('obras.cuaderno.store', $obra), [
@@ -136,9 +135,9 @@ it('admin/gerente general y administrador de obra pueden eliminar; otros no', fu
     $obra = Obra::factory()->create();
     $admin = adminCuad();
     $ingeniero = User::factory()->create(['email_verified_at' => now()]);
-    $ingeniero->assignRole(RolGlobal::Ingeniero->value);
+    $ingeniero->assignRole(RolGlobal::Usuario->value);
     $obra->usuarios()->attach($ingeniero->id, [
-        'rol_obra' => RolObra::ResidenteObra->value,
+        'rol_obra' => RolObra::Residente->value,
         'asignado_at' => now(),
     ]);
 
@@ -203,7 +202,7 @@ it('descargar un PDF requiere ver la obra', function () {
     $a = AsientoCuaderno::first();
 
     $ajeno = User::factory()->create(['email_verified_at' => now()]);
-    $ajeno->assignRole(RolGlobal::Invitado->value);
+    $ajeno->assignRole(RolGlobal::Usuario->value);
 
     $this->actingAs($ajeno)
         ->get(route('obras.cuaderno.descargar', [$obra, $a]))

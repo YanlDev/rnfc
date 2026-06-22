@@ -20,26 +20,26 @@ it('admin ve el listado de certificados', function () {
 });
 
 it('gerente general ve el listado de certificados', function () {
-    $this->actingAs(usuarioConRol(RolGlobal::GerenteGeneral))
+    $this->actingAs(usuarioConRol(RolGlobal::Admin))
         ->get(route('certificados.index'))
         ->assertOk();
 });
 
 it('ingeniero NO ve certificados', function () {
-    $this->actingAs(usuarioConRol(RolGlobal::Ingeniero))
+    $this->actingAs(usuarioConRol(RolGlobal::Usuario))
         ->get(route('certificados.index'))
         ->assertForbidden();
 });
 
 it('residente NO ve certificados', function () {
-    $this->actingAs(usuarioConRol(RolGlobal::Residente))
+    $this->actingAs(usuarioConRol(RolGlobal::Usuario))
         ->get(route('certificados.index'))
         ->assertForbidden();
 });
 
 it('administrador de obra NO accede al módulo de certificados', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::AdministradorObra);
+    $user = usuarioEnObra($obra, RolObra::Administrador);
 
     $this->actingAs($user)
         ->get(route('certificados.index'))
@@ -53,7 +53,7 @@ it('admin puede entrar al formulario de creación', function () {
 });
 
 it('ingeniero NO puede entrar al formulario de creación', function () {
-    $this->actingAs(usuarioConRol(RolGlobal::Ingeniero))
+    $this->actingAs(usuarioConRol(RolGlobal::Usuario))
         ->get(route('certificados.create'))
         ->assertForbidden();
 });

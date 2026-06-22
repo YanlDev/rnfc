@@ -23,7 +23,7 @@ it('admin puede enviar invitación global a un correo sin cuenta', function () {
     $this->actingAs(admin())
         ->post(route('admin.invitar'), [
             'email' => 'nuevo@externo.com',
-            'rol_global' => RolGlobal::GerenteGeneral->value,
+            'rol_global' => RolGlobal::Admin->value,
         ])
         ->assertRedirect();
 
@@ -32,7 +32,7 @@ it('admin puede enviar invitación global a un correo sin cuenta', function () {
         ->first();
 
     expect($inv)->not->toBeNull();
-    expect($inv->rol_global->value)->toBe(RolGlobal::GerenteGeneral->value);
+    expect($inv->rol_global->value)->toBe(RolGlobal::Admin->value);
     expect($inv->estaActiva())->toBeTrue();
 
     Mail::assertQueued(InvitacionGlobal::class, fn ($m) => $m->hasTo('nuevo@externo.com'));
@@ -46,9 +46,9 @@ it('rechaza invitación global con rol no administrativo (residente, ingeniero, 
         ])
         ->assertSessionHasErrors('rol_global');
 })->with([
-    RolGlobal::Residente->value,
-    RolGlobal::Ingeniero->value,
-    RolGlobal::Invitado->value,
+    RolGlobal::Usuario->value,
+    RolGlobal::Usuario->value,
+    RolGlobal::Usuario->value,
 ]);
 
 it('no permite invitar global a un correo que ya tiene cuenta', function () {
@@ -80,7 +80,7 @@ it('no permite duplicar invitaciones globales pendientes', function () {
 
 it('solo admin o gerente general puede enviar invitaciones globales', function () {
     $user = User::factory()->create();
-    $user->assignRole(RolGlobal::Ingeniero->value);
+    $user->assignRole(RolGlobal::Usuario->value);
 
     $this->actingAs($user)
         ->post(route('admin.invitar'), [
@@ -93,7 +93,7 @@ it('solo admin o gerente general puede enviar invitaciones globales', function (
 it('aceptar invitación global al registrarse asigna el rol correctamente', function () {
     Invitacion::create([
         'email' => 'gerente@externo.com',
-        'rol_global' => RolGlobal::GerenteGeneral->value,
+        'rol_global' => RolGlobal::Admin->value,
         'token' => Invitacion::generarToken(),
         'expira_at' => now()->addDays(7),
     ]);
@@ -107,7 +107,7 @@ it('aceptar invitación global al registrarse asigna el rol correctamente', func
 
     $user = User::where('email', 'gerente@externo.com')->first();
     expect($user)->not->toBeNull();
-    expect($user->hasRole(RolGlobal::GerenteGeneral->value))->toBeTrue();
+    expect($user->hasRole(RolGlobal::Admin->value))->toBeTrue();
 
     $inv = Invitacion::where('email', 'gerente@externo.com')->first();
     expect($inv->fresh()->aceptada_at)->not->toBeNull();
@@ -155,7 +155,7 @@ it('admin puede reenviar una invitación global renovando token y expiración', 
     $tokenOriginal = Invitacion::generarToken();
     $inv = Invitacion::create([
         'email' => 'reenviar@externo.com',
-        'rol_global' => RolGlobal::GerenteGeneral->value,
+        'rol_global' => RolGlobal::Admin->value,
         'token' => $tokenOriginal,
         'expira_at' => now()->addDays(3),
     ]);
@@ -208,9 +208,9 @@ it('un no-admin no puede cancelar invitaciones globales', function (string $rol)
 
     expect($inv->fresh()->cancelada_at)->toBeNull();
 })->with([
-    RolGlobal::Residente->value,
-    RolGlobal::Ingeniero->value,
-    RolGlobal::Invitado->value,
+    RolGlobal::Usuario->value,
+    RolGlobal::Usuario->value,
+    RolGlobal::Usuario->value,
 ]);
 
 it('un no-admin no puede reenviar invitaciones globales', function () {
@@ -222,7 +222,7 @@ it('un no-admin no puede reenviar invitaciones globales', function () {
         'expira_at' => now()->addDays(7),
     ]);
 
-    $this->actingAs(usuarioConRol(RolGlobal::Ingeniero))
+    $this->actingAs(usuarioConRol(RolGlobal::Usuario))
         ->post(route('admin.invitaciones.reenviar', $inv))
         ->assertForbidden();
 

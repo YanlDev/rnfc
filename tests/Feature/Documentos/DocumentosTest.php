@@ -132,14 +132,14 @@ it('descarga requiere autorización (invitado fuera de la obra no accede)', func
     );
 
     $ajeno = User::factory()->create(['email_verified_at' => now()]);
-    $ajeno->assignRole(RolGlobal::Invitado->value);
+    $ajeno->assignRole(RolGlobal::Usuario->value);
 
     $this->actingAs($ajeno)
         ->get(route('obras.documentos.descargar', [$carpeta->obra_id, $doc]))
         ->assertForbidden();
 });
 
-it('un invitado vinculado a la obra puede previsualizar pero no subir', function () {
+it('un asistente vinculado a la obra puede previsualizar y subir (por defecto)', function () {
     $carpeta = carpetaConObra();
     $doc = app(DocumentoService::class)->subir(
         $carpeta,
@@ -147,9 +147,9 @@ it('un invitado vinculado a la obra puede previsualizar pero no subir', function
     );
 
     $miembro = User::factory()->create(['email_verified_at' => now()]);
-    $miembro->assignRole(RolGlobal::Invitado->value);
+    $miembro->assignRole(RolGlobal::Usuario->value);
     $carpeta->obra->usuarios()->attach($miembro->id, [
-        'rol_obra' => 'invitado',
+        'rol_obra' => 'asistente',
         'asignado_at' => now(),
     ]);
 
@@ -162,5 +162,5 @@ it('un invitado vinculado a la obra puede previsualizar pero no subir', function
             route('obras.documentos.store', [$carpeta->obra_id, $carpeta]),
             ['archivo' => UploadedFile::fake()->create('nuevo.pdf', 100, 'application/pdf')],
         )
-        ->assertForbidden();
+        ->assertRedirect();
 });

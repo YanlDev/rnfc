@@ -28,7 +28,7 @@ it('admin ve el cuaderno de cualquier obra', function () {
 
 it('administrador de obra ve el cuaderno de su obra', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::AdministradorObra);
+    $user = usuarioEnObra($obra, RolObra::Administrador);
 
     $this->actingAs($user)
         ->get(route('obras.cuaderno.index', $obra))
@@ -37,7 +37,7 @@ it('administrador de obra ve el cuaderno de su obra', function () {
 
 it('residente de obra ve el cuaderno de su obra', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::ResidenteObra);
+    $user = usuarioEnObra($obra, RolObra::Residente);
 
     $this->actingAs($user)
         ->get(route('obras.cuaderno.index', $obra))
@@ -46,25 +46,25 @@ it('residente de obra ve el cuaderno de su obra', function () {
 
 it('especialista de obra ve el cuaderno', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::EspecialistaCalidad);
+    $user = usuarioEnObra($obra, RolObra::Especialista);
 
     $this->actingAs($user)
         ->get(route('obras.cuaderno.index', $obra))
         ->assertOk();
 });
 
-it('invitado de obra NO puede ver el cuaderno', function () {
+it('asistente de obra ve el cuaderno (por defecto)', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::Invitado, RolGlobal::Invitado);
+    $user = usuarioEnObra($obra, RolObra::Asistente);
 
     $this->actingAs($user)
         ->get(route('obras.cuaderno.index', $obra))
-        ->assertForbidden();
+        ->assertOk();
 });
 
 it('usuario sin asignación NO ve el cuaderno de una obra ajena', function () {
     $obra = Obra::factory()->create();
-    $this->actingAs(usuarioConRol(RolGlobal::Ingeniero))
+    $this->actingAs(usuarioConRol(RolGlobal::Usuario))
         ->get(route('obras.cuaderno.index', $obra))
         ->assertForbidden();
 });
@@ -84,7 +84,7 @@ it('admin puede crear asiento en cualquier obra', function () {
 
 it('administrador de obra puede crear asiento en su obra', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::AdministradorObra);
+    $user = usuarioEnObra($obra, RolObra::Administrador);
 
     $this->actingAs($user)
         ->post(route('obras.cuaderno.store', $obra), [
@@ -95,22 +95,22 @@ it('administrador de obra puede crear asiento en su obra', function () {
         ->assertRedirect();
 });
 
-it('residente de obra NO puede crear asiento', function () {
+it('residente de obra puede crear asiento (por defecto)', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::ResidenteObra);
+    $user = usuarioEnObra($obra, RolObra::Residente);
 
     $this->actingAs($user)
         ->post(route('obras.cuaderno.store', $obra), [
             'tipo_autor' => TipoAutorCuaderno::Residente->value,
             'fecha' => '2026-05-13',
-            'contenido' => 'Intento',
+            'contenido' => 'Asiento del residente',
         ])
-        ->assertForbidden();
+        ->assertRedirect();
 });
 
 it('especialista de obra NO puede crear asiento', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::EspecialistaCalidad);
+    $user = usuarioEnObra($obra, RolObra::Especialista);
 
     $this->actingAs($user)
         ->post(route('obras.cuaderno.store', $obra), [
@@ -123,7 +123,7 @@ it('especialista de obra NO puede crear asiento', function () {
 
 it('invitado de obra NO puede crear asiento', function () {
     $obra = Obra::factory()->create();
-    $user = usuarioEnObra($obra, RolObra::Invitado, RolGlobal::Invitado);
+    $user = usuarioEnObra($obra, RolObra::Asistente, RolGlobal::Usuario);
 
     $this->actingAs($user)
         ->post(route('obras.cuaderno.store', $obra), [

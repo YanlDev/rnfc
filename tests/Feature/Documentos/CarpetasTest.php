@@ -111,9 +111,9 @@ it('eliminar la obra elimina todas sus carpetas', function () {
 it('un practicante (no admin/supervisor) no puede aplicar plantilla', function () {
     $obra = Obra::factory()->create();
     $invitado = User::factory()->create(['email_verified_at' => now()]);
-    $invitado->assignRole(RolGlobal::Invitado->value);
+    $invitado->assignRole(RolGlobal::Usuario->value);
     $obra->usuarios()->attach($invitado->id, [
-        'rol_obra' => 'practicante',
+        'rol_obra' => 'asistente',
         'asignado_at' => now(),
     ]);
 

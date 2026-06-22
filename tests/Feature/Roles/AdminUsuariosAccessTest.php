@@ -21,25 +21,25 @@ it('admin entra a /admin/usuarios', function () {
 });
 
 it('gerente general entra a /admin/usuarios', function () {
-    $this->actingAs(usuarioConRol(RolGlobal::GerenteGeneral))
+    $this->actingAs(usuarioConRol(RolGlobal::Admin))
         ->get(route('admin.usuarios.index'))
         ->assertOk();
 });
 
 it('ingeniero NO entra a /admin/usuarios', function () {
-    $this->actingAs(usuarioConRol(RolGlobal::Ingeniero))
+    $this->actingAs(usuarioConRol(RolGlobal::Usuario))
         ->get(route('admin.usuarios.index'))
         ->assertForbidden();
 });
 
 it('residente NO entra a /admin/usuarios', function () {
-    $this->actingAs(usuarioConRol(RolGlobal::Residente))
+    $this->actingAs(usuarioConRol(RolGlobal::Usuario))
         ->get(route('admin.usuarios.index'))
         ->assertForbidden();
 });
 
 it('invitado NO entra a /admin/usuarios', function () {
-    $this->actingAs(usuarioConRol(RolGlobal::Invitado))
+    $this->actingAs(usuarioConRol(RolGlobal::Usuario))
         ->get(route('admin.usuarios.index'))
         ->assertForbidden();
 });
@@ -56,32 +56,21 @@ it('admin no puede desactivarse a sí mismo', function () {
     expect($admin->fresh()->estaActivo())->toBeTrue();
 });
 
-it('no se puede desactivar al último admin activo', function () {
+it('un admin puede desactivar a otro admin si hay más de uno', function () {
     $admin1 = usuarioConRol(RolGlobal::Admin);
     $admin2 = usuarioConRol(RolGlobal::Admin);
 
-    // admin1 logueado, intenta desactivar a admin2 → debería poder (quedan 1)
+    // Quedando otro admin activo, desactivar a admin2 está permitido.
     $this->actingAs($admin1)
         ->patch(route('admin.usuarios.toggle-activo', $admin2), [])
         ->assertRedirect();
 
     expect($admin2->fresh()->estaActivo())->toBeFalse();
-
-    // Crear un GG para tener otra cuenta admin (mismo grupo administrativo)
-    $gerente = usuarioConRol(RolGlobal::GerenteGeneral);
-
-    // Ahora hay 1 admin activo. Si admin1 intenta desactivarse a sí mismo, falla por regla auto.
-    // Pero si gerente intenta desactivar a admin1 (único admin activo) → debería fallar
-    $this->actingAs($gerente)
-        ->patch(route('admin.usuarios.toggle-activo', $admin1), [])
-        ->assertSessionHasErrors('usuario');
-
-    expect($admin1->fresh()->estaActivo())->toBeTrue();
 });
 
 it('desactivar un usuario lo bloquea de iniciar sesión', function () {
     $admin = usuarioConRol(RolGlobal::Admin);
-    $ingeniero = usuarioConRol(RolGlobal::Ingeniero);
+    $ingeniero = usuarioConRol(RolGlobal::Usuario);
 
     $this->actingAs($admin)
         ->patch(route('admin.usuarios.toggle-activo', $ingeniero), ['motivo' => 'Test'])
@@ -93,14 +82,14 @@ it('desactivar un usuario lo bloquea de iniciar sesión', function () {
 
 it('cambiar rol global de un usuario funciona', function () {
     $admin = usuarioConRol(RolGlobal::Admin);
-    $u = usuarioConRol(RolGlobal::Ingeniero);
+    $u = usuarioConRol(RolGlobal::Usuario);
 
     $this->actingAs($admin)
-        ->patch(route('admin.usuarios.rol', $u), ['rol' => RolGlobal::Residente->value])
+        ->patch(route('admin.usuarios.rol', $u), ['rol' => RolGlobal::Admin->value])
         ->assertRedirect();
 
-    expect($u->fresh()->hasRole(RolGlobal::Residente->value))->toBeTrue();
-    expect($u->fresh()->hasRole(RolGlobal::Ingeniero->value))->toBeFalse();
+    expect($u->fresh()->hasRole(RolGlobal::Admin->value))->toBeTrue();
+    expect($u->fresh()->hasRole(RolGlobal::Usuario->value))->toBeFalse();
 });
 
 it('no se puede quitar admin al único administrador del sistema', function () {
@@ -110,7 +99,7 @@ it('no se puede quitar admin al único administrador del sistema', function () {
 
     // Si el otro admin intenta degradar a admin1 y queda 1 admin → debería poder
     $this->actingAs($otroAdmin)
-        ->patch(route('admin.usuarios.rol', $admin), ['rol' => RolGlobal::Ingeniero->value])
+        ->patch(route('admin.usuarios.rol', $admin), ['rol' => RolGlobal::Usuario->value])
         ->assertRedirect();
 
     expect($admin->fresh()->hasRole(RolGlobal::Admin->value))->toBeFalse();
@@ -118,7 +107,7 @@ it('no se puede quitar admin al único administrador del sistema', function () {
     // Ahora solo queda otroAdmin como admin. Otro admin no puede degradarse a sí mismo... pero por la regla del rol
     // (se quitaría el último admin del sistema), debería fallar si intentamos degradarlo.
     $this->actingAs($otroAdmin)
-        ->patch(route('admin.usuarios.rol', $otroAdmin), ['rol' => RolGlobal::Ingeniero->value])
+        ->patch(route('admin.usuarios.rol', $otroAdmin), ['rol' => RolGlobal::Usuario->value])
         ->assertSessionHasErrors('rol');
 
     expect($otroAdmin->fresh()->hasRole(RolGlobal::Admin->value))->toBeTrue();
@@ -126,7 +115,7 @@ it('no se puede quitar admin al único administrador del sistema', function () {
 
 it('usuario desactivado es deslogueado en el siguiente request', function () {
     $admin = usuarioConRol(RolGlobal::Admin);
-    $ingeniero = usuarioConRol(RolGlobal::Ingeniero);
+    $ingeniero = usuarioConRol(RolGlobal::Usuario);
 
     // Simulamos que está logueado y luego lo desactivamos directamente en BD
     $this->actingAs($ingeniero);

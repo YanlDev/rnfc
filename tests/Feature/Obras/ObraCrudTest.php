@@ -26,7 +26,7 @@ function adminUser(): User
 function invitadoUser(): User
 {
     $u = User::factory()->create(['email_verified_at' => now()]);
-    $u->assignRole(RolGlobal::Invitado->value);
+    $u->assignRole(RolGlobal::Usuario->value);
 
     return $u;
 }
@@ -135,7 +135,7 @@ it('invitado no puede crear obras', function () {
 it('solo admin/gerente general puede eliminar obras', function () {
     $obra = Obra::factory()->create();
     $ingeniero = User::factory()->create(['email_verified_at' => now()]);
-    $ingeniero->assignRole(RolGlobal::Ingeniero->value);
+    $ingeniero->assignRole(RolGlobal::Usuario->value);
 
     $this->actingAs($ingeniero)
         ->delete(route('obras.destroy', $obra))

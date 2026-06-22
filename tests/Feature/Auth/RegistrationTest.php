@@ -36,7 +36,7 @@ test('user with active invitation can register and gets attached to obra', funct
     Invitacion::create([
         'obra_id' => $obra->id,
         'email' => 'invitado@example.com',
-        'rol_obra' => RolObra::ResidenteObra->value,
+        'rol_obra' => RolObra::Residente->value,
         'token' => str_repeat('a', 64),
         'invitado_por' => $admin->id,
         'expira_at' => now()->addDays(7),
@@ -63,7 +63,7 @@ test('expired invitation does not allow registration', function () {
     Invitacion::create([
         'obra_id' => $obra->id,
         'email' => 'expirada@example.com',
-        'rol_obra' => RolObra::ResidenteObra->value,
+        'rol_obra' => RolObra::Residente->value,
         'token' => str_repeat('b', 64),
         'invitado_por' => $admin->id,
         'expira_at' => now()->subDay(),
