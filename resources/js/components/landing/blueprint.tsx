@@ -1,89 +1,118 @@
 import { animate, createTimeline, stagger, svg } from 'animejs';
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * Trazo de ingeniería: un edificio en construcción con grúa torre, en vista
- * isométrica, que se "dibuja" con anime.js (v4). Caras sólidas sutiles +
- * line-art para que se lea claramente como una obra. Respeta
- * prefers-reduced-motion.
+ * Trazo de ingeniería vial: una carretera serpenteante en planta que se dibuja
+ * poco a poco con anime.js (v4), con anotaciones de plano (progresivas, cotas,
+ * radio, norte, escala). Los bordes de la calzada se calculan midiendo la curva
+ * real (normales por muestreo) para que las cotas queden pegadas al trazo.
+ * Respeta prefers-reduced-motion.
  */
-const COS = Math.cos(Math.PI / 6); // 30°
-const SIN = 0.5;
-const S = 42; // escala de planta
-const FH = 34; // altura de entrepiso
-const OX = 150;
-const OY = 210;
-const NZ = 4; // pisos (0..4)
+const MONO = "'Geist Mono', ui-monospace, monospace";
 
-/** Proyección isométrica de un nudo (gx,gy,gz) a coordenadas de pantalla. */
-function P(gx: number, gy: number, gz: number): [number, number] {
-    return [OX + (gx - gy) * COS * S, OY + (gx + gy) * SIN * S - gz * FH];
-}
+// Eje de la carretera (planta).
+const EJE =
+    'M45,72 C120,18 178,150 262,138 C346,126 352,236 256,250 C176,261 150,206 70,246';
 
-const seg = (a: [number, number], b: [number, number]) =>
-    `M${a[0].toFixed(1)},${a[1].toFixed(1)} L${b[0].toFixed(1)},${b[1].toFixed(1)}`;
+const HALF = 11; // semiancho de calzada (px)
+const N = 180; // muestras
+const ESTACIONES = [0, 45, 90, 135, 180]; // índices de muestra para progresivas
 
-const poly = (pts: [number, number][]) =>
-    pts.map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+type Pt = [number, number];
 
-// Esquinas visibles del prisma (esquina cercana = (2,2)).
-const X0 = P(2, 0, 0);
-const Y0 = P(0, 2, 0);
-const C0 = P(2, 2, 0);
-const A4 = P(0, 0, NZ);
-const X4 = P(2, 0, NZ);
-const Y4 = P(0, 2, NZ);
-const C4 = P(2, 2, NZ);
+type Geo = {
+    left: string;
+    right: string;
+    ticks: string[];
+    stations: { x: number; y: number; t: string }[];
+    ancho: { x: number; y: number };
+    radio: { x: number; y: number; lx: number; ly: number };
+};
 
-// Aristas del volumen (silueta).
-const EDGES: string[] = [
-    seg(P(2, 2, 0), C4), // arista vertical cercana
-    seg(P(2, 0, 0), X4),
-    seg(P(0, 2, 0), Y4),
-    seg(A4, X4),
-    seg(X4, C4),
-    seg(C4, Y4),
-    seg(Y4, A4),
-    seg(X0, C0),
-    seg(C0, Y0),
-];
-
-// Caras (relleno translúcido) para que se lea como sólido.
-const CARA_DER = poly([X0, C0, C4, X4]);
-const CARA_IZQ = poly([Y0, C0, C4, Y4]);
-const CARA_TOP = poly([A4, X4, C4, Y4]);
-
-// Pisos y montantes (rejilla de fachada -> se lee como edificio).
-const GRID: string[] = [];
-
-for (let gz = 1; gz < NZ; gz++) {
-    GRID.push(seg(P(2, 0, gz), P(2, 2, gz))); // horizontal cara derecha
-    GRID.push(seg(P(0, 2, gz), P(2, 2, gz))); // horizontal cara izquierda
-}
-
-GRID.push(seg(P(2, 1, 0), P(2, 1, NZ))); // montante cara derecha
-GRID.push(seg(P(1, 2, 0), P(1, 2, NZ))); // montante cara izquierda
-
-// Grúa torre (en coordenadas de pantalla, sobre el edificio).
-const GRUA: string[] = [
-    seg([315, 300], [315, 52]), // mástil
-    seg([315, 52], [315, 30]), // cabeza
-    seg([180, 52], [362, 52]), // pluma
-    seg([315, 30], [180, 52]), // tirante delantero
-    seg([315, 30], [362, 52]), // tirante trasero
-    seg([210, 52], [210, 138]), // cable
-    seg([204, 138], [210, 146]), // gancho
-    seg([216, 138], [210, 146]),
-];
+const toPath = (pts: Pt[]) =>
+    pts
+        .map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`)
+        .join(' ');
 
 export function Blueprint({ className }: { className?: string }) {
     const root = useRef<SVGSVGElement | null>(null);
+    const eje = useRef<SVGPathElement | null>(null);
+    const [geo, setGeo] = useState<Geo | null>(null);
 
+    // Medición: muestrea el eje y deriva bordes, ticks y anclas de cotas.
+    useLayoutEffect(() => {
+        const path = eje.current;
+
+        if (!path) {
+            return;
+        }
+
+        const total = path.getTotalLength();
+        const cx: number[] = [];
+        const cy: number[] = [];
+        const nx: number[] = [];
+        const ny: number[] = [];
+
+        for (let i = 0; i <= N; i++) {
+            const len = (total * i) / N;
+            const p = path.getPointAtLength(len);
+            const q = path.getPointAtLength(Math.min(len + 1, total));
+            let tx = q.x - p.x;
+            let ty = q.y - p.y;
+            const m = Math.hypot(tx, ty) || 1;
+            tx /= m;
+            ty /= m;
+            cx.push(p.x);
+            cy.push(p.y);
+            nx.push(-ty);
+            ny.push(tx);
+        }
+
+        const left: Pt[] = cx.map((x, i) => [
+            x + nx[i] * HALF,
+            cy[i] + ny[i] * HALF,
+        ]);
+        const right: Pt[] = cx.map((x, i) => [
+            x - nx[i] * HALF,
+            cy[i] - ny[i] * HALF,
+        ]);
+
+        const ticks = ESTACIONES.map(
+            (i) =>
+                `M${left[i][0].toFixed(1)},${left[i][1].toFixed(1)} L${right[i][0].toFixed(1)},${right[i][1].toFixed(1)}`,
+        );
+
+        const stations = ESTACIONES.map((i, k) => ({
+            x: left[i][0] + nx[i] * 13,
+            y: left[i][1] + ny[i] * 13,
+            t: `0+${(k * 100).toString().padStart(3, '0')}`,
+        }));
+
+        const ai = 30; // ancla cota de ancho
+        const ri = 90; // ancla radio (curva central)
+
+        setGeo({
+            left: toPath(left),
+            right: toPath(right),
+            ticks,
+            stations,
+            ancho: {
+                x: right[ai][0] - nx[ai] * 16,
+                y: right[ai][1] - ny[ai] * 16,
+            },
+            radio: {
+                x: cx[ri] + nx[ri] * 40,
+                y: cy[ri] + ny[ri] * 40,
+                lx: cx[ri] + nx[ri] * HALF,
+                ly: cy[ri] + ny[ri] * HALF,
+            },
+        });
+    }, []);
+
+    // Animación (una vez calculada la geometría).
     useEffect(() => {
-        const el = root.current;
-
-        if (!el) {
+        if (!geo || !root.current) {
             return;
         }
 
@@ -91,140 +120,182 @@ export function Blueprint({ className }: { className?: string }) {
             return;
         }
 
-        const bob = animate('.bd-load', {
-            translateY: [0, 7],
+        const march = animate('.road-center', {
+            strokeDashoffset: [0, -40],
             loop: true,
-            alternate: true,
-            ease: 'inOutSine',
-            duration: 1700,
+            ease: 'linear',
+            duration: 1000,
             autoplay: false,
         });
 
         const tl = createTimeline({
             defaults: { ease: 'inOutSine' },
-            onComplete: () => bob.play(),
+            onComplete: () => march.play(),
         });
 
         tl.add(
-            svg.createDrawable('.bd-ground'),
-            { draw: ['0 0', '0 1'], duration: 600 },
+            svg.createDrawable('.road-edge'),
+            { draw: ['0 0', '0 1'], duration: 1500 },
             0,
         )
+            .add('.road-center', { opacity: [0, 1], duration: 500 }, 950)
             .add(
-                svg.createDrawable('.bd-edge'),
-                { draw: ['0 0', '0 1'], duration: 520, delay: stagger(55) },
-                250,
-            )
-            .add('.bd-face', { opacity: [0, 1], duration: 600 }, 700)
-            .add(
-                svg.createDrawable('.bd-grid'),
-                { draw: ['0 0', '0 1'], duration: 420, delay: stagger(45) },
-                900,
+                svg.createDrawable('.road-tick'),
+                { draw: ['0 0', '0 1'], duration: 280, delay: stagger(55) },
+                1050,
             )
             .add(
-                svg.createDrawable('.bd-crane'),
-                { draw: ['0 0', '0 1'], duration: 480, delay: stagger(75) },
-                1350,
-            )
-            .add(
-                '.bd-cw',
+                '.road-anno',
                 {
                     opacity: [0, 1],
-                    scale: [0.6, 1],
-                    duration: 450,
-                    ease: 'outBack',
+                    translateY: [4, 0],
+                    duration: 420,
+                    delay: stagger(45),
                 },
-                1700,
-            )
-            .add('.bd-load', { opacity: [0, 1], duration: 400 }, 1900);
+                1250,
+            );
 
         return () => {
-            bob.pause();
+            march.pause();
             tl.pause();
         };
-    }, []);
+    }, [geo]);
 
     return (
         <svg
             ref={root}
-            viewBox="0 0 410 330"
+            viewBox="0 0 440 300"
             className={cn('h-auto w-full', className)}
             fill="none"
             role="img"
-            aria-label="Edificio en construcción con grúa torre, vista isométrica"
+            aria-label="Planta de trazo vial con progresivas y cotas"
         >
-            {/* suelo */}
-            <path
-                className="bd-ground"
-                d="M30,300 L388,300"
-                stroke="#60a5fa"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-            />
-
-            {/* caras del volumen */}
-            <g className="bd-face" style={{ opacity: 0 }}>
-                <polygon points={CARA_TOP} fill="rgba(96,165,250,0.05)" />
-                <polygon points={CARA_IZQ} fill="rgba(96,165,250,0.10)" />
-                <polygon points={CARA_DER} fill="rgba(96,165,250,0.05)" />
+            {/* bloque de título */}
+            <g className="road-anno" fill="#93c5fd" style={{ opacity: 0 }}>
+                <text
+                    x="20"
+                    y="26"
+                    fontSize="11"
+                    fontWeight="700"
+                    fontFamily={MONO}
+                >
+                    PLANTA — TRAZO VIAL
+                </text>
+                <text
+                    x="20"
+                    y="39"
+                    fontSize="8.5"
+                    fill="#64748b"
+                    fontFamily={MONO}
+                >
+                    CARRETERA · ESC 1:2000
+                </text>
             </g>
 
-            {/* rejilla de fachada (pisos / montantes) */}
-            <g stroke="#7fa8e0" strokeWidth="1" strokeLinecap="round">
-                {GRID.map((d, i) => (
-                    <path key={`g${i}`} className="bd-grid" d={d} />
-                ))}
+            {/* norte */}
+            <g className="road-anno" style={{ opacity: 0 }}>
+                <path d="M412,20 L412,46" stroke="#64748b" strokeWidth="1" />
+                <path d="M412,18 l-4,8 l8,0 Z" fill="#93c5fd" />
+                <text
+                    x="412"
+                    y="58"
+                    fontSize="9"
+                    fontWeight="700"
+                    fontFamily={MONO}
+                    fill="#93c5fd"
+                    textAnchor="middle"
+                >
+                    N
+                </text>
             </g>
 
-            {/* aristas del edificio */}
-            <g
-                stroke="#cfe0ff"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            >
-                {EDGES.map((d, i) => (
-                    <path key={`e${i}`} className="bd-edge" d={d} />
-                ))}
-            </g>
+            {/* eje de medición (oculto) */}
+            <path ref={eje} d={EJE} stroke="none" fill="none" />
 
-            {/* grúa torre */}
-            <g
-                stroke="#d4af37"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            >
-                {GRUA.map((d, i) => (
-                    <path key={`cr${i}`} className="bd-crane" d={d} />
-                ))}
-            </g>
+            {geo && (
+                <>
+                    {/* bordes de calzada */}
+                    <g
+                        stroke="#cfe0ff"
+                        strokeWidth="1.7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    >
+                        <path className="road-edge" d={geo.left} />
+                        <path className="road-edge" d={geo.right} />
+                    </g>
 
-            {/* contrapeso */}
-            <rect
-                className="bd-cw"
-                x="350"
-                y="52"
-                width="13"
-                height="11"
-                fill="#d4af37"
-                style={{
-                    transformBox: 'fill-box',
-                    transformOrigin: 'center',
-                    opacity: 0,
-                }}
-            />
+                    {/* línea central (guiones que avanzan) */}
+                    <path
+                        className="road-center"
+                        d={EJE}
+                        stroke="#d4af37"
+                        strokeWidth="1.6"
+                        strokeDasharray="9 11"
+                        strokeLinecap="round"
+                        style={{ opacity: 0 }}
+                    />
 
-            {/* carga colgante (sube y baja) */}
-            <g
-                className="bd-load"
-                fill="rgba(212,175,55,0.18)"
-                stroke="#d4af37"
-                strokeWidth="1.4"
-                style={{ opacity: 0 }}
-            >
-                <rect x="201" y="146" width="18" height="11" rx="1" />
-            </g>
+                    {/* progresivas (ticks + etiquetas) */}
+                    <g stroke="#7fa8e0" strokeWidth="1">
+                        {geo.ticks.map((d, i) => (
+                            <path key={`t${i}`} className="road-tick" d={d} />
+                        ))}
+                    </g>
+                    <g
+                        className="road-anno"
+                        fill="#94a3b8"
+                        fontSize="8"
+                        fontFamily={MONO}
+                        style={{ opacity: 0 }}
+                    >
+                        {geo.stations.map((s, i) => (
+                            <text
+                                key={`s${i}`}
+                                x={s.x.toFixed(1)}
+                                y={s.y.toFixed(1)}
+                                textAnchor="middle"
+                            >
+                                {s.t}
+                            </text>
+                        ))}
+                    </g>
+
+                    {/* cota de ancho de calzada */}
+                    <g className="road-anno" style={{ opacity: 0 }}>
+                        <text
+                            x={geo.ancho.x.toFixed(1)}
+                            y={geo.ancho.y.toFixed(1)}
+                            fontSize="8.5"
+                            fontFamily={MONO}
+                            fill="#cfe0ff"
+                            textAnchor="middle"
+                        >
+                            B = 7.20 m
+                        </text>
+                    </g>
+
+                    {/* radio de curva */}
+                    <g className="road-anno" style={{ opacity: 0 }}>
+                        <path
+                            d={`M${geo.radio.lx.toFixed(1)},${geo.radio.ly.toFixed(1)} L${geo.radio.x.toFixed(1)},${geo.radio.y.toFixed(1)}`}
+                            stroke="#64748b"
+                            strokeWidth="1"
+                            strokeDasharray="3 3"
+                        />
+                        <text
+                            x={geo.radio.x.toFixed(1)}
+                            y={(geo.radio.y - 4).toFixed(1)}
+                            fontSize="8.5"
+                            fontFamily={MONO}
+                            fill="#38bdf8"
+                            textAnchor="middle"
+                        >
+                            R = 50.00 m
+                        </text>
+                    </g>
+                </>
+            )}
         </svg>
     );
 }
