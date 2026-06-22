@@ -22,10 +22,20 @@ class CarpetaController extends Controller
         $this->authorize('viewAny', [Carpeta::class, $obra]);
 
         $carpetas = Carpeta::where('obra_id', $obra->id)
+            ->select(['id', 'parent_id', 'nombre', 'ruta', 'orden'])
+            ->withCount(['documentos as documentos_count' => fn ($q) => $q->vigentes()])
             ->orderBy('parent_id')
             ->orderBy('orden')
             ->orderBy('nombre')
-            ->get(['id', 'parent_id', 'nombre', 'ruta', 'orden']);
+            ->get()
+            ->map(fn (Carpeta $c) => [
+                'id' => $c->id,
+                'parent_id' => $c->parent_id,
+                'nombre' => $c->nombre,
+                'ruta' => $c->ruta,
+                'orden' => $c->orden,
+                'documentos_count' => (int) $c->documentos_count,
+            ]);
 
         $obraData = [
             'id' => $obra->id,

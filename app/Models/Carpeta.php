@@ -34,6 +34,11 @@ class Carpeta extends Model
         return $this->hasMany(self::class, 'parent_id')->orderBy('orden')->orderBy('nombre');
     }
 
+    public function documentos(): HasMany
+    {
+        return $this->hasMany(Documento::class);
+    }
+
     public function creador(): BelongsTo
     {
         return $this->belongsTo(User::class, 'creado_por');

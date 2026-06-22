@@ -34,6 +34,7 @@ type Carpeta = {
     nombre: string;
     ruta: string;
     orden: number;
+    documentos_count: number;
 };
 
 type ObraResumen = {
@@ -78,6 +79,23 @@ function construirArbol(carpetas: Carpeta[]): NodoArbol[] {
     });
 
     return raices;
+}
+
+/** Cuenta recursivamente archivos y subcarpetas dentro de un nodo. */
+function contarContenido(nodo: NodoArbol): {
+    archivos: number;
+    subcarpetas: number;
+} {
+    let archivos = nodo.documentos_count ?? 0;
+    let subcarpetas = nodo.hijos.length;
+
+    for (const h of nodo.hijos) {
+        const r = contarContenido(h);
+        archivos += r.archivos;
+        subcarpetas += r.subcarpetas;
+    }
+
+    return { archivos, subcarpetas };
 }
 
 function obtenerLinea(carpetaId: number, carpetas: Carpeta[]): Carpeta[] {
@@ -155,11 +173,26 @@ const NodoCarpeta = memo(function NodoCarpeta({
     const eliminar = (e: React.MouseEvent) => {
         e.stopPropagation();
 
-        if (
-            !confirm(
-                `¿Eliminar la carpeta "${nodo.nombre}" y todas sus subcarpetas?`,
-            )
-        ) {
+        const { archivos, subcarpetas } = contarContenido(nodo);
+        const partes: string[] = [];
+
+        if (subcarpetas > 0) {
+            partes.push(
+                `${subcarpetas} ${subcarpetas === 1 ? 'subcarpeta' : 'subcarpetas'}`,
+            );
+        }
+
+        if (archivos > 0) {
+            partes.push(
+                `${archivos} ${archivos === 1 ? 'archivo' : 'archivos'}`,
+            );
+        }
+
+        const detalle = partes.length
+            ? `\n\nSe eliminarán también ${partes.join(' y ')} de forma permanente. Esta acción no se puede deshacer.`
+            : '';
+
+        if (!confirm(`¿Eliminar la carpeta «${nodo.nombre}»?${detalle}`)) {
             return;
         }
 
