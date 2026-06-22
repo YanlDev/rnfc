@@ -420,6 +420,22 @@ export default function DocumentosIndex({
             : documentos;
     }, [documentos, filtro]);
 
+    // Subcarpetas de la carpeta activa (para verlas como en un explorador).
+    const subcarpetas = useMemo(
+        () =>
+            carpetaActiva
+                ? carpetas.filter((c) => c.parent_id === carpetaActiva.id)
+                : [],
+        [carpetas, carpetaActiva],
+    );
+    const subcarpetasFiltradas = useMemo(() => {
+        const q = filtro.trim().toLowerCase();
+
+        return q
+            ? subcarpetas.filter((c) => c.nombre.toLowerCase().includes(q))
+            : subcarpetas;
+    }, [subcarpetas, filtro]);
+
     const crearRaiz = (e: React.FormEvent) => {
         e.preventDefault();
         formRaiz.post(`/obras/${obra.id}/carpetas`, {
@@ -438,6 +454,13 @@ export default function DocumentosIndex({
 
         router.reload({ only: ['documentos'] });
     };
+
+    const irACarpeta = (id: number) =>
+        router.get(
+            `/obras/${obra.id}/documentos`,
+            { carpeta: id },
+            { preserveScroll: true, preserveState: true },
+        );
 
     const vacio = carpetas.length === 0;
 
@@ -605,11 +628,11 @@ export default function DocumentosIndex({
                                         />
                                     )}
 
-                                    {documentos.length === 0 ? (
+                                    {subcarpetas.length === 0 &&
+                                    documentos.length === 0 ? (
                                         <Card className="p-10 text-center">
                                             <p className="text-sm text-muted-foreground">
-                                                Esta carpeta aún no tiene
-                                                archivos.
+                                                Esta carpeta está vacía.
                                             </p>
                                         </Card>
                                     ) : (
@@ -625,16 +648,24 @@ export default function DocumentosIndex({
                                                                 e.target.value,
                                                             )
                                                         }
-                                                        placeholder="Buscar archivo…"
+                                                        placeholder="Buscar carpeta o archivo…"
                                                         className="h-9 pl-8"
                                                     />
                                                 </div>
                                                 <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                                                    {documentosFiltrados.length}
-                                                    {documentosFiltrados.length !==
-                                                    documentos.length
-                                                        ? ` / ${documentos.length}`
-                                                        : ''}{' '}
+                                                    {subcarpetas.length > 0 && (
+                                                        <>
+                                                            {
+                                                                subcarpetasFiltradas.length
+                                                            }{' '}
+                                                            {subcarpetas.length ===
+                                                            1
+                                                                ? 'carpeta'
+                                                                : 'carpetas'}{' '}
+                                                            ·{' '}
+                                                        </>
+                                                    )}
+                                                    {documentosFiltrados.length}{' '}
                                                     {documentos.length === 1
                                                         ? 'archivo'
                                                         : 'archivos'}
@@ -677,39 +708,109 @@ export default function DocumentosIndex({
                                                 </div>
                                             </div>
 
-                                            {documentosFiltrados.length ===
-                                            0 ? (
+                                            {subcarpetasFiltradas.length ===
+                                                0 &&
+                                            documentosFiltrados.length === 0 ? (
                                                 <Card className="p-8 text-center">
                                                     <p className="text-sm text-muted-foreground">
-                                                        Ningún archivo coincide
-                                                        con «{filtro}».
+                                                        Nada coincide con «
+                                                        {filtro}».
                                                     </p>
                                                 </Card>
                                             ) : vista === 'grid' ? (
-                                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                                                    {documentosFiltrados.map(
-                                                        (d) => (
-                                                            <DocumentoCard
-                                                                key={d.id}
-                                                                documento={d}
-                                                                obraId={obra.id}
-                                                                puedeSubir={
-                                                                    puedeSubir
-                                                                }
-                                                                puedeEliminar={
-                                                                    puedeEliminarDoc
-                                                                }
-                                                                onPreview={() =>
-                                                                    setDocPreview(
-                                                                        d,
-                                                                    )
-                                                                }
-                                                            />
-                                                        ),
+                                                <div className="space-y-3">
+                                                    {subcarpetasFiltradas.length >
+                                                        0 && (
+                                                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                                                            {subcarpetasFiltradas.map(
+                                                                (c) => (
+                                                                    <button
+                                                                        key={
+                                                                            c.id
+                                                                        }
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            irACarpeta(
+                                                                                c.id,
+                                                                            )
+                                                                        }
+                                                                        className="flex items-center gap-2.5 rounded-lg border border-border bg-card p-3 text-left transition-all hover:bg-muted/50 hover:shadow-md"
+                                                                    >
+                                                                        <Folder className="size-8 shrink-0 text-primary" />
+                                                                        <span
+                                                                            className="min-w-0 truncate text-sm font-medium"
+                                                                            title={
+                                                                                c.nombre
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                c.nombre
+                                                                            }
+                                                                        </span>
+                                                                    </button>
+                                                                ),
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    {documentosFiltrados.length >
+                                                        0 && (
+                                                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                                                            {documentosFiltrados.map(
+                                                                (d) => (
+                                                                    <DocumentoCard
+                                                                        key={
+                                                                            d.id
+                                                                        }
+                                                                        documento={
+                                                                            d
+                                                                        }
+                                                                        obraId={
+                                                                            obra.id
+                                                                        }
+                                                                        puedeSubir={
+                                                                            puedeSubir
+                                                                        }
+                                                                        puedeEliminar={
+                                                                            puedeEliminarDoc
+                                                                        }
+                                                                        onPreview={() =>
+                                                                            setDocPreview(
+                                                                                d,
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                ),
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </div>
                                             ) : (
                                                 <div className="overflow-hidden rounded-lg border border-border">
+                                                    {subcarpetasFiltradas.map(
+                                                        (c) => (
+                                                            <button
+                                                                key={c.id}
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    irACarpeta(
+                                                                        c.id,
+                                                                    )
+                                                                }
+                                                                className="flex w-full items-center gap-3 border-b border-border px-3 py-2 text-left hover:bg-muted/40"
+                                                            >
+                                                                <Folder className="size-7 shrink-0 text-primary" />
+                                                                <span
+                                                                    className="min-w-0 flex-1 truncate text-sm font-medium"
+                                                                    title={
+                                                                        c.nombre
+                                                                    }
+                                                                >
+                                                                    {c.nombre}
+                                                                </span>
+                                                                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                                                            </button>
+                                                        ),
+                                                    )}
                                                     {documentosFiltrados.map(
                                                         (d) => (
                                                             <DocumentoCard

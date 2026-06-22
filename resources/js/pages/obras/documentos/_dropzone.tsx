@@ -116,7 +116,7 @@ export default function Dropzone({ urlSubida, onComplete }: Props) {
                 onDragLeave={() => setDragOver(false)}
                 onDrop={onDrop}
                 className={
-                    'group relative w-full rounded-lg border-2 border-dashed p-6 text-center transition-all ' +
+                    'group relative w-full rounded-lg border-2 border-dashed p-3 transition-all ' +
                     (dragOver
                         ? 'scale-[1.01] border-primary bg-primary/5'
                         : 'border-border hover:border-primary/50 hover:bg-muted/30')
@@ -135,28 +135,29 @@ export default function Dropzone({ urlSubida, onComplete }: Props) {
                         e.target.value = '';
                     }}
                 />
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex items-center justify-center gap-3">
                     <div
                         className={
-                            'flex size-12 items-center justify-center rounded-full transition-colors ' +
+                            'flex size-9 shrink-0 items-center justify-center rounded-full transition-colors ' +
                             (dragOver
                                 ? 'bg-primary text-primary-foreground'
                                 : 'bg-muted text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground')
                         }
                     >
-                        <Upload className="size-6" />
+                        <Upload className="size-4" />
                     </div>
-                    <div className="text-sm">
-                        <strong className="text-foreground">
-                            Haz clic para elegir archivos
-                        </strong>{' '}
-                        <span className="text-muted-foreground">
-                            o arrástralos aquí
-                        </span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                        PDF, imágenes, planos, documentos · máx. 50 MB por
-                        archivo
+                    <div className="text-left leading-tight">
+                        <div className="text-sm">
+                            <strong className="text-foreground">
+                                Haz clic para elegir archivos
+                            </strong>{' '}
+                            <span className="text-muted-foreground">
+                                o arrástralos aquí
+                            </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                            PDF, imágenes, planos, documentos · máx. 50 MB
+                        </div>
                     </div>
                 </div>
             </button>
