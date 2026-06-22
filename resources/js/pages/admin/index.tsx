@@ -144,6 +144,7 @@ function bytesHumano(bytes: number) {
 
 function colorEstado(value: string) {
     const i = ORDEN_ESTADO.indexOf(value);
+
     return PALETA[(i < 0 ? 0 : i) % PALETA.length];
 }
 
@@ -173,7 +174,7 @@ function Kpi({
                     )}
                 />
             </div>
-            <div className="text-2xl font-semibold tabular-nums text-foreground">
+            <div className="text-2xl font-semibold text-foreground tabular-nums">
                 {value}
             </div>
             {sub && (
