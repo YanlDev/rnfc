@@ -19,6 +19,15 @@ class HandleInertiaRequests extends Middleware
     protected $rootView = 'app';
 
     /**
+     * El landing público usa su propio root template con SEO renderizado en
+     * servidor (meta tags + JSON-LD), ya que la app no tiene SSR de Inertia.
+     */
+    public function rootView(Request $request): string
+    {
+        return $request->routeIs('home') ? 'landing-app' : $this->rootView;
+    }
+
+    /**
      * Determines the current asset version.
      *
      * @see https://inertiajs.com/asset-versioning

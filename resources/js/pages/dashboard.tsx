@@ -1,18 +1,17 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import {
     Activity,
+    ArrowRight,
     Building2,
     CheckCircle2,
+    Clock,
+    FileText,
+    NotebookPen,
     PauseCircle,
 } from 'lucide-react';
-import type { ComponentType, SVGProps } from 'react';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import type { ComponentType } from 'react';
+import { EstadoObraBadge } from '@/components/estado-obra-badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { dashboard } from '@/routes';
 
 type Kpis = {
@@ -22,115 +21,235 @@ type Kpis = {
     paralizadas: number;
 };
 
-type DashboardPageProps = {
-    kpis: Kpis;
+type ObraResumen = {
+    id: number;
+    codigo: string;
+    nombre: string;
+    ubicacion: string | null;
+    estado: string;
+    estado_label: string;
+    rol: string | null;
 };
 
-type KpiCardProps = {
+type ActividadRow = {
+    icono: string;
     titulo: string;
-    valor: number;
-    descripcion: string;
-    Icono: ComponentType<SVGProps<SVGSVGElement>>;
-    acento: string;
+    subtitulo: string;
+    enlace: string;
+    created_at_relativo: string;
 };
 
-function KpiCard({ titulo, valor, descripcion, Icono, acento }: KpiCardProps) {
+type SharedProps = {
+    auth: { user: { name: string } | null };
+};
+
+type DashboardPageProps = {
+    esAdmin: boolean;
+    kpis: Kpis;
+    misObras: ObraResumen[];
+    actividadReciente: ActividadRow[];
+};
+
+const ICONOS_ACTIVIDAD: Record<
+    string,
+    ComponentType<{ className?: string }>
+> = {
+    NotebookPen,
+    FileText,
+};
+
+function Kpi({
+    label,
+    value,
+    Icono,
+    alerta = false,
+}: {
+    label: string;
+    value: number;
+    Icono: ComponentType<{ className?: string }>;
+    alerta?: boolean;
+}) {
     return (
-        <Card className="relative overflow-hidden">
-            <span
-                aria-hidden
-                className={`absolute inset-x-0 top-0 h-1 ${acento}`}
-            />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-                    {titulo}
-                </CardTitle>
-                <Icono className="size-5 text-primary" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-3xl font-bold text-foreground tabular-nums">
-                    {valor}
-                </div>
-                <CardDescription className="mt-1 text-xs">
-                    {descripcion}
-                </CardDescription>
-            </CardContent>
-        </Card>
+        <div className="flex flex-col gap-2 p-4">
+            <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                    {label}
+                </span>
+                <Icono
+                    className={
+                        alerta && value > 0
+                            ? 'size-4 text-amber-500'
+                            : 'size-4 text-muted-foreground/70'
+                    }
+                />
+            </div>
+            <div className="text-2xl font-semibold text-foreground tabular-nums">
+                {value}
+            </div>
+        </div>
     );
 }
 
 export default function Dashboard() {
-    const { kpis } = usePage<DashboardPageProps>().props;
+    const { esAdmin, kpis, misObras, actividadReciente } =
+        usePage<DashboardPageProps>().props;
+    const { auth } = usePage<SharedProps>().props;
+    const nombre = auth.user?.name?.split(' ')[0] ?? '';
 
     return (
         <>
             <Head title="Panel" />
-            <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
-                <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <KpiCard
-                        titulo="Total de obras"
-                        valor={kpis.totalObras}
-                        descripcion="Obras registradas en la plataforma"
+            <div className="flex h-full flex-1 flex-col gap-5 p-4 md:p-6">
+                <div>
+                    <h1 className="text-xl font-semibold text-foreground">
+                        Hola{nombre ? `, ${nombre}` : ''}
+                    </h1>
+                    <p className="text-sm text-muted-foreground">
+                        {esAdmin
+                            ? 'Resumen general de la plataforma.'
+                            : 'Resumen de las obras donde participas.'}
+                    </p>
+                </div>
+
+                {/* KPIs — panel sobrio con divisores */}
+                <section className="grid grid-cols-2 divide-x divide-y divide-border overflow-hidden rounded-xl border border-border bg-card lg:grid-cols-4">
+                    <Kpi
+                        label={esAdmin ? 'Total de obras' : 'Mis obras'}
+                        value={kpis.totalObras}
                         Icono={Building2}
-                        acento="bg-primary"
                     />
-                    <KpiCard
-                        titulo="En ejecución"
-                        valor={kpis.enEjecucion}
-                        descripcion="Obras activas en supervisión"
+                    <Kpi
+                        label="En ejecución"
+                        value={kpis.enEjecucion}
                         Icono={Activity}
-                        acento="bg-[var(--color-brand-verde)]"
                     />
-                    <KpiCard
-                        titulo="Finalizadas"
-                        valor={kpis.finalizadas}
-                        descripcion="Obras culminadas y entregadas"
+                    <Kpi
+                        label="Finalizadas"
+                        value={kpis.finalizadas}
                         Icono={CheckCircle2}
-                        acento="bg-[var(--color-brand-verde-claro)]"
                     />
-                    <KpiCard
-                        titulo="Paralizadas"
-                        valor={kpis.paralizadas}
-                        descripcion="Requieren atención inmediata"
+                    <Kpi
+                        label="Paralizadas"
+                        value={kpis.paralizadas}
                         Icono={PauseCircle}
-                        acento="bg-[var(--color-brand-amarillo)]"
+                        alerta
                     />
                 </section>
 
                 <section className="grid gap-4 lg:grid-cols-3">
-                    <Card className="lg:col-span-2">
-                        <CardHeader>
-                            <CardTitle>Actividad reciente</CardTitle>
-                            <CardDescription>
-                                Últimos movimientos en obras, documentos y
-                                cuaderno.
-                            </CardDescription>
+                    {/* Mis obras */}
+                    <Card className="min-w-0 lg:col-span-2">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                <Building2 className="size-4" />
+                                {esAdmin ? 'Obras recientes' : 'Mis obras'}
+                            </CardTitle>
+                            <Link
+                                href="/obras"
+                                className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                            >
+                                Ver todas
+                                <ArrowRight className="size-3" />
+                            </Link>
                         </CardHeader>
-                        <CardContent>
-                            <div className="flex h-48 items-center justify-center rounded-md border border-dashed border-border bg-muted/30 text-sm text-muted-foreground">
-                                Sin actividad registrada todavía
-                            </div>
+                        <CardContent className="space-y-1.5">
+                            {misObras.length === 0 ? (
+                                <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border bg-muted/30 text-center text-sm text-muted-foreground">
+                                    <Building2 className="size-6 opacity-50" />
+                                    Aún no tienes obras asignadas.
+                                </div>
+                            ) : (
+                                misObras.map((o) => (
+                                    <Link
+                                        key={o.id}
+                                        href={`/obras/${o.id}`}
+                                        className="flex items-center justify-between gap-3 rounded-lg border border-transparent px-2 py-2 hover:border-border hover:bg-muted/50"
+                                    >
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <span className="truncate font-mono text-[11px] font-semibold text-muted-foreground">
+                                                    {o.codigo}
+                                                </span>
+                                                {o.rol && (
+                                                    <span className="shrink-0 text-[11px] text-muted-foreground">
+                                                        · {o.rol}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="truncate text-sm font-medium">
+                                                {o.nombre}
+                                            </div>
+                                            {o.ubicacion && (
+                                                <div className="truncate text-xs text-muted-foreground">
+                                                    {o.ubicacion}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <EstadoObraBadge
+                                            estado={o.estado}
+                                            label={o.estado_label}
+                                            className="shrink-0"
+                                        />
+                                    </Link>
+                                ))
+                            )}
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-gradient-to-br from-[#145694] to-[#2850da] text-white">
+                    {/* Actividad reciente */}
+                    <Card className="min-w-0">
                         <CardHeader>
-                            <CardTitle className="text-white">
-                                Bienvenido a RNFC
+                            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                <Activity className="size-4" />
+                                Actividad reciente
                             </CardTitle>
-                            <CardDescription className="text-white/80">
-                                Plataforma de supervisión y consultoría de
-                                obras.
-                            </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-3 text-sm text-white/90">
-                            <p>
-                                Gestiona obras, equipos, documentos y cuadernos
-                                de obra en un solo lugar.
-                            </p>
-                            <p className="text-xs text-white/70">
-                                Plataforma en desarrollo · v0.1
-                            </p>
+                        <CardContent>
+                            {actividadReciente.length === 0 ? (
+                                <div className="flex h-40 items-center justify-center rounded-md border border-dashed border-border bg-muted/30 text-center text-sm text-muted-foreground">
+                                    Sin actividad todavía.
+                                </div>
+                            ) : (
+                                <ul className="space-y-0.5">
+                                    {actividadReciente.map((ev, i) => {
+                                        const Icono =
+                                            ICONOS_ACTIVIDAD[ev.icono] ??
+                                            Activity;
+
+                                        return (
+                                            <li key={`${ev.enlace}-${i}`}>
+                                                <Link
+                                                    href={ev.enlace}
+                                                    className="flex items-start gap-3 rounded-lg p-2 transition-colors hover:bg-muted/50"
+                                                >
+                                                    <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                                                        <Icono className="size-4" />
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="truncate text-sm font-medium">
+                                                            {ev.titulo}
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                            <span className="truncate">
+                                                                {ev.subtitulo}
+                                                            </span>
+                                                            <span aria-hidden>
+                                                                ·
+                                                            </span>
+                                                            <span className="flex shrink-0 items-center gap-0.5">
+                                                                <Clock className="size-3" />
+                                                                {
+                                                                    ev.created_at_relativo
+                                                                }
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </Link>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            )}
                         </CardContent>
                     </Card>
                 </section>

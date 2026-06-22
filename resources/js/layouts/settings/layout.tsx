@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,8 @@ type NavGroup = {
     items: NavItem[];
 };
 
-const sidebarGroups: NavGroup[] = [
+// Grupos visibles para cualquier usuario autenticado.
+const gruposCuenta: NavGroup[] = [
     {
         label: 'Mi cuenta',
         items: [
@@ -24,6 +25,11 @@ const sidebarGroups: NavGroup[] = [
             { title: 'Apariencia', href: editAppearance(), icon: null },
         ],
     },
+];
+
+// Configuración de plataforma: solo administradores (firma de certificados y
+// galería pública). Las rutas también están gateadas en el backend.
+const gruposAdmin: NavGroup[] = [
     {
         label: 'Certificados',
         items: [
@@ -44,6 +50,14 @@ const sidebarGroups: NavGroup[] = [
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
     const { isCurrentOrParentUrl } = useCurrentUrl();
+    const { auth } = usePage<{
+        auth: { user: { es_admin?: boolean } | null };
+    }>().props;
+    const esAdmin = auth?.user?.es_admin === true;
+
+    const sidebarGroups = esAdmin
+        ? [...gruposCuenta, ...gruposAdmin]
+        : gruposCuenta;
 
     return (
         <div className="px-4 py-6">
@@ -54,10 +68,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
 
             <div className="flex flex-col lg:flex-row lg:space-x-12">
                 <aside className="w-full max-w-xl lg:w-56">
-                    <nav
-                        className="flex flex-col gap-6"
-                        aria-label="Settings"
-                    >
+                    <nav className="flex flex-col gap-6" aria-label="Settings">
                         {sidebarGroups.map((group) => (
                             <div key={group.label} className="flex flex-col">
                                 <h3 className="mb-2 px-3 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
@@ -70,9 +81,15 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                                             size="sm"
                                             variant="ghost"
                                             asChild
-                                            className={cn('w-full justify-start', {
-                                                'bg-muted': isCurrentOrParentUrl(item.href),
-                                            })}
+                                            className={cn(
+                                                'w-full justify-start',
+                                                {
+                                                    'bg-muted':
+                                                        isCurrentOrParentUrl(
+                                                            item.href,
+                                                        ),
+                                                },
+                                            )}
                                         >
                                             <Link href={item.href}>
                                                 {item.icon && (

@@ -24,29 +24,43 @@ import certificados from '@/routes/certificados';
 import obras from '@/routes/obras';
 import type { NavGroup } from '@/types';
 
-const baseGroups: NavGroup[] = [
-    {
+/**
+ * Construye el menú según el rol global. Solo hay dos roles de plataforma
+ * (admin / usuario); la diferenciación fina entre los 4 roles de obra ocurre
+ * DENTRO de cada obra (matriz de permisos), no en este sidebar global.
+ */
+function construirGrupos(esAdmin: boolean): NavGroup[] {
+    // Todos: navegan el panel y sus obras.
+    const general: NavGroup = {
         label: 'General',
         items: [
             { title: 'Panel', href: dashboard(), icon: LayoutGrid },
             { title: 'Obras', href: obras.index().url, icon: Building2 },
-            {
-                title: 'Certificados',
-                href: certificados.index().url,
-                icon: Award,
-            },
         ],
-    },
-];
+    };
 
-const adminGroup: NavGroup = {
-    label: 'Administración',
-    items: [
-        { title: 'Panel admin', href: '/admin', icon: Settings2 },
-        { title: 'Usuarios', href: '/admin/usuarios', icon: UserCog },
-        { title: 'Permisos', href: '/admin/permisos', icon: ShieldCheck },
-    ],
-};
+    if (!esAdmin) {
+        return [general];
+    }
+
+    // Certificados es una función de plataforma (admin-only): solo el admin la ve.
+    general.items.push({
+        title: 'Certificados',
+        href: certificados.index().url,
+        icon: Award,
+    });
+
+    const administracion: NavGroup = {
+        label: 'Administración',
+        items: [
+            { title: 'Panel admin', href: '/admin', icon: Settings2 },
+            { title: 'Usuarios', href: '/admin/usuarios', icon: UserCog },
+            { title: 'Permisos', href: '/admin/permisos', icon: ShieldCheck },
+        ],
+    };
+
+    return [general, administracion];
+}
 
 export function AppSidebar() {
     const { auth } = usePage<{
@@ -54,9 +68,7 @@ export function AppSidebar() {
     }>().props;
     const esAdmin = auth?.user?.es_admin === true;
 
-    const groups: NavGroup[] = esAdmin
-        ? [...baseGroups, adminGroup]
-        : baseGroups;
+    const groups = construirGrupos(esAdmin);
 
     return (
         <Sidebar collapsible="icon" variant="inset">

@@ -22,9 +22,8 @@ use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\VerificacionController;
 use Illuminate\Support\Facades\Route;
 
-// Landing institucional pública (Blade + Tailwind, SEO-friendly)
+// Landing institucional pública (Inertia React, SEO server-side)
 Route::get('/', [LandingController::class, 'home'])->name('home');
-Route::post('/contacto', [LandingController::class, 'enviarMensaje'])->name('landing.contacto');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 // Verificación pública de certificados (sin auth)

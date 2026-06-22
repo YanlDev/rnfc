@@ -1,0 +1,323 @@
+/* ============================================================
+   Landing público RNFC — estilos propios (premium híbrido).
+   Importado solo por resources/js/pages/landing.tsx.
+   ============================================================ */
+
+.lp {
+    --c-bg: #071426;
+    --c-bg-2: #0a1a30;
+    --c-blue: #0f4c81;
+    --c-blue-bright: #2563eb;
+    --c-cyan: #38bdf8;
+    --c-gold: #d4af37;
+    --c-text-dim: #94a3b8;
+    --c-border: rgba(148, 175, 220, 0.12);
+    --c-border-strong: rgba(148, 175, 220, 0.22);
+    letter-spacing: -0.005em;
+    -webkit-font-smoothing: antialiased;
+}
+
+.lp h1,
+.lp h2,
+.lp h3,
+.lp h4 {
+    letter-spacing: -0.02em;
+}
+.lp .display-tight {
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+    overflow-wrap: break-word;
+}
+
+/* ===== fondos técnicos (secciones oscuras) ===== */
+.lp .bg-blueprint {
+    background-color: var(--c-bg);
+    background-image:
+        linear-gradient(rgba(56, 189, 248, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 189, 248, 0.045) 1px, transparent 1px);
+    background-size: 56px 56px;
+}
+.lp .bg-blueprint-fine {
+    background-image:
+        linear-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+    background-size: 28px 28px;
+}
+/* grid azul sobre fondo claro */
+.lp .bg-blueprint-light {
+    background-image:
+        linear-gradient(rgba(37, 99, 235, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(37, 99, 235, 0.06) 1px, transparent 1px);
+    background-size: 32px 32px;
+}
+.lp .mask-radial {
+    mask-image: radial-gradient(
+        ellipse 80% 60% at 50% 40%,
+        black 30%,
+        transparent 80%
+    );
+    -webkit-mask-image: radial-gradient(
+        ellipse 80% 60% at 50% 40%,
+        black 30%,
+        transparent 80%
+    );
+}
+.lp .glow-blue {
+    background: radial-gradient(
+        closest-side,
+        rgba(37, 99, 235, 0.18),
+        transparent 70%
+    );
+    filter: blur(50px);
+}
+.lp .glow-gold {
+    background: radial-gradient(
+        closest-side,
+        rgba(212, 175, 55, 0.1),
+        transparent 70%
+    );
+    filter: blur(50px);
+}
+
+/* ===== glass (oscuro) ===== */
+.lp .glass {
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.04),
+        rgba(255, 255, 255, 0.015)
+    );
+    border: 1px solid var(--c-border);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+.lp .glass-strong {
+    background: linear-gradient(
+        180deg,
+        rgba(15, 76, 129, 0.18),
+        rgba(7, 20, 38, 0.55)
+    );
+    border: 1px solid var(--c-border-strong);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+/* ===== eyebrow ===== */
+.lp .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+}
+.lp .eyebrow::before {
+    content: '';
+    width: 28px;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.5;
+}
+.lp .eyebrow-center {
+    justify-content: center;
+}
+.lp .eyebrow-center::after {
+    content: '';
+    width: 28px;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.5;
+}
+
+/* ===== botones ===== */
+.lp .btn-primary {
+    background: var(--c-blue-bright);
+    color: #fff;
+    box-shadow:
+        0 8px 24px -12px rgba(37, 99, 235, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        background-color 0.25s ease;
+}
+.lp .btn-primary:hover {
+    transform: translateY(-2px);
+    background: #1d4ed8;
+    box-shadow:
+        0 14px 32px -14px rgba(37, 99, 235, 0.75),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.lp .btn-ghost {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--c-border-strong);
+    color: #fff;
+    backdrop-filter: blur(8px);
+    transition:
+        background-color 0.25s ease,
+        border-color 0.25s ease,
+        transform 0.25s ease;
+}
+.lp .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(148, 175, 220, 0.45);
+    transform: translateY(-2px);
+}
+.lp .btn-outline {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    color: #0f172a;
+    transition:
+        border-color 0.25s ease,
+        transform 0.25s ease,
+        box-shadow 0.25s ease;
+}
+.lp .btn-outline:hover {
+    transform: translateY(-2px);
+    border-color: #cbd5e1;
+    box-shadow: 0 10px 24px -16px rgba(15, 23, 42, 0.4);
+}
+
+/* ===== reveal (IntersectionObserver) ===== */
+.lp .reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition:
+        opacity 0.8s cubic-bezier(0.2, 0.7, 0.2, 1),
+        transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+    transition-delay: var(--reveal-delay, 0s);
+}
+.lp .reveal.in {
+    opacity: 1;
+    transform: none;
+}
+
+/* ===== service card ===== */
+.lp .svc-card {
+    position: relative;
+    overflow: hidden;
+    transition:
+        transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1),
+        border-color 0.4s ease,
+        box-shadow 0.4s ease;
+}
+.lp .svc-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 30px 60px -30px rgba(37, 99, 235, 0.28);
+}
+
+/* ===== mockup window (oscuro) ===== */
+.lp .mock-window {
+    background: linear-gradient(180deg, #0d1d36 0%, #07142a 100%);
+    border: 1px solid var(--c-border-strong);
+    border-radius: 16px;
+    box-shadow:
+        0 50px 100px -30px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(255, 255, 255, 0.02);
+    max-width: 100%;
+    overflow: hidden;
+}
+.lp .mock-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 0.9rem;
+    border-bottom: 1px solid var(--c-border);
+}
+.lp .mock-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+}
+
+/* ===== float cards ===== */
+@keyframes lp-floaty {
+    0% {
+        transform: translateY(0);
+    }
+    100% {
+        transform: translateY(-12px);
+    }
+}
+.lp .floaty {
+    animation: lp-floaty 5s ease-in-out infinite alternate;
+}
+.lp .floaty-slow {
+    animation: lp-floaty 7s ease-in-out infinite alternate;
+}
+
+/* ===== iso card ===== */
+.lp .iso-premium {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.4s ease;
+}
+.lp .iso-premium:hover {
+    transform: translateY(-6px);
+}
+.lp .iso-premium::after {
+    content: '';
+    position: absolute;
+    inset: -40%;
+    background: radial-gradient(
+        closest-side,
+        var(--iso-glow, rgba(37, 99, 235, 0.35)),
+        transparent 70%
+    );
+    filter: blur(40px);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+}
+.lp .iso-premium:hover::after {
+    opacity: 0.8;
+}
+
+/* ===== gallery hover ===== */
+.lp .gal-item {
+    transition: transform 0.5s ease;
+}
+.lp .gal-item:hover {
+    transform: scale(1.02);
+}
+.lp .gal-item img {
+    transition:
+        transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1),
+        filter 0.5s ease;
+}
+.lp .gal-item:hover img {
+    transform: scale(1.08);
+    filter: saturate(1.1) brightness(1.05);
+}
+
+/* ===== nav ===== */
+.lp .nav-shell {
+    transition:
+        background-color 0.35s ease,
+        border-color 0.35s ease,
+        backdrop-filter 0.35s ease;
+    background-color: transparent;
+    border-bottom: 1px solid transparent;
+}
+.lp .nav-shell.scrolled {
+    background-color: rgba(7, 20, 38, 0.82);
+    border-bottom-color: var(--c-border);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+.lp ::selection {
+    background: rgba(37, 99, 235, 0.35);
+    color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lp .reveal,
+    .lp .floaty,
+    .lp .floaty-slow {
+        animation: none !important;
+        transition: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
+}

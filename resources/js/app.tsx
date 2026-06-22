@@ -14,6 +14,8 @@ createInertiaApp({
         switch (true) {
             case name === 'welcome':
                 return null;
+            case name === 'landing':
+                return null;
             case name.startsWith('invitaciones/'):
                 return null;
             case name.startsWith('auth/'):

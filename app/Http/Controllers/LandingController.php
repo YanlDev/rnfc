@@ -2,42 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\EnviarMensajeContactoRequest;
-use App\Mail\MensajeContacto;
 use App\Models\GaleriaHome;
-use Illuminate\Contracts\View\View;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Mail;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class LandingController extends Controller
 {
-    public function home(): View
+    public function home(): Response
     {
-        $galeria = GaleriaHome::orderBy('orden')->orderBy('id')->get();
+        $galeria = GaleriaHome::orderBy('orden')->orderBy('id')->get()
+            ->map(fn (GaleriaHome $img) => [
+                'id' => $img->id,
+                'url' => $img->url,
+                'titulo' => $img->titulo,
+            ])
+            ->all();
 
-        return view('landing.index', compact('galeria'));
-    }
-
-    public function enviarMensaje(EnviarMensajeContactoRequest $request): RedirectResponse
-    {
-        // Honeypot anti-spam: si el campo "website" viene lleno, descarta sin error.
-        if (! empty($request->input('website'))) {
-            return back()->with('success', 'Mensaje recibido. Te responderemos a la brevedad.');
-        }
-
-        $data = $request->validated();
-        $destino = config('mail.from.address', 'contacto@rnfcconsultoria.com');
-
-        Mail::to($destino)->queue(new MensajeContacto(
-            nombre: $data['nombre'],
-            correo: $data['correo'],
-            telefono: $data['telefono'] ?? null,
-            asunto: $data['asunto'] ?? 'Mensaje desde la web',
-            mensaje: $data['mensaje'],
-        ));
-
-        return back()
-            ->with('success', '¡Gracias por escribirnos! Nos pondremos en contacto contigo a la brevedad.')
-            ->withFragment('contacto');
+        return Inertia::render('landing', [
+            'galeria' => $galeria,
+        ]);
     }
 }

@@ -315,7 +315,7 @@ export default function AdminPanel({
 
                 {/* Charts de distribución */}
                 <section className="grid gap-4 lg:grid-cols-2">
-                    <Card>
+                    <Card className="min-w-0">
                         <CardHeader>
                             <PanelTitulo Icono={Building2}>
                                 Obras por estado
@@ -365,7 +365,7 @@ export default function AdminPanel({
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="min-w-0">
                         <CardHeader>
                             <PanelTitulo Icono={Award}>
                                 Certificados por tipo
@@ -418,7 +418,7 @@ export default function AdminPanel({
 
                 {/* Almacenamiento + usuarios activos */}
                 <section className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-                    <Card>
+                    <Card className="min-w-0">
                         <CardHeader>
                             <PanelTitulo Icono={HardDrive}>
                                 Top obras por almacenamiento
@@ -492,7 +492,7 @@ export default function AdminPanel({
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="min-w-0">
                         <CardHeader>
                             <PanelTitulo Icono={Trophy}>
                                 Usuarios más activos
@@ -536,7 +536,7 @@ export default function AdminPanel({
 
                 {/* Ranking carpetas + actividad reciente */}
                 <section className="grid gap-4 lg:grid-cols-[1fr_2fr]">
-                    <Card>
+                    <Card className="min-w-0">
                         <CardHeader>
                             <PanelTitulo Icono={FileText}>
                                 Obras con más carpetas
@@ -577,7 +577,7 @@ export default function AdminPanel({
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="min-w-0">
                         <CardHeader>
                             <PanelTitulo Icono={Activity}>
                                 Actividad reciente

@@ -23,7 +23,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('user-password.update');
 
     Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
+});
 
+// Configuración de plataforma: solo administradores (firma de certificados y
+// galería pública del home). Antes estaba abierto a cualquier usuario.
+Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('settings/branding', [BrandingController::class, 'edit'])->name('branding.edit');
     Route::post('settings/branding', [BrandingController::class, 'update'])->name('branding.update');
     Route::delete('settings/branding', [BrandingController::class, 'destroy'])->name('branding.destroy');
