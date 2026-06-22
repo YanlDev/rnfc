@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\InvitacionGlobalController;
+use App\Http\Controllers\Admin\PermisosController;
 use App\Http\Controllers\Admin\UsuariosController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AsientoCuadernoController;
@@ -51,6 +52,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('admin.usuarios.toggle-activo');
     Route::patch('admin/usuarios/{usuario}/rol', [UsuariosController::class, 'cambiarRol'])
         ->name('admin.usuarios.rol');
+    // Matriz de permisos por rol de obra
+    Route::get('admin/permisos', [PermisosController::class, 'index'])
+        ->name('admin.permisos.index');
+    Route::put('admin/permisos', [PermisosController::class, 'update'])
+        ->name('admin.permisos.update');
+
     Route::post('admin/invitar', [InvitacionGlobalController::class, 'store'])
         ->name('admin.invitar');
     Route::delete('admin/invitaciones/{invitacion}', [InvitacionGlobalController::class, 'cancelar'])

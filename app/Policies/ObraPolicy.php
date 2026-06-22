@@ -3,15 +3,15 @@
 namespace App\Policies;
 
 use App\Enums\RolGlobal;
-use App\Enums\RolObra;
 use App\Models\Obra;
 use App\Models\User;
+use App\Support\PermisosObra;
 
 class ObraPolicy
 {
     /**
-     * Cualquier usuario autenticado con rol global válido puede listar obras.
-     * El listado de cada usuario será filtrado por las obras a las que pertenece.
+     * Cualquier usuario autenticado puede entrar al listado; se filtra por
+     * las obras a las que pertenece.
      */
     public function viewAny(User $user): bool
     {
@@ -19,37 +19,29 @@ class ObraPolicy
     }
 
     /**
-     * Para ver una obra específica:
-     *   - admin, gerente general o supervisor → todas
-     *   - los demás roles → sólo si están vinculados via pivot
+     * Ver una obra: el Admin de plataforma ve todas; el resto, sólo las suyas.
      */
     public function view(User $user, Obra $obra): bool
     {
-        if ($user->hasAnyRole(RolGlobal::rolesVisionGlobal())) {
-            return true;
-        }
-
-        return $obra->usuarios()->where('users.id', $user->id)->exists();
-    }
-
-    public function create(User $user): bool
-    {
-        return $user->hasAnyRole(RolGlobal::rolesVisionGlobal());
+        return PermisosObra::esMiembro($user, $obra);
     }
 
     /**
-     * Editar: admin global, gerente general, supervisor (global o de la obra).
+     * Crear obras es una acción de plataforma (sólo Admin).
      */
+    public function create(User $user): bool
+    {
+        return $user->hasAnyRole(RolGlobal::rolesAdministrativos());
+    }
+
     public function update(User $user, Obra $obra): bool
     {
-        if ($user->hasAnyRole(RolGlobal::rolesVisionGlobal())) {
-            return true;
-        }
+        return PermisosObra::puede($user, $obra, 'obra.editar');
+    }
 
-        return $obra->usuarios()
-            ->where('users.id', $user->id)
-            ->wherePivot('rol_obra', RolObra::AdministradorObra->value)
-            ->exists();
+    public function gestionarEquipo(User $user, Obra $obra): bool
+    {
+        return PermisosObra::puede($user, $obra, 'equipo.gestionar');
     }
 
     public function delete(User $user, Obra $obra): bool

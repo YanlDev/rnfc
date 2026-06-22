@@ -102,13 +102,7 @@ type Props = {
 
 const ROL_COLOR: Record<string, string> = {
     admin: 'bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300',
-    gerente_general:
-        'bg-purple-100 text-purple-800 hover:bg-purple-100 dark:bg-purple-950/40 dark:text-purple-300',
-    residente:
-        'bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300',
-    ingeniero:
-        'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300',
-    invitado:
+    usuario:
         'bg-slate-100 text-slate-700 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300',
 };
 

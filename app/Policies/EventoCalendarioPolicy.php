@@ -2,21 +2,16 @@
 
 namespace App\Policies;
 
-use App\Enums\RolGlobal;
-use App\Enums\RolObra;
 use App\Models\EventoCalendario;
 use App\Models\Obra;
 use App\Models\User;
+use App\Support\PermisosObra;
 
 class EventoCalendarioPolicy
 {
     public function viewAny(User $user, Obra $obra): bool
     {
-        if ($user->hasAnyRole(RolGlobal::rolesVisionGlobal())) {
-            return true;
-        }
-
-        return $obra->usuarios()->where('users.id', $user->id)->exists();
+        return PermisosObra::puede($user, $obra, 'calendario.ver');
     }
 
     public function view(User $user, EventoCalendario $evento): bool
@@ -24,19 +19,9 @@ class EventoCalendarioPolicy
         return $this->viewAny($user, $evento->obra);
     }
 
-    /**
-     * Crear eventos → admin global o administrador de la obra.
-     */
     public function create(User $user, Obra $obra): bool
     {
-        if ($user->hasAnyRole(RolGlobal::rolesAdministrativos())) {
-            return true;
-        }
-
-        return $obra->usuarios()
-            ->where('users.id', $user->id)
-            ->wherePivot('rol_obra', RolObra::AdministradorObra->value)
-            ->exists();
+        return PermisosObra::puede($user, $obra, 'calendario.gestionar');
     }
 
     public function update(User $user, EventoCalendario $evento): bool

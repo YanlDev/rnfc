@@ -115,9 +115,9 @@ class UsuariosController extends Controller implements HasMiddleware
                 'value' => $r->value,
                 'label' => $r->label(),
             ])->all(),
-            'rolesGlobales' => collect(RolGlobal::rolesAdministrativos())->map(fn (string $r) => [
-                'value' => $r,
-                'label' => RolGlobal::from($r)->label(),
+            'rolesGlobales' => collect(RolGlobal::cases())->map(fn (RolGlobal $r) => [
+                'value' => $r->value,
+                'label' => $r->label(),
             ])->all(),
             'kpis' => $kpis,
             'invitacionesPendientes' => Invitacion::with('invitador:id,name')

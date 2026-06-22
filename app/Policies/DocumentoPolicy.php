@@ -2,69 +2,30 @@
 
 namespace App\Policies;
 
-use App\Enums\RolGlobal;
-use App\Enums\RolObra;
 use App\Models\Carpeta;
 use App\Models\Documento;
 use App\Models\User;
+use App\Support\PermisosObra;
 
 class DocumentoPolicy
 {
-    /**
-     * Ver un documento:
-     *  - admin / gerente general → siempre
-     *  - usuario en pivot → su obra (incluye invitado, lectura)
-     */
     public function view(User $user, Documento $documento): bool
     {
-        if ($user->hasAnyRole(RolGlobal::rolesVisionGlobal())) {
-            return true;
-        }
-
-        return $documento->obra
-            ->usuarios()
-            ->where('users.id', $user->id)
-            ->exists();
+        return PermisosObra::puede($user, $documento->obra, 'documento.ver');
     }
 
-    /**
-     * Subir documentos:
-     *  - admin / gerente general → siempre
-     *  - cualquier rol en pivot EXCEPTO invitado
-     */
     public function create(User $user, Carpeta $carpeta): bool
     {
-        if ($user->hasAnyRole(RolGlobal::rolesVisionGlobal())) {
-            return true;
-        }
-
-        return $carpeta->obra
-            ->usuarios()
-            ->where('users.id', $user->id)
-            ->where('rol_obra', '!=', RolObra::Invitado->value)
-            ->exists();
+        return PermisosObra::puede($user, $carpeta->obra, 'documento.subir');
     }
 
     public function update(User $user, Documento $documento): bool
     {
-        return $this->create($user, $documento->carpeta);
+        return PermisosObra::puede($user, $documento->obra, 'documento.subir');
     }
 
-    /**
-     * Eliminar documentos:
-     *  - admin / gerente general → siempre
-     *  - administrador de obra → en su obra
-     */
     public function delete(User $user, Documento $documento): bool
     {
-        if ($user->hasAnyRole(RolGlobal::rolesAdministrativos())) {
-            return true;
-        }
-
-        return $documento->obra
-            ->usuarios()
-            ->where('users.id', $user->id)
-            ->wherePivot('rol_obra', RolObra::AdministradorObra->value)
-            ->exists();
+        return PermisosObra::puede($user, $documento->obra, 'documento.eliminar');
     }
 }

@@ -12,7 +12,7 @@ class InvitarUsuarioRequest extends FormRequest
     {
         $obra = $this->route('obra');
 
-        return $obra !== null && ($this->user()?->can('update', $obra) ?? false);
+        return $obra !== null && ($this->user()?->can('gestionarEquipo', $obra) ?? false);
     }
 
     /**

@@ -3,6 +3,7 @@ import {
     Award,
     Building2,
     LayoutGrid,
+    ShieldCheck,
     Settings2,
     UserCog,
 } from 'lucide-react';
@@ -43,6 +44,7 @@ const adminGroup: NavGroup = {
     items: [
         { title: 'Panel admin', href: '/admin', icon: Settings2 },
         { title: 'Usuarios', href: '/admin/usuarios', icon: UserCog },
+        { title: 'Permisos', href: '/admin/permisos', icon: ShieldCheck },
     ],
 };
 

@@ -2,21 +2,16 @@
 
 namespace App\Policies;
 
-use App\Enums\RolGlobal;
-use App\Enums\RolObra;
 use App\Models\Carpeta;
 use App\Models\Obra;
 use App\Models\User;
+use App\Support\PermisosObra;
 
 class CarpetaPolicy
 {
     public function viewAny(User $user, Obra $obra): bool
     {
-        if ($user->hasAnyRole(RolGlobal::rolesVisionGlobal())) {
-            return true;
-        }
-
-        return $obra->usuarios()->where('users.id', $user->id)->exists();
+        return PermisosObra::puede($user, $obra, 'documento.ver');
     }
 
     public function view(User $user, Carpeta $carpeta): bool
@@ -24,19 +19,9 @@ class CarpetaPolicy
         return $this->viewAny($user, $carpeta->obra);
     }
 
-    /**
-     * Crear / renombrar carpetas → solo administrador de obra (o admin global).
-     */
     public function create(User $user, Obra $obra): bool
     {
-        if ($user->hasAnyRole(RolGlobal::rolesAdministrativos())) {
-            return true;
-        }
-
-        return $obra->usuarios()
-            ->where('users.id', $user->id)
-            ->wherePivot('rol_obra', RolObra::AdministradorObra->value)
-            ->exists();
+        return PermisosObra::puede($user, $obra, 'carpeta.gestionar');
     }
 
     public function update(User $user, Carpeta $carpeta): bool

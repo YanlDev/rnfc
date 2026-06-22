@@ -58,9 +58,8 @@ class EquipoObraController extends Controller
             'rolesObra' => collect(RolObra::cases())->map(fn (RolObra $r) => [
                 'value' => $r->value,
                 'label' => $r->label(),
-                'categoria' => $r->categoria(),
             ])->all(),
-            'puedeAdministrar' => request()->user()?->can('update', $obra) ?? false,
+            'puedeAdministrar' => request()->user()?->can('gestionarEquipo', $obra) ?? false,
         ]);
     }
 
@@ -132,7 +131,7 @@ class EquipoObraController extends Controller
 
     public function cambiarRol(Obra $obra, User $usuario): RedirectResponse
     {
-        $this->authorize('update', $obra);
+        $this->authorize('gestionarEquipo', $obra);
 
         $data = request()->validate([
             'rol_obra' => ['required', 'string', 'in:'.implode(',', RolObra::values())],
@@ -147,7 +146,7 @@ class EquipoObraController extends Controller
 
     public function remover(Obra $obra, User $usuario): RedirectResponse
     {
-        $this->authorize('update', $obra);
+        $this->authorize('gestionarEquipo', $obra);
 
         $obra->usuarios()->detach($usuario->id);
 
@@ -156,7 +155,7 @@ class EquipoObraController extends Controller
 
     public function cancelarInvitacion(Obra $obra, Invitacion $invitacion): RedirectResponse
     {
-        $this->authorize('update', $obra);
+        $this->authorize('gestionarEquipo', $obra);
 
         abort_unless($invitacion->obra_id === $obra->id, 404);
 
@@ -167,7 +166,7 @@ class EquipoObraController extends Controller
 
     public function reenviarInvitacion(Obra $obra, Invitacion $invitacion): RedirectResponse
     {
-        $this->authorize('update', $obra);
+        $this->authorize('gestionarEquipo', $obra);
 
         abort_unless($invitacion->obra_id === $obra->id, 404);
 
