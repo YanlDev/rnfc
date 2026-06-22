@@ -1,7 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { Building2, ChevronRight, NotebookPen } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { EstadoObraBadge } from '@/components/estado-obra-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,20 +22,16 @@ type Props = {
     obras: ObraConCuaderno[];
 };
 
-const ESTADO_BADGE: Record<string, string> = {
-    planificacion: 'bg-slate-200 text-slate-800 hover:bg-slate-200',
-    en_ejecucion: 'bg-[var(--color-brand-verde)] text-white hover:bg-[var(--color-brand-verde)]',
-    paralizada: 'bg-[var(--color-brand-amarillo)] text-[#3e4142] hover:bg-[var(--color-brand-amarillo)]',
-    finalizada: 'bg-[var(--color-brand-azul-oscuro)] text-white hover:bg-[var(--color-brand-azul-oscuro)]',
-    archivada: 'bg-slate-500 text-white hover:bg-slate-500',
-};
-
 export default function CuadernoSelector({ obras: lista }: Props) {
     const [busqueda, setBusqueda] = useState('');
 
     const filtradas = useMemo(() => {
         const q = busqueda.trim().toLowerCase();
-        if (!q) return lista;
+
+        if (!q) {
+            return lista;
+        }
+
         return lista.filter(
             (o) =>
                 o.codigo.toLowerCase().includes(q) ||
@@ -98,13 +94,10 @@ export default function CuadernoSelector({ obras: lista }: Props) {
                                             <span className="font-mono text-xs font-semibold tracking-wider text-primary">
                                                 {o.codigo}
                                             </span>
-                                            <Badge
-                                                className={
-                                                    ESTADO_BADGE[o.estado] ?? ''
-                                                }
-                                            >
-                                                {o.estado_label}
-                                            </Badge>
+                                            <EstadoObraBadge
+                                                estado={o.estado}
+                                                label={o.estado_label}
+                                            />
                                         </div>
                                         <h3 className="line-clamp-2 text-sm font-semibold">
                                             {o.nombre}
@@ -119,7 +112,7 @@ export default function CuadernoSelector({ obras: lista }: Props) {
                                                 <div className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
                                                     Supervisión
                                                 </div>
-                                                <div className="text-lg font-bold tabular-nums text-foreground">
+                                                <div className="text-lg font-bold text-foreground tabular-nums">
                                                     {o.asientos_supervisor}
                                                 </div>
                                             </div>
@@ -127,7 +120,7 @@ export default function CuadernoSelector({ obras: lista }: Props) {
                                                 <div className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
                                                     Residencia
                                                 </div>
-                                                <div className="text-lg font-bold tabular-nums text-foreground">
+                                                <div className="text-lg font-bold text-foreground tabular-nums">
                                                     {o.asientos_residente}
                                                 </div>
                                             </div>
@@ -149,7 +142,8 @@ export default function CuadernoSelector({ obras: lista }: Props) {
 
 CuadernoSelector.layout = {
     title: 'Cuaderno de Obra',
-    description: 'Elige la obra para abrir su cuaderno digital (supervisor y residente).',
+    description:
+        'Elige la obra para abrir su cuaderno digital (supervisor y residente).',
     breadcrumbs: [
         { title: 'Panel', href: '/dashboard' },
         { title: 'Cuaderno', href: '/cuaderno' },

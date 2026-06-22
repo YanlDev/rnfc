@@ -8,7 +8,7 @@ import {
     X,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { formatearBytes } from '@/lib/bytes';
 
 type ArchivoEnSubida = {
     id: string;
@@ -22,13 +22,6 @@ type Props = {
     urlSubida: string;
     onComplete?: () => void;
 };
-
-function formatearTamano(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
-    return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
-}
 
 function genId() {
     return Math.random().toString(36).slice(2, 11);
@@ -73,7 +66,8 @@ export default function Dropzone({ urlSubida, onComplete }: Props) {
                 }, 1500);
             },
             onError: (errors) => {
-                const msg = Object.values(errors)[0] ?? 'Error al subir el archivo';
+                const msg =
+                    Object.values(errors)[0] ?? 'Error al subir el archivo';
                 setArchivos((prev) =>
                     prev.map((a) =>
                         a.id === item.id
@@ -100,6 +94,7 @@ export default function Dropzone({ urlSubida, onComplete }: Props) {
     const onDrop = (e: React.DragEvent) => {
         e.preventDefault();
         setDragOver(false);
+
         if (e.dataTransfer.files.length > 0) {
             agregarArchivos(e.dataTransfer.files);
         }
@@ -133,7 +128,10 @@ export default function Dropzone({ urlSubida, onComplete }: Props) {
                     multiple
                     className="hidden"
                     onChange={(e) => {
-                        if (e.target.files) agregarArchivos(e.target.files);
+                        if (e.target.files) {
+                            agregarArchivos(e.target.files);
+                        }
+
                         e.target.value = '';
                     }}
                 />
@@ -152,10 +150,13 @@ export default function Dropzone({ urlSubida, onComplete }: Props) {
                         <strong className="text-foreground">
                             Haz clic para elegir archivos
                         </strong>{' '}
-                        <span className="text-muted-foreground">o arrástralos aquí</span>
+                        <span className="text-muted-foreground">
+                            o arrástralos aquí
+                        </span>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                        PDF, imágenes, planos, documentos · máx. 50 MB por archivo
+                        PDF, imágenes, planos, documentos · máx. 50 MB por
+                        archivo
                     </div>
                 </div>
             </button>
@@ -184,7 +185,7 @@ export default function Dropzone({ urlSubida, onComplete }: Props) {
                                         {a.file.name}
                                     </div>
                                     <div className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                                        {formatearTamano(a.file.size)}
+                                        {formatearBytes(a.file.size)}
                                     </div>
                                 </div>
                                 {a.estado !== 'error' && (

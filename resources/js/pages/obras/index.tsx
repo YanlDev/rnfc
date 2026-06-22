@@ -1,20 +1,17 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import {
     Building2,
     Calendar,
-    CalendarDays,
-    DollarSign,
     FolderTree,
     MapPin,
     NotebookPen,
     Plus,
     Search,
-    Trash2,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { EstadoObraBadge } from '@/components/estado-obra-badge';
+import Paginacion from '@/components/paginacion';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -23,7 +20,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useFiltrosUrl } from '@/hooks/use-filtros-url';
 import obras from '@/routes/obras';
+import type { Paginado } from '@/types';
 
 type Obra = {
     id: number;
@@ -31,21 +30,16 @@ type Obra = {
     nombre: string;
     ubicacion: string | null;
     entidad_contratante: string | null;
-    monto_contractual: string | number | null;
     fecha_inicio: string | null;
     fecha_fin_prevista: string | null;
     estado: string;
     estado_label: string;
-    creador: string | null;
+    imagen_url: string | null;
+    documentos_count: number;
+    cuaderno_count: number;
 };
 
 type EstadoOpcion = { value: string; label: string };
-
-type Paginado<T> = {
-    data: T[];
-    links?: { url: string | null; label: string; active: boolean }[];
-    meta?: { current_page: number; last_page: number; total: number; from?: number; to?: number };
-};
 
 type Props = {
     obras: Paginado<Obra>;
@@ -53,183 +47,144 @@ type Props = {
     estados: EstadoOpcion[];
 };
 
-const ESTADO_BADGE: Record<string, string> = {
-    planificacion: 'bg-slate-200 text-slate-800 hover:bg-slate-200',
-    en_ejecucion: 'bg-[var(--color-brand-verde)] text-white hover:bg-[var(--color-brand-verde)]',
-    paralizada: 'bg-[var(--color-brand-amarillo)] text-[#3e4142] hover:bg-[var(--color-brand-amarillo)]',
-    finalizada: 'bg-[var(--color-brand-azul-oscuro)] text-white hover:bg-[var(--color-brand-azul-oscuro)]',
-    archivada: 'bg-slate-500 text-white hover:bg-slate-500',
-};
+const MESES = [
+    'ene',
+    'feb',
+    'mar',
+    'abr',
+    'may',
+    'jun',
+    'jul',
+    'ago',
+    'sep',
+    'oct',
+    'nov',
+    'dic',
+];
 
-const ESTADO_ACENTO: Record<string, string> = {
-    planificacion: 'bg-slate-300',
-    en_ejecucion: 'bg-[var(--color-brand-verde)]',
-    paralizada: 'bg-[var(--color-brand-amarillo)]',
-    finalizada: 'bg-[var(--color-brand-azul-oscuro)]',
-    archivada: 'bg-slate-500',
-};
+function formatearFecha(iso: string | null): string | null {
+    if (!iso) {
+        return null;
+    }
 
-function formatearMonto(monto: string | number | null): string {
-    if (monto === null || monto === undefined || monto === '') return '—';
-    const n = typeof monto === 'string' ? parseFloat(monto) : monto;
-    if (Number.isNaN(n)) return '—';
-    return new Intl.NumberFormat('es-PE', {
-        style: 'currency',
-        currency: 'PEN',
-        maximumFractionDigits: 2,
-    }).format(n);
+    const [y, m, d] = iso.split('-').map(Number);
+
+    if (!y || !m || !d) {
+        return iso;
+    }
+
+    return `${d} ${MESES[m - 1]} ${y}`;
 }
 
-function ObraCard({ obra, onEliminar }: { obra: Obra; onEliminar: () => void }) {
+function ChipMetrica({
+    icono: Icono,
+    valor,
+    etiqueta,
+}: {
+    icono: typeof FolderTree;
+    valor: number;
+    etiqueta: string;
+}) {
     return (
-        <Card className="group relative flex flex-col overflow-hidden p-0 transition-all hover:-translate-y-0.5 hover:shadow-xl">
-            {/* Banda lateral de estado */}
-            <span
-                aria-hidden
-                className={`absolute inset-y-0 left-0 w-1.5 ${ESTADO_ACENTO[obra.estado] ?? 'bg-slate-300'}`}
-            />
-
-            <CardContent className="flex flex-1 flex-col gap-5 p-7 pl-9">
-                {/* Encabezado: código + estado */}
-                <div className="flex items-center justify-between gap-2">
-                    <Link
-                        href={obras.show(obra.id).url}
-                        className="font-mono text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase hover:text-primary"
-                    >
-                        {obra.codigo}
-                    </Link>
-                    <Badge className={`${ESTADO_BADGE[obra.estado] ?? ''} px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase`}>
-                        {obra.estado_label}
-                    </Badge>
+        <div className="flex items-center gap-2 rounded-lg bg-black/55 px-2.5 py-1.5 text-white backdrop-blur-sm">
+            <Icono className="size-4 shrink-0" />
+            <div className="leading-none">
+                <div className="text-sm font-bold tabular-nums">{valor}</div>
+                <div className="mt-0.5 text-[10px] text-white/80">
+                    {etiqueta}
                 </div>
+            </div>
+        </div>
+    );
+}
 
-                {/* Nombre de la obra */}
-                <Link href={obras.show(obra.id).url} className="block">
-                    <h3 className="font-display line-clamp-2 text-xl leading-tight font-bold text-foreground transition-colors group-hover:text-primary">
-                        {obra.nombre}
-                    </h3>
-                </Link>
+function ObraCard({ obra }: { obra: Obra }) {
+    const inicio = formatearFecha(obra.fecha_inicio);
+    const fin = formatearFecha(obra.fecha_fin_prevista);
 
-                {/* Info principal */}
-                <div className="flex flex-1 flex-col gap-2.5 text-sm">
+    return (
+        <Link
+            href={obras.show(obra.id).url}
+            className="group block overflow-hidden rounded-xl border border-border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
+        >
+            {/* Imagen con overlays */}
+            <div className="relative h-44 w-full overflow-hidden">
+                {obra.imagen_url ? (
+                    <img
+                        src={obra.imagen_url}
+                        alt={obra.nombre}
+                        className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                    />
+                ) : (
+                    <div className="flex size-full items-center justify-center bg-muted">
+                        <Building2 className="size-10 text-muted-foreground/40" />
+                    </div>
+                )}
+
+                <span className="absolute top-3 left-3 rounded-md bg-white/90 px-2 py-1 font-mono text-[11px] font-semibold tracking-[0.12em] text-foreground uppercase shadow-sm backdrop-blur">
+                    {obra.codigo}
+                </span>
+                <EstadoObraBadge
+                    estado={obra.estado}
+                    label={obra.estado_label}
+                    className="absolute top-3 right-3 shadow-sm"
+                />
+
+                <div className="absolute bottom-3 left-3 flex gap-2">
+                    <ChipMetrica
+                        icono={FolderTree}
+                        valor={obra.documentos_count}
+                        etiqueta="Docs"
+                    />
+                    <ChipMetrica
+                        icono={NotebookPen}
+                        valor={obra.cuaderno_count}
+                        etiqueta="Cuaderno"
+                    />
+                </div>
+            </div>
+
+            {/* Contenido */}
+            <div className="space-y-3 p-5">
+                <h3 className="line-clamp-2 text-lg leading-snug font-bold text-foreground transition-colors group-hover:text-primary">
+                    {obra.nombre}
+                </h3>
+
+                <div className="space-y-2 text-sm text-muted-foreground">
                     {obra.entidad_contratante && (
-                        <div className="flex items-start gap-2.5">
-                            <Building2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                            <span className="line-clamp-2 text-foreground/80">
+                        <div className="flex items-center gap-2">
+                            <Building2 className="size-4 shrink-0" />
+                            <span className="truncate">
                                 {obra.entidad_contratante}
                             </span>
                         </div>
                     )}
                     {obra.ubicacion && (
-                        <div className="flex items-start gap-2.5">
-                            <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                            <span className="line-clamp-2 text-foreground/80">
-                                {obra.ubicacion}
-                            </span>
+                        <div className="flex items-center gap-2">
+                            <MapPin className="size-4 shrink-0" />
+                            <span className="truncate">{obra.ubicacion}</span>
                         </div>
                     )}
-                    {(obra.fecha_inicio || obra.fecha_fin_prevista) && (
-                        <div className="flex items-start gap-2.5">
-                            <Calendar className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                            <span className="tabular-nums text-foreground/80">
-                                {obra.fecha_inicio ?? '—'}
-                                {obra.fecha_fin_prevista && (
-                                    <> → {obra.fecha_fin_prevista}</>
-                                )}
+                    {(inicio || fin) && (
+                        <div className="flex items-center gap-2">
+                            <Calendar className="size-4 shrink-0" />
+                            <span className="tabular-nums">
+                                {inicio ?? '—'}
+                                {fin && ` – ${fin}`}
                             </span>
                         </div>
                     )}
                 </div>
-
-                {/* Monto destacado */}
-                <div className="rounded-lg bg-muted/50 px-4 py-3">
-                    <div className="text-[10px] font-bold tracking-[0.18em] text-muted-foreground uppercase">
-                        Monto contractual
-                    </div>
-                    <div className="font-display mt-1 flex items-center gap-1 text-xl font-bold text-foreground tabular-nums">
-                        <DollarSign className="size-4 text-muted-foreground" />
-                        {formatearMonto(obra.monto_contractual)}
-                    </div>
-                </div>
-
-                {/* Acciones */}
-                <div className="flex items-center justify-between gap-1 border-t border-border pt-3">
-                    <div className="flex items-center gap-0.5">
-                        <Button
-                            asChild
-                            size="sm"
-                            variant="ghost"
-                            title="Documentos"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <Link href={`/obras/${obra.id}/documentos`}>
-                                <FolderTree className="size-4 text-primary" />
-                            </Link>
-                        </Button>
-                        <Button
-                            asChild
-                            size="sm"
-                            variant="ghost"
-                            title="Cuaderno de obra"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <Link href={`/obras/${obra.id}/cuaderno`}>
-                                <NotebookPen className="size-4 text-primary" />
-                            </Link>
-                        </Button>
-                        <Button
-                            asChild
-                            size="sm"
-                            variant="ghost"
-                            title="Calendario"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <Link href={`/obras/${obra.id}/calendario`}>
-                                <CalendarDays className="size-4 text-primary" />
-                            </Link>
-                        </Button>
-                    </div>
-                    <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={onEliminar}
-                        title="Eliminar"
-                    >
-                        <Trash2 className="size-4 text-destructive" />
-                    </Button>
-                </div>
-            </CardContent>
-        </Card>
+            </div>
+        </Link>
     );
 }
 
 export default function ObrasIndex({ obras: paginado, filtros, estados }: Props) {
-    const [busqueda, setBusqueda] = useState(filtros.q ?? '');
-    const [estado, setEstado] = useState(filtros.estado ?? 'todos');
-
-    useEffect(() => {
-        const t = setTimeout(() => {
-            router.get(
-                obras.index().url,
-                {
-                    q: busqueda || undefined,
-                    estado: estado === 'todos' ? undefined : estado,
-                },
-                { preserveState: true, preserveScroll: true, replace: true },
-            );
-        }, 250);
-        return () => clearTimeout(t);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [busqueda, estado]);
-
-    const eliminar = (obra: Obra) => {
-        const ok = confirm(
-            `¿Eliminar definitivamente la obra ${obra.codigo}?\n\n` +
-                'Esta acción también elimina todos los certificados asociados y no se puede deshacer.',
-        );
-        if (!ok) return;
-        router.delete(obras.destroy(obra.id).url);
-    };
+    const { filtros: f, set } = useFiltrosUrl(obras.index().url, {
+        q: filtros.q ?? '',
+        estado: filtros.estado ?? 'todos',
+    });
 
     return (
         <>
@@ -241,17 +196,22 @@ export default function ObrasIndex({ obras: paginado, filtros, estados }: Props)
                             <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
                                 placeholder="Buscar por código, nombre o entidad…"
-                                value={busqueda}
-                                onChange={(e) => setBusqueda(e.target.value)}
+                                value={f.q}
+                                onChange={(e) => set('q', e.target.value)}
                                 className="pl-9"
                             />
                         </div>
-                        <Select value={estado} onValueChange={setEstado}>
+                        <Select
+                            value={f.estado}
+                            onValueChange={(v) => set('estado', v)}
+                        >
                             <SelectTrigger className="sm:w-56">
                                 <SelectValue placeholder="Filtrar por estado" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="todos">Todos los estados</SelectItem>
+                                <SelectItem value="todos">
+                                    Todos los estados
+                                </SelectItem>
                                 {estados.map((e) => (
                                     <SelectItem key={e.value} value={e.value}>
                                         {e.label}
@@ -278,38 +238,12 @@ export default function ObrasIndex({ obras: paginado, filtros, estados }: Props)
                 ) : (
                     <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                         {paginado.data.map((o) => (
-                            <ObraCard
-                                key={o.id}
-                                obra={o}
-                                onEliminar={() => eliminar(o)}
-                            />
+                            <ObraCard key={o.id} obra={o} />
                         ))}
                     </div>
                 )}
 
-                {paginado.meta && paginado.meta.last_page > 1 && (
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <div>
-                            {paginado.meta.from ?? 0}–{paginado.meta.to ?? 0} de{' '}
-                            {paginado.meta.total}
-                        </div>
-                        <div className="flex gap-1">
-                            {paginado.links?.map((l, i) => (
-                                <Button
-                                    key={i}
-                                    size="sm"
-                                    variant={l.active ? 'default' : 'outline'}
-                                    disabled={!l.url}
-                                    onClick={() =>
-                                        l.url && router.visit(l.url, { preserveScroll: true })
-                                    }
-                                >
-                                    <span dangerouslySetInnerHTML={{ __html: l.label }} />
-                                </Button>
-                            ))}
-                        </div>
-                    </div>
-                )}
+                <Paginacion meta={paginado.meta} links={paginado.links} />
             </div>
         </>
     );

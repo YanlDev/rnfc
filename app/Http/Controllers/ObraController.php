@@ -4,14 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Enums\EstadoObra;
 use App\Enums\RolGlobal;
-use App\Enums\RolObra;
 use App\Http\Requests\StoreObraRequest;
 use App\Http\Requests\UpdateObraRequest;
-use App\Models\EventoCalendario;
 use App\Models\Obra;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ObraController extends Controller
 {
@@ -25,6 +26,7 @@ class ObraController extends Controller
 
         $obras = Obra::query()
             ->with('creador:id,name')
+            ->withCount(['documentos', 'asientosCuaderno', 'eventosCalendario'])
             ->when(! $vistaCompleta, fn ($q) => $q->whereHas('usuarios', fn ($qb) => $qb->where('users.id', $user?->id)))
             ->when($filtros['q'] ?? null, function ($query, $q) {
                 $like = '%'.mb_strtolower($q).'%';
@@ -44,12 +46,15 @@ class ObraController extends Controller
                 'nombre' => $o->nombre,
                 'ubicacion' => $o->ubicacion,
                 'entidad_contratante' => $o->entidad_contratante,
-                'monto_contractual' => $o->monto_contractual,
                 'fecha_inicio' => $o->fecha_inicio?->format('Y-m-d'),
                 'fecha_fin_prevista' => $o->fecha_fin_prevista?->format('Y-m-d'),
                 'estado' => $o->estado->value,
                 'estado_label' => $o->estado->label(),
-                'creador' => $o->creador?->name,
+                'imagen_url' => $o->imagen_path
+                    ? route('obras.imagen.show', $o).'?v='.$o->updated_at?->timestamp
+                    : null,
+                'documentos_count' => $o->documentos_count,
+                'cuaderno_count' => $o->asientos_cuaderno_count,
             ]);
 
         return Inertia::render('obras/index', [
@@ -85,53 +90,22 @@ class ObraController extends Controller
     {
         $this->authorize('view', $obra);
 
-        $obra->load([
-            'creador:id,name',
-            'usuarios' => fn ($q) => $q->orderBy('name'),
-            'invitaciones' => fn ($q) => $q
-                ->whereNull('aceptada_at')
-                ->whereNull('cancelada_at')
-                ->where('expira_at', '>', now())
-                ->latest(),
-            'invitaciones.invitador:id,name',
+        $obra->load('creador:id,name')->loadCount([
+            'documentos',
+            'asientosCuaderno',
+            'eventosCalendario',
+            'usuarios',
         ]);
 
         return Inertia::render('obras/show', [
             'obra' => $this->serializarObra($obra),
-            'equipo' => $obra->usuarios->map(fn ($u) => [
-                'id' => $u->id,
-                'name' => $u->name,
-                'email' => $u->email,
-                'rol_obra' => $u->pivot->rol_obra,
-                'rol_obra_label' => RolObra::from($u->pivot->rol_obra)->label(),
-                'asignado_at' => $u->pivot->asignado_at,
-            ])->all(),
-            'invitacionesPendientes' => $obra->invitaciones->map(fn ($i) => [
-                'id' => $i->id,
-                'email' => $i->email,
-                'rol_obra' => $i->rol_obra->value,
-                'rol_obra_label' => $i->rol_obra->label(),
-                'expira_at' => $i->expira_at->toIso8601String(),
-                'invitador' => $i->invitador?->name,
-            ])->all(),
-            'rolesObra' => collect(RolObra::cases())->map(fn (RolObra $r) => [
-                'value' => $r->value,
-                'label' => $r->label(),
-                'categoria' => $r->categoria(),
-            ])->all(),
+            'contadores' => [
+                'documentos' => $obra->documentos_count,
+                'cuaderno' => $obra->asientos_cuaderno_count,
+                'calendario' => $obra->eventos_calendario_count,
+                'equipo' => $obra->usuarios_count,
+            ],
             'puedeAdministrar' => request()->user()?->can('update', $obra) ?? false,
-            'eventosCalendario' => EventoCalendario::query()
-                ->where('obra_id', $obra->id)
-                ->orderBy('fecha_inicio')
-                ->get(['id', 'tipo', 'titulo', 'fecha_inicio', 'fecha_fin'])
-                ->map(fn (EventoCalendario $e) => [
-                    'id' => $e->id,
-                    'titulo' => $e->titulo,
-                    'color' => $e->color(),
-                    'fecha_inicio_iso' => $e->fecha_inicio?->format('Y-m-d'),
-                    'fecha_fin_iso' => $e->fecha_fin?->format('Y-m-d'),
-                ])
-                ->all(),
         ]);
     }
 
@@ -199,6 +173,49 @@ class ObraController extends Controller
     /**
      * @return array<string, mixed>
      */
+    public function actualizarImagen(Request $request, Obra $obra): RedirectResponse
+    {
+        $this->authorize('update', $obra);
+
+        $request->validate([
+            'imagen' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        $disk = Storage::disk('documentos');
+
+        if ($obra->imagen_path) {
+            $disk->delete($obra->imagen_path);
+        }
+
+        $obra->update([
+            'imagen_path' => $request->file('imagen')->store('obras/imagenes', 'documentos'),
+        ]);
+
+        return back()->with('success', 'Imagen del proyecto actualizada.');
+    }
+
+    public function eliminarImagen(Obra $obra): RedirectResponse
+    {
+        $this->authorize('update', $obra);
+
+        if ($obra->imagen_path) {
+            Storage::disk('documentos')->delete($obra->imagen_path);
+            $obra->update(['imagen_path' => null]);
+        }
+
+        return back()->with('success', 'Imagen del proyecto eliminada.');
+    }
+
+    public function mostrarImagen(Obra $obra): StreamedResponse
+    {
+        $this->authorize('view', $obra);
+
+        $disk = Storage::disk('documentos');
+        abort_unless($obra->imagen_path && $disk->exists($obra->imagen_path), 404);
+
+        return $disk->response($obra->imagen_path);
+    }
+
     private function serializarObra(Obra $obra): array
     {
         return [
@@ -209,6 +226,9 @@ class ObraController extends Controller
             'ubicacion' => $obra->ubicacion,
             'latitud' => $obra->latitud,
             'longitud' => $obra->longitud,
+            'imagen_url' => $obra->imagen_path
+                ? route('obras.imagen.show', $obra).'?v='.$obra->updated_at?->timestamp
+                : null,
             'entidad_contratante' => $obra->entidad_contratante,
             'monto_contractual' => $obra->monto_contractual !== null
                 ? (float) $obra->monto_contractual

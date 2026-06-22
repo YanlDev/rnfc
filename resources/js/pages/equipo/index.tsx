@@ -1,20 +1,10 @@
 import { Head, Link } from '@inertiajs/react';
-import {
-    Building2,
-    ChevronRight,
-    Mail,
-    UserPlus,
-    Users,
-} from 'lucide-react';
+import { Building2, ChevronRight, Mail, UserPlus, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { EstadoObraBadge } from '@/components/estado-obra-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import obras from '@/routes/obras';
 
@@ -53,14 +43,6 @@ type Props = {
     };
 };
 
-const ESTADO_BADGE: Record<string, string> = {
-    planificacion: 'bg-slate-200 text-slate-800 hover:bg-slate-200',
-    en_ejecucion: 'bg-[var(--color-brand-verde)] text-white hover:bg-[var(--color-brand-verde)]',
-    paralizada: 'bg-[var(--color-brand-amarillo)] text-[#3e4142] hover:bg-[var(--color-brand-amarillo)]',
-    finalizada: 'bg-[var(--color-brand-azul-oscuro)] text-white hover:bg-[var(--color-brand-azul-oscuro)]',
-    archivada: 'bg-slate-500 text-white hover:bg-slate-500',
-};
-
 function ObraEquipoCard({ obra }: { obra: ObraConEquipo }) {
     const vacia = obra.miembros.length === 0 && obra.invitaciones.length === 0;
 
@@ -76,9 +58,10 @@ function ObraEquipoCard({ obra }: { obra: ObraConEquipo }) {
                             >
                                 {obra.codigo}
                             </Link>
-                            <Badge className={ESTADO_BADGE[obra.estado] ?? ''}>
-                                {obra.estado_label}
-                            </Badge>
+                            <EstadoObraBadge
+                                estado={obra.estado}
+                                label={obra.estado_label}
+                            />
                         </div>
                         <CardTitle className="text-base leading-snug">
                             {obra.nombre}
@@ -156,7 +139,11 @@ function ObraEquipoCard({ obra }: { obra: ObraConEquipo }) {
                                                 </div>
                                                 <div className="text-xs text-muted-foreground">
                                                     Expira el{' '}
-                                                    {new Date(i.expira_at).toLocaleDateString('es-PE')}
+                                                    {new Date(
+                                                        i.expira_at,
+                                                    ).toLocaleDateString(
+                                                        'es-PE',
+                                                    )}
                                                 </div>
                                             </div>
                                             <Badge
@@ -182,7 +169,11 @@ export default function EquipoIndex({ obras: obrasConEquipo, totales }: Props) {
 
     const obrasFiltradas = useMemo(() => {
         const q = busqueda.trim().toLowerCase();
-        if (!q) return obrasConEquipo;
+
+        if (!q) {
+            return obrasConEquipo;
+        }
+
         return obrasConEquipo.filter(
             (o) =>
                 o.codigo.toLowerCase().includes(q) ||
@@ -193,9 +184,7 @@ export default function EquipoIndex({ obras: obrasConEquipo, totales }: Props) {
                         m.name.toLowerCase().includes(q) ||
                         m.email.toLowerCase().includes(q),
                 ) ||
-                o.invitaciones.some((i) =>
-                    i.email.toLowerCase().includes(q),
-                ),
+                o.invitaciones.some((i) => i.email.toLowerCase().includes(q)),
         );
     }, [obrasConEquipo, busqueda]);
 

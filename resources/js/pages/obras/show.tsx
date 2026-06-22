@@ -1,36 +1,34 @@
-import { Head, Link, router, setLayoutProps } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
-    ArrowLeft,
     Building2,
-    Calendar,
     CalendarDays,
+    CalendarRange,
+    ChevronRight,
     DollarSign,
     FolderTree,
-    Hash,
+    ImagePlus,
     MapPin,
+    NotebookPen,
     Pencil,
     Trash2,
     User,
+    Users,
 } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { EstadoObraBadge } from '@/components/estado-obra-badge';
 import MapaUbicacion from '@/components/mapa-ubicacion';
-import MiniCalendario, { type MiniEvento } from '@/components/mini-calendario';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import obras from '@/routes/obras';
-import EquipoObra, {
-    type InvitacionPendiente,
-    type Miembro,
-} from './_equipo';
 
 type ObraData = {
     id: number;
     codigo: string;
     nombre: string;
-    descripcion: string | null;
     ubicacion: string | null;
     latitud: number | null;
     longitud: number | null;
+    imagen_url: string | null;
     entidad_contratante: string | null;
     monto_contractual: number | null;
     fecha_inicio: string | null;
@@ -39,25 +37,49 @@ type ObraData = {
     estado: string;
     estado_label: string;
     creador: string | null;
-    created_at: string | null;
-    updated_at: string | null;
 };
 
-const ESTADO_BADGE: Record<string, string> = {
-    planificacion: 'bg-slate-200 text-slate-800',
-    en_ejecucion: 'bg-[var(--color-brand-verde)] text-white',
-    paralizada: 'bg-[var(--color-brand-amarillo)] text-[#3e4142]',
-    finalizada: 'bg-[var(--color-brand-azul-oscuro)] text-white',
-    archivada: 'bg-slate-500 text-white',
+type Contadores = {
+    documentos: number;
+    cuaderno: number;
+    calendario: number;
+    equipo: number;
+};
+
+type ShowProps = {
+    obra: ObraData;
+    contadores: Contadores;
+    puedeAdministrar: boolean;
 };
 
 function formatearMonto(monto: number | null): string {
-    if (monto === null) return '—';
+    if (monto === null) {
+        return '—';
+    }
+
     return new Intl.NumberFormat('es-PE', {
         style: 'currency',
         currency: 'PEN',
         maximumFractionDigits: 2,
     }).format(monto);
+}
+
+/** Progreso 0-100 según los días transcurridos entre inicio y fin previsto. */
+function progresoDias(inicio: string | null, fin: string | null): number | null {
+    if (!inicio || !fin) {
+        return null;
+    }
+
+    const i = new Date(inicio).getTime();
+    const f = new Date(fin).getTime();
+
+    if (!Number.isFinite(i) || !Number.isFinite(f) || f <= i) {
+        return null;
+    }
+
+    const pct = ((Date.now() - i) / (f - i)) * 100;
+
+    return Math.round(Math.min(100, Math.max(0, pct)));
 }
 
 function Dato({
@@ -67,235 +89,347 @@ function Dato({
 }: {
     label: string;
     valor: React.ReactNode;
-    icono?: React.ComponentType<{ className?: string }>;
+    icono: React.ComponentType<{ className?: string }>;
 }) {
     return (
         <div className="flex items-start gap-3">
-            {Icono && <Icono className="mt-0.5 size-4 text-primary" />}
-            <div className="flex-1">
-                <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Icono className="size-4" />
+            </span>
+            <div className="min-w-0">
+                <div className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
                     {label}
                 </div>
-                <div className="text-sm font-medium text-foreground">{valor}</div>
+                <div className="truncate text-sm font-semibold text-foreground">
+                    {valor}
+                </div>
             </div>
         </div>
     );
 }
 
-type RolOpcion = { value: string; label: string };
+function ImagenProyecto({
+    obraId,
+    imagenUrl,
+    nombre,
+    puedeEditar,
+}: {
+    obraId: number;
+    imagenUrl: string | null;
+    nombre: string;
+    puedeEditar: boolean;
+}) {
+    const inputRef = useRef<HTMLInputElement>(null);
+    const [subiendo, setSubiendo] = useState(false);
 
-type ShowProps = {
-    obra: ObraData;
-    equipo: Miembro[];
-    invitacionesPendientes: InvitacionPendiente[];
-    rolesObra: RolOpcion[];
-    puedeAdministrar: boolean;
-    eventosCalendario: MiniEvento[];
-};
+    const eliminar = () => {
+        if (!confirm('¿Quitar la imagen del proyecto?')) {
+            return;
+        }
+
+        router.delete(`/obras/${obraId}/imagen`, { preserveScroll: true });
+    };
+
+    const seleccionar = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        router.post(
+            `/obras/${obraId}/imagen`,
+            { imagen: file },
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onStart: () => setSubiendo(true),
+                onFinish: () => {
+                    setSubiendo(false);
+
+                    if (inputRef.current) {
+                        inputRef.current.value = '';
+                    }
+                },
+            },
+        );
+    };
+
+    return (
+        <div className="group relative h-56 overflow-hidden rounded-lg">
+            {imagenUrl ? (
+                <img
+                    src={imagenUrl}
+                    alt={nombre}
+                    className="size-full object-cover"
+                />
+            ) : (
+                <div className="flex size-full flex-col items-center justify-center gap-2 bg-muted/40 text-muted-foreground">
+                    <ImagePlus className="size-9 text-muted-foreground/50" />
+                    <span className="text-xs">Sin imagen del proyecto</span>
+                </div>
+            )}
+
+            {puedeEditar && (
+                <>
+                    {imagenUrl ? (
+                        <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/45 opacity-0 backdrop-blur-[1px] transition-opacity group-hover:opacity-100">
+                            <button
+                                type="button"
+                                onClick={() => inputRef.current?.click()}
+                                disabled={subiendo}
+                                className="inline-flex items-center gap-1.5 rounded-md bg-white/90 px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-white"
+                            >
+                                <ImagePlus className="size-3.5" />
+                                {subiendo ? 'Subiendo…' : 'Cambiar'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={eliminar}
+                                className="inline-flex items-center gap-1.5 rounded-md bg-white/90 px-2.5 py-1.5 text-xs font-medium text-destructive hover:bg-white"
+                            >
+                                <Trash2 className="size-3.5" />
+                                Eliminar
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => inputRef.current?.click()}
+                            disabled={subiendo}
+                            className="absolute inset-0 flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60"
+                        >
+                            <ImagePlus className="size-4" />
+                            {subiendo ? 'Subiendo…' : 'Subir imagen'}
+                        </button>
+                    )}
+                    <input
+                        ref={inputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={seleccionar}
+                    />
+                </>
+            )}
+        </div>
+    );
+}
+
+function AccesoDirecto({
+    href,
+    icono: Icono,
+    label,
+    valor,
+    unidad,
+}: {
+    href: string;
+    icono: React.ComponentType<{ className?: string }>;
+    label: string;
+    valor: number;
+    unidad: string;
+}) {
+    return (
+        <Link
+            href={href}
+            className="group flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+        >
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Icono className="size-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+                <div className="font-semibold text-foreground">{label}</div>
+                <div className="text-sm text-muted-foreground">
+                    <span className="font-semibold tabular-nums text-foreground">
+                        {valor}
+                    </span>{' '}
+                    {unidad}
+                </div>
+            </div>
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+        </Link>
+    );
+}
 
 export default function ObraShow({
     obra,
-    equipo,
-    invitacionesPendientes,
-    rolesObra,
+    contadores,
     puedeAdministrar,
-    eventosCalendario,
 }: ShowProps) {
-    setLayoutProps({
-        title: obra.nombre,
-        description: `${obra.codigo} · ${obra.estado_label}${obra.entidad_contratante ? ' · ' + obra.entidad_contratante : ''}`,
-    });
-
     const eliminar = () => {
         const ok = confirm(
             `¿Eliminar definitivamente la obra ${obra.codigo}?\n\n` +
                 'Esta acción también elimina todos los certificados asociados y no se puede deshacer.',
         );
-        if (!ok) return;
+
+        if (!ok) {
+            return;
+        }
+
         router.delete(obras.destroy(obra.id).url);
     };
+
+    const progreso = progresoDias(obra.fecha_inicio, obra.fecha_fin_prevista);
 
     return (
         <>
             <Head title={`${obra.codigo} — ${obra.nombre}`} />
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <Link
-                        href={obras.index().url}
-                        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-                    >
-                        <ArrowLeft className="size-3.5" />
-                        Volver al listado
-                    </Link>
-                    <div className="flex items-center gap-2">
-                        <Badge className={ESTADO_BADGE[obra.estado] ?? ''}>
-                            {obra.estado_label}
-                        </Badge>
-                        <Button asChild>
-                            <Link href={`/obras/${obra.id}/documentos`}>
-                                <FolderTree className="size-4" />
-                                Documentos
-                            </Link>
-                        </Button>
-                        <Button asChild variant="outline">
-                            <Link href={obras.edit(obra.id).url}>
-                                <Pencil className="size-4" />
-                                Editar
-                            </Link>
-                        </Button>
-                        <Button variant="ghost" onClick={eliminar}>
-                            <Trash2 className="size-4 text-destructive" />
-                        </Button>
+                {/* Header de página */}
+                <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                        <h1
+                            className="truncate text-lg font-semibold text-foreground"
+                            title={obra.nombre}
+                        >
+                            {obra.nombre}
+                        </h1>
+                        <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
+                            <span className="inline-flex min-w-0 items-center gap-1.5">
+                                <MapPin className="size-3.5 shrink-0" />
+                                <span className="truncate">
+                                    {obra.ubicacion ?? 'Sin ubicación'}
+                                </span>
+                            </span>
+                            <EstadoObraBadge
+                                estado={obra.estado}
+                                label={obra.estado_label}
+                            />
+                        </div>
                     </div>
-                </div>
-
-                {/* Top: Información general + Cronograma a la izquierda · Mini calendario a la derecha */}
-                <div className="grid gap-6 lg:grid-cols-2">
-                    <div className="space-y-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Información general</CardTitle>
-                            </CardHeader>
-                            <CardContent className="grid gap-4 sm:grid-cols-2">
-                                <Dato label="Código" valor={obra.codigo} icono={Hash} />
-                                <Dato
-                                    label="Entidad contratante"
-                                    valor={obra.entidad_contratante ?? '—'}
-                                    icono={Building2}
-                                />
-                                <Dato
-                                    label="Ubicación"
-                                    valor={obra.ubicacion ?? '—'}
-                                    icono={MapPin}
-                                />
-                                <Dato
-                                    label="Monto contractual"
-                                    valor={formatearMonto(obra.monto_contractual)}
-                                    icono={DollarSign}
-                                />
-                                {obra.descripcion && (
-                                    <div className="sm:col-span-2">
-                                        <div className="mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                                            Descripción
-                                        </div>
-                                        <p className="text-sm whitespace-pre-line text-foreground">
-                                            {obra.descripcion}
-                                        </p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Cronograma</CardTitle>
-                            </CardHeader>
-                            <CardContent className="grid gap-4 sm:grid-cols-3">
-                                <Dato
-                                    label="Inicio"
-                                    valor={obra.fecha_inicio ?? '—'}
-                                    icono={Calendar}
-                                />
-                                <Dato
-                                    label="Fin previsto"
-                                    valor={obra.fecha_fin_prevista ?? '—'}
-                                    icono={Calendar}
-                                />
-                                <Dato
-                                    label="Fin real"
-                                    valor={obra.fecha_fin_real ?? '—'}
-                                    icono={Calendar}
-                                />
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <CalendarDays className="size-5 text-primary" />
-                                Calendario
-                            </CardTitle>
-                            <Button asChild size="sm" variant="outline">
-                                <Link href={`/obras/${obra.id}/calendario`}>
-                                    Ver completo
+                    {puedeAdministrar && (
+                        <div className="flex shrink-0 items-center gap-1">
+                            <Button
+                                asChild
+                                variant="outline"
+                                size="icon"
+                                title="Editar obra"
+                            >
+                                <Link href={obras.edit(obra.id).url}>
+                                    <Pencil className="size-4" />
                                 </Link>
                             </Button>
-                        </CardHeader>
-                        <CardContent>
-                            <Link
-                                href={`/obras/${obra.id}/calendario`}
-                                className="block rounded-md p-1 transition-colors hover:bg-muted/30"
-                                title="Abrir calendario completo"
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={eliminar}
+                                title="Eliminar obra"
                             >
-                                <MiniCalendario eventos={eventosCalendario} />
-                            </Link>
-                            <div className="mt-3 text-center text-xs text-muted-foreground">
-                                {eventosCalendario.length}{' '}
-                                {eventosCalendario.length === 1
-                                    ? 'evento registrado'
-                                    : 'eventos registrados'}{' '}
-                                · haz clic para abrir el calendario completo
-                            </div>
-                        </CardContent>
-                    </Card>
+                                <Trash2 className="size-4 text-destructive" />
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
-                {/* Mapa (si aplica) */}
-                {obra.latitud !== null && obra.longitud !== null && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Ubicación en mapa</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <MapaUbicacion
-                                latitud={obra.latitud}
-                                longitud={obra.longitud}
-                                soloLectura
-                                altura="280px"
+                {/* Hero: imagen · datos · mapa  (progreso a todo el ancho debajo) */}
+                <Card className="p-5">
+                    <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                        <ImagenProyecto
+                            obraId={obra.id}
+                            imagenUrl={obra.imagen_url}
+                            nombre={obra.nombre}
+                            puedeEditar={puedeAdministrar}
+                        />
+
+                        {/* Datos mínimos */}
+                        <div className="flex flex-col justify-center gap-5">
+                            <Dato
+                                label="Entidad contratante"
+                                valor={obra.entidad_contratante ?? '—'}
+                                icono={Building2}
                             />
-                        </CardContent>
-                    </Card>
-                )}
+                            <Dato
+                                label="Responsable"
+                                valor={obra.creador ?? '—'}
+                                icono={User}
+                            />
+                            <Dato
+                                label="Monto contractual"
+                                valor={formatearMonto(obra.monto_contractual)}
+                                icono={DollarSign}
+                            />
+                            <Dato
+                                label="Inicio · término previsto"
+                                valor={`${obra.fecha_inicio ?? '—'} → ${obra.fecha_fin_prevista ?? '—'}`}
+                                icono={CalendarRange}
+                            />
+                        </div>
 
-                {/* Equipo full width */}
-                <EquipoObra
-                    obraId={obra.id}
-                    equipo={equipo}
-                    invitacionesPendientes={invitacionesPendientes}
-                    rolesObra={rolesObra}
-                    puedeAdministrar={puedeAdministrar}
-                />
+                        {/* Mapa */}
+                        <div className="h-56 overflow-hidden rounded-lg border border-border md:col-span-2 lg:col-span-1">
+                            {obra.latitud !== null &&
+                            obra.longitud !== null ? (
+                                <MapaUbicacion
+                                    latitud={obra.latitud}
+                                    longitud={obra.longitud}
+                                    soloLectura
+                                    altura="224px"
+                                />
+                            ) : (
+                                <div className="flex size-full flex-col items-center justify-center gap-2 bg-muted/30 px-6 text-center text-sm text-muted-foreground">
+                                    <MapPin className="size-7 text-muted-foreground/50" />
+                                    Sin ubicación geográfica
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
-                {/* Auditoría al final */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Auditoría</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid gap-4 sm:grid-cols-3">
-                        <Dato
-                            label="Creado por"
-                            valor={obra.creador ?? '—'}
-                            icono={User}
-                        />
-                        <Dato
-                            label="Creada el"
-                            valor={
-                                obra.created_at
-                                    ? new Date(obra.created_at).toLocaleString('es-PE')
-                                    : '—'
-                            }
-                        />
-                        <Dato
-                            label="Última actualización"
-                            valor={
-                                obra.updated_at
-                                    ? new Date(obra.updated_at).toLocaleString('es-PE')
-                                    : '—'
-                            }
-                        />
-                    </CardContent>
+                    {/* Progreso por días — a todo el ancho */}
+                    <div className="mt-5 space-y-2 border-t border-border pt-4">
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="font-medium text-foreground">
+                                Progreso general
+                            </span>
+                            <span className="font-semibold tabular-nums text-muted-foreground">
+                                {progreso !== null ? `${progreso}%` : '—'}
+                            </span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                            <div
+                                className="h-full rounded-full bg-primary transition-all"
+                                style={{ width: `${progreso ?? 0}%` }}
+                            />
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                            Etapa actual:{' '}
+                            <span className="font-medium text-foreground">
+                                {obra.estado_label}
+                            </span>
+                        </div>
+                    </div>
                 </Card>
+
+                {/* Accesos directos a los módulos de la obra */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <AccesoDirecto
+                        href={`/obras/${obra.id}/documentos`}
+                        icono={FolderTree}
+                        label="Documentos"
+                        valor={contadores.documentos}
+                        unidad="documentos"
+                    />
+                    <AccesoDirecto
+                        href={`/obras/${obra.id}/cuaderno`}
+                        icono={NotebookPen}
+                        label="Cuaderno de obra"
+                        valor={contadores.cuaderno}
+                        unidad="asientos"
+                    />
+                    <AccesoDirecto
+                        href={`/obras/${obra.id}/calendario`}
+                        icono={CalendarDays}
+                        label="Calendario"
+                        valor={contadores.calendario}
+                        unidad="eventos"
+                    />
+                    <AccesoDirecto
+                        href={`/obras/${obra.id}/equipo`}
+                        icono={Users}
+                        label="Equipo"
+                        valor={contadores.equipo}
+                        unidad="integrantes"
+                    />
+                </div>
             </div>
         </>
     );

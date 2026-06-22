@@ -60,6 +60,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Obras
     Route::resource('obras', ObraController::class);
+    Route::post('obras/{obra}/imagen', [ObraController::class, 'actualizarImagen'])->name('obras.imagen');
+    Route::get('obras/{obra}/imagen', [ObraController::class, 'mostrarImagen'])->name('obras.imagen.show');
+    Route::delete('obras/{obra}/imagen', [ObraController::class, 'eliminarImagen'])->name('obras.imagen.destroy');
 
     // Gestor documental: carpetas de una obra
     Route::get('obras/{obra}/documentos', [CarpetaController::class, 'index'])->name('obras.documentos.index');
@@ -104,6 +107,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('equipo', EquipoGlobalController::class)->name('equipo.index');
 
     // Equipo de una obra
+    Route::get('obras/{obra}/equipo', [EquipoObraController::class, 'index'])->name('obras.equipo.index');
     Route::post('obras/{obra}/equipo/invitar', [EquipoObraController::class, 'invitar'])->name('obras.equipo.invitar');
     Route::patch('obras/{obra}/equipo/{usuario}', [EquipoObraController::class, 'cambiarRol'])->name('obras.equipo.cambiar-rol');
     Route::delete('obras/{obra}/equipo/{usuario}', [EquipoObraController::class, 'remover'])->name('obras.equipo.remover');

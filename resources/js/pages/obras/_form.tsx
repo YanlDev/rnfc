@@ -1,6 +1,13 @@
+import { CalendarRange, FileText, MapPin } from 'lucide-react';
 import InputError from '@/components/input-error';
 import MapaUbicacion from '@/components/mapa-ubicacion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -36,13 +43,44 @@ type Props = {
     estados: EstadoOpcion[];
 };
 
-export default function ObraFormFields({ data, errors, setData, estados }: Props) {
+function SeccionHeader({
+    icono: Icono,
+    titulo,
+    descripcion,
+}: {
+    icono: React.ComponentType<{ className?: string }>;
+    titulo: string;
+    descripcion: string;
+}) {
+    return (
+        <CardHeader>
+            <div className="flex items-center gap-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Icono className="size-[18px]" />
+                </span>
+                <div>
+                    <CardTitle>{titulo}</CardTitle>
+                    <CardDescription>{descripcion}</CardDescription>
+                </div>
+            </div>
+        </CardHeader>
+    );
+}
+
+export default function ObraFormFields({
+    data,
+    errors,
+    setData,
+    estados,
+}: Props) {
     return (
         <div className="flex flex-col gap-6">
             <Card>
-                <CardHeader>
-                    <CardTitle>Identificación</CardTitle>
-                </CardHeader>
+                <SeccionHeader
+                    icono={FileText}
+                    titulo="Identificación"
+                    descripcion="Código, estado y datos que identifican la obra."
+                />
                 <CardContent className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
                         <Label htmlFor="codigo">Código *</Label>
@@ -89,7 +127,9 @@ export default function ObraFormFields({ data, errors, setData, estados }: Props
                             id="descripcion"
                             rows={3}
                             value={data.descripcion}
-                            onChange={(e) => setData('descripcion', e.target.value)}
+                            onChange={(e) =>
+                                setData('descripcion', e.target.value)
+                            }
                             placeholder="Alcance, metas físicas o cualquier nota relevante."
                         />
                         <InputError message={errors.descripcion} />
@@ -98,16 +138,22 @@ export default function ObraFormFields({ data, errors, setData, estados }: Props
             </Card>
 
             <Card>
-                <CardHeader>
-                    <CardTitle>Ubicación y contratante</CardTitle>
-                </CardHeader>
+                <SeccionHeader
+                    icono={MapPin}
+                    titulo="Ubicación y contratante"
+                    descripcion="Dónde se ejecuta la obra y quién la contrata."
+                />
                 <CardContent className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2 md:col-span-2">
-                        <Label htmlFor="ubicacion">Dirección / referencia</Label>
+                        <Label htmlFor="ubicacion">
+                            Dirección / referencia
+                        </Label>
                         <Input
                             id="ubicacion"
                             value={data.ubicacion}
-                            onChange={(e) => setData('ubicacion', e.target.value)}
+                            onChange={(e) =>
+                                setData('ubicacion', e.target.value)
+                            }
                             placeholder="Distrito, provincia, departamento o referencia textual"
                         />
                         <InputError message={errors.ubicacion} />
@@ -115,8 +161,12 @@ export default function ObraFormFields({ data, errors, setData, estados }: Props
                     <div className="grid gap-2 md:col-span-2">
                         <Label>Ubicación en mapa</Label>
                         <MapaUbicacion
-                            latitud={data.latitud ? parseFloat(data.latitud) : null}
-                            longitud={data.longitud ? parseFloat(data.longitud) : null}
+                            latitud={
+                                data.latitud ? parseFloat(data.latitud) : null
+                            }
+                            longitud={
+                                data.longitud ? parseFloat(data.longitud) : null
+                            }
                             onCambio={(c) => {
                                 setData('latitud', c ? String(c.lat) : '');
                                 setData('longitud', c ? String(c.lng) : '');
@@ -126,7 +176,9 @@ export default function ObraFormFields({ data, errors, setData, estados }: Props
                         <InputError message={errors.longitud} />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="entidad_contratante">Entidad contratante</Label>
+                        <Label htmlFor="entidad_contratante">
+                            Entidad contratante
+                        </Label>
                         <Input
                             id="entidad_contratante"
                             value={data.entidad_contratante}
@@ -138,7 +190,9 @@ export default function ObraFormFields({ data, errors, setData, estados }: Props
                         <InputError message={errors.entidad_contratante} />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="monto_contractual">Monto contractual (S/)</Label>
+                        <Label htmlFor="monto_contractual">
+                            Monto contractual (S/)
+                        </Label>
                         <Input
                             id="monto_contractual"
                             type="number"
@@ -156,9 +210,11 @@ export default function ObraFormFields({ data, errors, setData, estados }: Props
             </Card>
 
             <Card>
-                <CardHeader>
-                    <CardTitle>Cronograma</CardTitle>
-                </CardHeader>
+                <SeccionHeader
+                    icono={CalendarRange}
+                    titulo="Cronograma"
+                    descripcion="Fechas de inicio, fin previsto y fin real."
+                />
                 <CardContent className="grid gap-4 md:grid-cols-3">
                     <div className="grid gap-2">
                         <Label htmlFor="fecha_inicio">Fecha de inicio</Label>
@@ -166,7 +222,9 @@ export default function ObraFormFields({ data, errors, setData, estados }: Props
                             id="fecha_inicio"
                             type="date"
                             value={data.fecha_inicio}
-                            onChange={(e) => setData('fecha_inicio', e.target.value)}
+                            onChange={(e) =>
+                                setData('fecha_inicio', e.target.value)
+                            }
                         />
                         <InputError message={errors.fecha_inicio} />
                     </div>
@@ -188,7 +246,9 @@ export default function ObraFormFields({ data, errors, setData, estados }: Props
                             id="fecha_fin_real"
                             type="date"
                             value={data.fecha_fin_real}
-                            onChange={(e) => setData('fecha_fin_real', e.target.value)}
+                            onChange={(e) =>
+                                setData('fecha_fin_real', e.target.value)
+                            }
                         />
                         <InputError message={errors.fecha_fin_real} />
                     </div>

@@ -1,6 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Eye, FileDown, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -21,6 +22,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import certificados from '@/routes/certificados';
+import type { Paginado } from '@/types';
 
 type Certificado = {
     id: number;
@@ -35,22 +37,20 @@ type Certificado = {
     revocado_at: string | null;
 };
 
-type Paginated<T> = {
-    data: T[];
-    links: { url: string | null; label: string; active: boolean }[];
-    meta?: { current_page: number; last_page: number; total: number };
-};
-
 type Tipo = { value: string; label: string };
 
 type Props = {
-    certificados: Paginated<Certificado>;
+    certificados: Paginado<Certificado>;
     tipos: Tipo[];
 };
 
-export default function CertificadosIndex({ certificados: paginado, tipos }: Props) {
+export default function CertificadosIndex({
+    certificados: paginado,
+    tipos,
+}: Props) {
     const [busqueda, setBusqueda] = useState('');
     const [filtroTipo, setFiltroTipo] = useState<string>('todos');
+    const { confirm, dialog } = useConfirm();
 
     const filtrados = paginado.data.filter((c) => {
         const matchTipo = filtroTipo === 'todos' || c.tipo === filtroTipo;
@@ -60,11 +60,23 @@ export default function CertificadosIndex({ certificados: paginado, tipos }: Pro
             c.codigo.toLowerCase().includes(q) ||
             c.beneficiario_nombre.toLowerCase().includes(q) ||
             (c.beneficiario_documento ?? '').toLowerCase().includes(q);
+
         return matchTipo && matchBusqueda;
     });
 
-    const eliminar = (c: Certificado) => {
-        if (!confirm(`¿Eliminar el certificado ${c.codigo}?`)) return;
+    const eliminar = async (c: Certificado) => {
+        const ok = await confirm({
+            titulo: `¿Eliminar el certificado ${c.codigo}?`,
+            descripcion:
+                'El certificado dejará de poder verificarse públicamente.',
+            confirmar: 'Eliminar',
+            destructivo: true,
+        });
+
+        if (!ok) {
+            return;
+        }
+
         router.delete(certificados.destroy(c.id).url);
     };
 
@@ -89,12 +101,17 @@ export default function CertificadosIndex({ certificados: paginado, tipos }: Pro
                             onChange={(e) => setBusqueda(e.target.value)}
                             className="sm:max-w-sm"
                         />
-                        <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+                        <Select
+                            value={filtroTipo}
+                            onValueChange={setFiltroTipo}
+                        >
                             <SelectTrigger className="sm:w-56">
                                 <SelectValue placeholder="Filtrar por tipo" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="todos">Todos los tipos</SelectItem>
+                                <SelectItem value="todos">
+                                    Todos los tipos
+                                </SelectItem>
                                 {tipos.map((t) => (
                                     <SelectItem key={t.value} value={t.value}>
                                         {t.label}
@@ -115,13 +132,18 @@ export default function CertificadosIndex({ certificados: paginado, tipos }: Pro
                                 <TableHead>Obra</TableHead>
                                 <TableHead>Emisión</TableHead>
                                 <TableHead>Estado</TableHead>
-                                <TableHead className="text-right">Acciones</TableHead>
+                                <TableHead className="text-right">
+                                    Acciones
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filtrados.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
+                                    <TableCell
+                                        colSpan={7}
+                                        className="py-8 text-center text-sm text-muted-foreground"
+                                    >
                                         Sin certificados emitidos todavía.
                                     </TableCell>
                                 </TableRow>
@@ -133,7 +155,9 @@ export default function CertificadosIndex({ certificados: paginado, tipos }: Pro
                                     </TableCell>
                                     <TableCell>{c.tipo_label}</TableCell>
                                     <TableCell>
-                                        <div className="font-medium">{c.beneficiario_nombre}</div>
+                                        <div className="font-medium">
+                                            {c.beneficiario_nombre}
+                                        </div>
                                         {c.beneficiario_documento && (
                                             <div className="text-xs text-muted-foreground">
                                                 DNI: {c.beneficiario_documento}
@@ -143,30 +167,64 @@ export default function CertificadosIndex({ certificados: paginado, tipos }: Pro
                                     <TableCell className="text-sm">
                                         {c.obra ? (
                                             <span>
-                                                <span className="font-mono text-xs text-muted-foreground">[{c.obra.codigo}]</span>{' '}
+                                                <span className="font-mono text-xs text-muted-foreground">
+                                                    [{c.obra.codigo}]
+                                                </span>{' '}
                                                 {c.obra.nombre}
                                             </span>
                                         ) : (
-                                            <span className="text-muted-foreground">—</span>
+                                            <span className="text-muted-foreground">
+                                                —
+                                            </span>
                                         )}
                                     </TableCell>
-                                    <TableCell className="text-sm">{c.fecha_emision}</TableCell>
+                                    <TableCell className="text-sm">
+                                        {c.fecha_emision}
+                                    </TableCell>
                                     <TableCell>
                                         {c.vigente ? (
-                                            <Badge className="bg-[var(--color-brand-verde)] text-white">Vigente</Badge>
+                                            <Badge className="bg-[var(--color-brand-verde)] text-white">
+                                                Vigente
+                                            </Badge>
                                         ) : (
-                                            <Badge variant="destructive">Revocado</Badge>
+                                            <Badge variant="destructive">
+                                                Revocado
+                                            </Badge>
                                         )}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-1">
-                                            <Button asChild size="sm" variant="ghost" title="Ver detalle">
-                                                <Link href={certificados.show(c.id).url}>
+                                            <Button
+                                                asChild
+                                                size="sm"
+                                                variant="ghost"
+                                                title="Ver detalle"
+                                            >
+                                                <Link
+                                                    href={
+                                                        certificados.show(c.id)
+                                                            .url
+                                                    }
+                                                    aria-label={`Ver certificado ${c.codigo}`}
+                                                >
                                                     <Eye className="size-4" />
                                                 </Link>
                                             </Button>
-                                            <Button asChild size="sm" variant="ghost" title="Descargar PDF">
-                                                <a href={certificados.pdf(c.id).url} target="_blank" rel="noreferrer">
+                                            <Button
+                                                asChild
+                                                size="sm"
+                                                variant="ghost"
+                                                title="Descargar PDF"
+                                            >
+                                                <a
+                                                    href={
+                                                        certificados.pdf(c.id)
+                                                            .url
+                                                    }
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    aria-label={`Descargar PDF de ${c.codigo}`}
+                                                >
                                                     <FileDown className="size-4" />
                                                 </a>
                                             </Button>
@@ -174,6 +232,7 @@ export default function CertificadosIndex({ certificados: paginado, tipos }: Pro
                                                 size="sm"
                                                 variant="ghost"
                                                 title="Eliminar"
+                                                aria-label={`Eliminar certificado ${c.codigo}`}
                                                 onClick={() => eliminar(c)}
                                             >
                                                 <Trash2 className="size-4 text-destructive" />
@@ -186,13 +245,15 @@ export default function CertificadosIndex({ certificados: paginado, tipos }: Pro
                     </Table>
                 </Card>
             </div>
+            {dialog}
         </>
     );
 }
 
 CertificadosIndex.layout = {
     title: 'Certificados',
-    description: 'Emite, previsualiza y verifica certificados oficiales de RNFC.',
+    description:
+        'Emite, previsualiza y verifica certificados oficiales de RNFC.',
     breadcrumbs: [
         { title: 'Panel', href: '/dashboard' },
         { title: 'Certificados', href: '/certificados' },

@@ -12,17 +12,18 @@ import {
     Sparkles,
     Trash2,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import obras from '@/routes/obras';
-import AplicarPlantillaDialog, {
-    type GrupoPlantilla,
-} from './_aplicar-plantilla';
-import DocumentoCard, { type DocumentoCardData } from './_documento-card';
+import AplicarPlantillaDialog from './_aplicar-plantilla';
+import type { GrupoPlantilla } from './_aplicar-plantilla';
+import DocumentoCard from './_documento-card';
+import type { DocumentoCardData } from './_documento-card';
 import Dropzone from './_dropzone';
-import PreviewModal, { type DocumentoPreview } from './_preview-modal';
+import PreviewModal from './_preview-modal';
+import type { DocumentoPreview } from './_preview-modal';
 
 type Carpeta = {
     id: number;
@@ -64,9 +65,13 @@ function construirArbol(carpetas: Carpeta[]): NodoArbol[] {
             raices.push(nodo);
         } else {
             const padre = mapa.get(nodo.parent_id);
-            if (padre) padre.hijos.push(nodo);
+
+            if (padre) {
+                padre.hijos.push(nodo);
+            }
         }
     });
+
     return raices;
 }
 
@@ -74,14 +79,16 @@ function obtenerLinea(carpetaId: number, carpetas: Carpeta[]): Carpeta[] {
     const mapa = new Map(carpetas.map((c) => [c.id, c]));
     const linea: Carpeta[] = [];
     let actual: Carpeta | undefined = mapa.get(carpetaId);
+
     while (actual) {
         linea.unshift(actual);
         actual = actual.parent_id ? mapa.get(actual.parent_id) : undefined;
     }
+
     return linea;
 }
 
-function NodoCarpeta({
+const NodoCarpeta = memo(function NodoCarpeta({
     nodo,
     nivel,
     obraId,
@@ -108,8 +115,13 @@ function NodoCarpeta({
 
     const toggle = () => {
         const next = new Set(expandidos);
-        if (next.has(nodo.id)) next.delete(nodo.id);
-        else next.add(nodo.id);
+
+        if (next.has(nodo.id)) {
+            next.delete(nodo.id);
+        } else {
+            next.add(nodo.id);
+        }
+
         setExpandidos(next);
     };
 
@@ -137,6 +149,7 @@ function NodoCarpeta({
 
     const eliminar = (e: React.MouseEvent) => {
         e.stopPropagation();
+
         if (
             !confirm(
                 `¿Eliminar la carpeta "${nodo.nombre}" y todas sus subcarpetas?`,
@@ -144,6 +157,7 @@ function NodoCarpeta({
         ) {
             return;
         }
+
         router.delete(`/obras/${obraId}/carpetas/${nodo.id}`, {
             preserveScroll: true,
         });
@@ -159,10 +173,13 @@ function NodoCarpeta({
     const guardarRename = (e: React.FormEvent) => {
         e.preventDefault();
         const nuevo = formRename.data.nombre.trim();
+
         if (!nuevo || nuevo === nodo.nombre) {
             setEditando(false);
+
             return;
         }
+
         formRename.patch(`/obras/${obraId}/carpetas/${nodo.id}`, {
             preserveScroll: true,
             onSuccess: () => setEditando(false),
@@ -235,7 +252,9 @@ function NodoCarpeta({
                                 formRename.setData('nombre', e.target.value)
                             }
                             onKeyDown={(e) => {
-                                if (e.key === 'Escape') setEditando(false);
+                                if (e.key === 'Escape') {
+                                    setEditando(false);
+                                }
                             }}
                             onBlur={guardarRename}
                             className="h-6 text-sm"
@@ -332,7 +351,7 @@ function NodoCarpeta({
             )}
         </li>
     );
-}
+});
 
 export default function DocumentosIndex({
     obra,
@@ -351,17 +370,23 @@ export default function DocumentosIndex({
     const [expandidos, setExpandidos] = useState<Set<number>>(() => {
         const init = new Set<number>(arbol.map((n) => n.id));
         lineaActiva.forEach((c) => init.add(c.id));
+
         return init;
     });
 
-    useEffect(() => {
-        if (carpetaActiva) {
-            const next = new Set(expandidos);
-            lineaActiva.forEach((c) => next.add(c.id));
-            setExpandidos(next);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [carpetaActiva?.id]);
+    // Al cambiar la carpeta activa, expandimos su línea ascendente. Patrón de
+    // ajuste de estado en render (no useEffect) recomendado por React para
+    // sincronizar estado con un cambio de prop.
+    const [carpetaPrevia, setCarpetaPrevia] = useState(
+        carpetaActiva?.id ?? null,
+    );
+
+    if (carpetaActiva && carpetaActiva.id !== carpetaPrevia) {
+        setCarpetaPrevia(carpetaActiva.id);
+        setExpandidos(
+            (prev) => new Set([...prev, ...lineaActiva.map((c) => c.id)]),
+        );
+    }
 
     const [mostrandoPlantilla, setMostrandoPlantilla] = useState(false);
     const [mostrandoNuevaRaiz, setMostrandoNuevaRaiz] = useState(false);
@@ -380,7 +405,10 @@ export default function DocumentosIndex({
     };
 
     const recargarDocumentos = () => {
-        if (!carpetaActiva) return;
+        if (!carpetaActiva) {
+            return;
+        }
+
         router.reload({ only: ['documentos'] });
     };
 
@@ -431,7 +459,9 @@ export default function DocumentosIndex({
                         </p>
                         {puedeAdministrar && (
                             <div className="mt-4 flex justify-center gap-2">
-                                <Button onClick={() => setMostrandoPlantilla(true)}>
+                                <Button
+                                    onClick={() => setMostrandoPlantilla(true)}
+                                >
                                     <Sparkles className="size-4" />
                                     Elegir desde la plantilla
                                 </Button>
@@ -484,7 +514,9 @@ export default function DocumentosIndex({
                                         puedeAdministrar={puedeAdministrar}
                                         expandidos={expandidos}
                                         setExpandidos={setExpandidos}
-                                        carpetaActivaId={carpetaActiva?.id ?? null}
+                                        carpetaActivaId={
+                                            carpetaActiva?.id ?? null
+                                        }
                                     />
                                 ))}
                             </ul>
@@ -527,7 +559,8 @@ export default function DocumentosIndex({
                                                     }
                                                     className={
                                                         'rounded px-1 hover:bg-muted ' +
-                                                        (i === lineaActiva.length - 1
+                                                        (i ===
+                                                        lineaActiva.length - 1
                                                             ? 'font-semibold text-foreground'
                                                             : '')
                                                     }
@@ -548,7 +581,8 @@ export default function DocumentosIndex({
                                     {documentos.length === 0 ? (
                                         <Card className="p-10 text-center">
                                             <p className="text-sm text-muted-foreground">
-                                                Esta carpeta aún no tiene archivos.
+                                                Esta carpeta aún no tiene
+                                                archivos.
                                             </p>
                                         </Card>
                                     ) : (
@@ -558,8 +592,12 @@ export default function DocumentosIndex({
                                                     key={d.id}
                                                     documento={d}
                                                     obraId={obra.id}
-                                                    puedeAdministrar={puedeAdministrar}
-                                                    onPreview={() => setDocPreview(d)}
+                                                    puedeAdministrar={
+                                                        puedeAdministrar
+                                                    }
+                                                    onPreview={() =>
+                                                        setDocPreview(d)
+                                                    }
                                                 />
                                             ))}
                                         </div>

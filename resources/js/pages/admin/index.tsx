@@ -26,13 +26,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-    type ChartConfig,
     ChartContainer,
     ChartLegend,
     ChartLegendContent,
     ChartTooltip,
     ChartTooltipContent,
 } from '@/components/ui/chart';
+import type { ChartConfig } from '@/components/ui/chart';
 
 type Kpis = {
     obras_total: number;
@@ -114,7 +114,10 @@ const COLORES_TIPO_CERT = [
     '#5d6166',
 ];
 
-const ICONOS_ACTIVIDAD: Record<string, React.ComponentType<{ className?: string }>> = {
+const ICONOS_ACTIVIDAD: Record<
+    string,
+    React.ComponentType<{ className?: string }>
+> = {
     Award,
     FolderTree,
     NotebookPen,
@@ -122,9 +125,18 @@ const ICONOS_ACTIVIDAD: Record<string, React.ComponentType<{ className?: string 
 };
 
 function bytesHumano(bytes: number) {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+    if (bytes < 1024) {
+        return `${bytes} B`;
+    }
+
+    if (bytes < 1024 ** 2) {
+        return `${(bytes / 1024).toFixed(1)} KB`;
+    }
+
+    if (bytes < 1024 ** 3) {
+        return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+    }
+
     return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
 }
 
@@ -157,7 +169,9 @@ function KpiCard({
             <CardContent>
                 <div className="text-2xl font-bold tabular-nums">{value}</div>
                 {sub && (
-                    <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                        {sub}
+                    </div>
                 )}
             </CardContent>
         </Card>
@@ -195,7 +209,10 @@ export default function AdminPanel({
     const configCert: ChartConfig = Object.fromEntries(
         certificadosPorTipo.map((t, i) => [
             t.value,
-            { label: t.label, color: COLORES_TIPO_CERT[i % COLORES_TIPO_CERT.length] },
+            {
+                label: t.label,
+                color: COLORES_TIPO_CERT[i % COLORES_TIPO_CERT.length],
+            },
         ]),
     );
 
@@ -301,7 +318,11 @@ export default function AdminPanel({
                                     <PieChart>
                                         <ChartTooltip
                                             cursor={false}
-                                            content={<ChartTooltipContent hideLabel />}
+                                            content={
+                                                <ChartTooltipContent
+                                                    hideLabel
+                                                />
+                                            }
                                         />
                                         <Pie
                                             data={datosEstadoChart}
@@ -311,11 +332,16 @@ export default function AdminPanel({
                                             strokeWidth={2}
                                         >
                                             {datosEstadoChart.map((entry) => (
-                                                <Cell key={entry.value} fill={entry.fill} />
+                                                <Cell
+                                                    key={entry.value}
+                                                    fill={entry.fill}
+                                                />
                                             ))}
                                         </Pie>
                                         <ChartLegend
-                                            content={<ChartLegendContent nameKey="value" />}
+                                            content={
+                                                <ChartLegendContent nameKey="value" />
+                                            }
                                         />
                                     </PieChart>
                                 </ChartContainer>
@@ -344,7 +370,11 @@ export default function AdminPanel({
                                     <PieChart>
                                         <ChartTooltip
                                             cursor={false}
-                                            content={<ChartTooltipContent hideLabel />}
+                                            content={
+                                                <ChartTooltipContent
+                                                    hideLabel
+                                                />
+                                            }
                                         />
                                         <Pie
                                             data={datosCertChart}
@@ -354,11 +384,16 @@ export default function AdminPanel({
                                             strokeWidth={2}
                                         >
                                             {datosCertChart.map((entry) => (
-                                                <Cell key={entry.value} fill={entry.fill} />
+                                                <Cell
+                                                    key={entry.value}
+                                                    fill={entry.fill}
+                                                />
                                             ))}
                                         </Pie>
                                         <ChartLegend
-                                            content={<ChartLegendContent nameKey="value" />}
+                                            content={
+                                                <ChartLegendContent nameKey="value" />
+                                            }
                                         />
                                     </PieChart>
                                 </ChartContainer>
@@ -390,7 +425,12 @@ export default function AdminPanel({
                                 >
                                     <BarChart
                                         data={datosAlmacenamiento}
-                                        margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                                        margin={{
+                                            top: 10,
+                                            right: 10,
+                                            left: -10,
+                                            bottom: 0,
+                                        }}
                                     >
                                         <CartesianGrid vertical={false} />
                                         <XAxis
@@ -398,13 +438,27 @@ export default function AdminPanel({
                                             tickLine={false}
                                             axisLine={false}
                                         />
-                                        <YAxis tickLine={false} axisLine={false} />
+                                        <YAxis
+                                            tickLine={false}
+                                            axisLine={false}
+                                        />
                                         <ChartTooltip
-                                            cursor={{ fill: 'rgba(20, 86, 148, 0.08)' }}
+                                            cursor={{
+                                                fill: 'rgba(20, 86, 148, 0.08)',
+                                            }}
                                             content={
                                                 <ChartTooltipContent
-                                                    labelFormatter={(_v: unknown, p: { payload?: { nombreCompleto?: string } }[]) =>
-                                                        p?.[0]?.payload?.nombreCompleto ?? ''
+                                                    labelFormatter={(
+                                                        _v: unknown,
+                                                        p: {
+                                                            payload?: {
+                                                                nombreCompleto?: string;
+                                                            };
+                                                        }[],
+                                                    ) =>
+                                                        p?.[0]?.payload
+                                                            ?.nombreCompleto ??
+                                                        ''
                                                     }
                                                 />
                                             }
@@ -519,11 +573,15 @@ export default function AdminPanel({
                                 </p>
                             ) : (
                                 <ul className="space-y-1">
-                                    {actividadReciente.map((ev, i) => {
+                                    {actividadReciente.map((ev) => {
                                         const Icono =
-                                            ICONOS_ACTIVIDAD[ev.icono] ?? Activity;
+                                            ICONOS_ACTIVIDAD[ev.icono] ??
+                                            Activity;
+
                                         return (
-                                            <li key={i}>
+                                            <li
+                                                key={`${ev.tipo}-${ev.enlace}-${ev.created_at_iso}`}
+                                            >
                                                 <Link
                                                     href={ev.enlace}
                                                     className="flex items-start gap-3 rounded-md p-2 transition-colors hover:bg-muted/40"

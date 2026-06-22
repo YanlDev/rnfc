@@ -11,9 +11,59 @@ use App\Models\User;
 use App\Notifications\InvitacionRecibida;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Mail;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class EquipoObraController extends Controller
 {
+    /**
+     * Página de gestión del equipo de una obra.
+     */
+    public function index(Obra $obra): Response
+    {
+        $this->authorize('view', $obra);
+
+        $obra->load([
+            'usuarios' => fn ($q) => $q->orderBy('name'),
+            'invitaciones' => fn ($q) => $q
+                ->whereNull('aceptada_at')
+                ->whereNull('cancelada_at')
+                ->where('expira_at', '>', now())
+                ->latest(),
+            'invitaciones.invitador:id,name',
+        ]);
+
+        return Inertia::render('obras/equipo', [
+            'obra' => [
+                'id' => $obra->id,
+                'codigo' => $obra->codigo,
+                'nombre' => $obra->nombre,
+            ],
+            'equipo' => $obra->usuarios->map(fn (User $u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'rol_obra' => $u->pivot->rol_obra,
+                'rol_obra_label' => RolObra::from($u->pivot->rol_obra)->label(),
+                'asignado_at' => $u->pivot->asignado_at,
+            ])->all(),
+            'invitacionesPendientes' => $obra->invitaciones->map(fn (Invitacion $i) => [
+                'id' => $i->id,
+                'email' => $i->email,
+                'rol_obra' => $i->rol_obra->value,
+                'rol_obra_label' => $i->rol_obra->label(),
+                'expira_at' => $i->expira_at->toIso8601String(),
+                'invitador' => $i->invitador?->name,
+            ])->all(),
+            'rolesObra' => collect(RolObra::cases())->map(fn (RolObra $r) => [
+                'value' => $r->value,
+                'label' => $r->label(),
+                'categoria' => $r->categoria(),
+            ])->all(),
+            'puedeAdministrar' => request()->user()?->can('update', $obra) ?? false,
+        ]);
+    }
+
     /**
      * Envía una invitación. Si el correo ya tiene cuenta, lo vincula directo.
      */

@@ -18,8 +18,8 @@ const iconUrl =
     'data:image/svg+xml;utf8,' +
     encodeURIComponent(
         `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="48" viewBox="0 0 32 48">
-            <path d="M16 0C7.2 0 0 7.2 0 16c0 11 16 32 16 32s16-21 16-32C32 7.2 24.8 0 16 0z" fill="#145694"/>
-            <circle cx="16" cy="16" r="6" fill="#ffd21c"/>
+            <path d="M16 0C7.2 0 0 7.2 0 16c0 11 16 32 16 32s16-21 16-32C32 7.2 24.8 0 16 0z" fill="#e11d48"/>
+            <circle cx="16" cy="16" r="6" fill="#ffffff"/>
         </svg>`,
     );
 

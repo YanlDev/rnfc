@@ -22,6 +22,7 @@ class Obra extends Model
         'ubicacion',
         'latitud',
         'longitud',
+        'imagen_path',
         'entidad_contratante',
         'monto_contractual',
         'fecha_inicio',

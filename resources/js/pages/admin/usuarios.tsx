@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import {
     Building2,
     CheckCircle2,
@@ -15,8 +15,10 @@ import {
     UserX,
     Users,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/confirm-dialog';
+import Paginacion from '@/components/paginacion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -45,7 +47,17 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import { useFiltrosUrl } from '@/hooks/use-filtros-url';
+import type { Paginado } from '@/types';
 
 type Usuario = {
     id: number;
@@ -74,18 +86,6 @@ type InvitacionPendienteGlobal = {
     invitador: string | null;
 };
 
-type Paginado<T> = {
-    data: T[];
-    links: { url: string | null; label: string; active: boolean }[];
-    meta: {
-        current_page: number;
-        last_page: number;
-        total: number;
-        from: number | null;
-        to: number | null;
-    };
-};
-
 type Props = {
     usuarios: Paginado<Usuario>;
     filtros: { q: string; estado: string; rol: string };
@@ -104,8 +104,6 @@ const ROL_COLOR: Record<string, string> = {
     admin: 'bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300',
     gerente_general:
         'bg-purple-100 text-purple-800 hover:bg-purple-100 dark:bg-purple-950/40 dark:text-purple-300',
-    supervisor:
-        'bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300',
     residente:
         'bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300',
     ingeniero:
@@ -114,97 +112,116 @@ const ROL_COLOR: Record<string, string> = {
         'bg-slate-100 text-slate-700 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300',
 };
 
-export default function AdminUsuarios({ usuarios, filtros, roles, rolesGlobales, kpis, invitacionesPendientes }: Props) {
-    const [busqueda, setBusqueda] = useState(filtros.q);
-    const [estado, setEstado] = useState(filtros.estado);
-    const [rol, setRol] = useState(filtros.rol);
+export default function AdminUsuarios({
+    usuarios,
+    filtros,
+    roles,
+    rolesGlobales,
+    kpis,
+    invitacionesPendientes,
+}: Props) {
+    const { filtros: f, set } = useFiltrosUrl('/admin/usuarios', {
+        q: filtros.q,
+        estado: filtros.estado,
+        rol: filtros.rol,
+    });
 
-    // Modal desactivar
-    const [usuarioObjetivo, setUsuarioObjetivo] = useState<Usuario | null>(null);
-    const [motivo, setMotivo] = useState('');
+    // Modal desactivar — useForm da processing/errors y evita doble submit.
+    const [usuarioObjetivo, setUsuarioObjetivo] = useState<Usuario | null>(
+        null,
+    );
+    const formToggle = useForm<{ motivo: string }>({ motivo: '' });
 
     // Modal cambiar rol
     const [usuarioRol, setUsuarioRol] = useState<Usuario | null>(null);
-    const [nuevoRol, setNuevoRol] = useState<string>('');
+    const formRol = useForm<{ rol: string }>({ rol: '' });
 
     // Modal invitar usuario global
     const [invitarOpen, setInvitarOpen] = useState(false);
-    const [invitarEmail, setInvitarEmail] = useState('');
-    const [invitarRol, setInvitarRol] = useState<string>('');
+    const formInvitar = useForm<{ email: string; rol_global: string }>({
+        email: '',
+        rol_global: '',
+    });
 
-    useEffect(() => {
-        const t = setTimeout(() => {
-            router.get(
-                '/admin/usuarios',
-                {
-                    q: busqueda || undefined,
-                    estado: estado === 'todos' ? undefined : estado,
-                    rol: rol === 'todos' ? undefined : rol,
-                },
-                { preserveState: true, preserveScroll: true, replace: true },
-            );
-        }, 250);
-        return () => clearTimeout(t);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [busqueda, estado, rol]);
+    const { confirm, dialog } = useConfirm();
 
     const confirmarToggle = () => {
-        if (!usuarioObjetivo) return;
-        router.patch(
+        if (!usuarioObjetivo || formToggle.processing) {
+            return;
+        }
+
+        formToggle.transform((d) => ({ motivo: d.motivo.trim() || null }));
+        formToggle.patch(
             `/admin/usuarios/${usuarioObjetivo.id}/toggle-activo`,
-            { motivo: motivo.trim() || null },
             {
                 preserveScroll: true,
                 onSuccess: () => {
                     setUsuarioObjetivo(null);
-                    setMotivo('');
+                    formToggle.reset();
                 },
                 onError: (errors) => {
-                    if (errors.usuario) toast.error(errors.usuario);
+                    if (errors.usuario) {
+                        toast.error(errors.usuario);
+                    }
                 },
             },
         );
     };
 
     const confirmarCambioRol = () => {
-        if (!usuarioRol || !nuevoRol) return;
-        router.patch(
-            `/admin/usuarios/${usuarioRol.id}/rol`,
-            { rol: nuevoRol },
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    setUsuarioRol(null);
-                    setNuevoRol('');
-                },
-                onError: (errors) => {
-                    if (errors.rol) toast.error(errors.rol);
-                },
+        if (!usuarioRol || !formRol.data.rol || formRol.processing) {
+            return;
+        }
+
+        formRol.patch(`/admin/usuarios/${usuarioRol.id}/rol`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setUsuarioRol(null);
+                formRol.reset();
             },
-        );
+            onError: (errors) => {
+                if (errors.rol) {
+                    toast.error(errors.rol);
+                }
+            },
+        });
     };
 
     const confirmarInvitacionGlobal = () => {
-        if (!invitarEmail || !invitarRol) return;
-        router.post(
-            '/admin/invitar',
-            { email: invitarEmail, rol_global: invitarRol },
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    setInvitarOpen(false);
-                    setInvitarEmail('');
-                    setInvitarRol('');
-                },
-                onError: (errors) => {
-                    if (errors.email) toast.error(errors.email);
-                },
+        if (
+            !formInvitar.data.email ||
+            !formInvitar.data.rol_global ||
+            formInvitar.processing
+        ) {
+            return;
+        }
+
+        formInvitar.post('/admin/invitar', {
+            preserveScroll: true,
+            onSuccess: () => {
+                setInvitarOpen(false);
+                formInvitar.reset();
             },
-        );
+            onError: (errors) => {
+                if (errors.email) {
+                    toast.error(errors.email);
+                }
+            },
+        });
     };
 
-    const cancelarGlobal = (invitacion: InvitacionPendienteGlobal) => {
-        if (!confirm(`¿Cancelar la invitación a ${invitacion.email}?`)) return;
+    const cancelarGlobal = async (invitacion: InvitacionPendienteGlobal) => {
+        const ok = await confirm({
+            titulo: `¿Cancelar la invitación a ${invitacion.email}?`,
+            confirmar: 'Cancelar invitación',
+            cancelar: 'Volver',
+            destructivo: true,
+        });
+
+        if (!ok) {
+            return;
+        }
+
         router.delete(`/admin/invitaciones/${invitacion.id}`, {
             preserveScroll: true,
         });
@@ -231,7 +248,9 @@ export default function AdminUsuarios({ usuarios, filtros, roles, rolesGlobales,
                         value={kpis.total}
                     />
                     <KpiCard
-                        icon={<CheckCircle2 className="size-5 text-emerald-600" />}
+                        icon={
+                            <CheckCircle2 className="size-5 text-emerald-600" />
+                        }
                         label="Activos"
                         value={kpis.activos}
                     />
@@ -253,27 +272,38 @@ export default function AdminUsuarios({ usuarios, filtros, roles, rolesGlobales,
                         <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             placeholder="Buscar por nombre o correo…"
-                            value={busqueda}
-                            onChange={(e) => setBusqueda(e.target.value)}
+                            value={f.q}
+                            onChange={(e) => set('q', e.target.value)}
                             className="pl-9"
                         />
                     </div>
-                    <Select value={estado} onValueChange={setEstado}>
+                    <Select
+                        value={f.estado}
+                        onValueChange={(v) => set('estado', v)}
+                    >
                         <SelectTrigger className="sm:w-48">
                             <SelectValue placeholder="Estado" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="todos">Todos los estados</SelectItem>
-                            <SelectItem value="activos">Solo activos</SelectItem>
-                            <SelectItem value="desactivados">Solo desactivados</SelectItem>
+                            <SelectItem value="todos">
+                                Todos los estados
+                            </SelectItem>
+                            <SelectItem value="activos">
+                                Solo activos
+                            </SelectItem>
+                            <SelectItem value="desactivados">
+                                Solo desactivados
+                            </SelectItem>
                         </SelectContent>
                     </Select>
-                    <Select value={rol} onValueChange={setRol}>
+                    <Select value={f.rol} onValueChange={(v) => set('rol', v)}>
                         <SelectTrigger className="sm:w-52">
                             <SelectValue placeholder="Rol" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="todos">Todos los roles</SelectItem>
+                            <SelectItem value="todos">
+                                Todos los roles
+                            </SelectItem>
                             {roles.map((r) => (
                                 <SelectItem key={r.value} value={r.value}>
                                     {r.label}
@@ -281,7 +311,10 @@ export default function AdminUsuarios({ usuarios, filtros, roles, rolesGlobales,
                             ))}
                         </SelectContent>
                     </Select>
-                    <Button variant="default" onClick={() => setInvitarOpen(true)}>
+                    <Button
+                        variant="default"
+                        onClick={() => setInvitarOpen(true)}
+                    >
                         <UserPlus className="mr-2 size-4" />
                         Invitar usuario
                     </Button>
@@ -307,9 +340,9 @@ export default function AdminUsuarios({ usuarios, filtros, roles, rolesGlobales,
                                             </div>
                                             <div className="text-xs text-muted-foreground">
                                                 {i.rol_global_label} · Expira el{' '}
-                                                {new Date(i.expira_at).toLocaleDateString(
-                                                    'es-PE',
-                                                )}
+                                                {new Date(
+                                                    i.expira_at,
+                                                ).toLocaleDateString('es-PE')}
                                                 {i.invitador && (
                                                     <> · Invitó {i.invitador}</>
                                                 )}
@@ -319,16 +352,22 @@ export default function AdminUsuarios({ usuarios, filtros, roles, rolesGlobales,
                                             <Button
                                                 size="sm"
                                                 variant="outline"
-                                                onClick={() => reenviarGlobal(i)}
+                                                onClick={() =>
+                                                    reenviarGlobal(i)
+                                                }
                                                 title="Reenviar"
+                                                aria-label={`Reenviar invitación a ${i.email}`}
                                             >
                                                 <RotateCcw className="size-4" />
                                             </Button>
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
-                                                onClick={() => cancelarGlobal(i)}
+                                                onClick={() =>
+                                                    cancelarGlobal(i)
+                                                }
                                                 title="Cancelar"
+                                                aria-label={`Cancelar invitación a ${i.email}`}
                                             >
                                                 <Trash2 className="size-4 text-destructive" />
                                             </Button>
@@ -350,158 +389,152 @@ export default function AdminUsuarios({ usuarios, filtros, roles, rolesGlobales,
                     </Card>
                 ) : (
                     <Card className="overflow-hidden p-0">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="border-b border-border bg-muted/30 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                    <tr>
-                                        <th className="px-4 py-3 text-left">Usuario</th>
-                                        <th className="px-4 py-3 text-left">Rol</th>
-                                        <th className="px-4 py-3 text-left">Obras</th>
-                                        <th className="px-4 py-3 text-left">Último acceso</th>
-                                        <th className="px-4 py-3 text-left">Estado</th>
-                                        <th className="px-4 py-3 text-right">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {usuarios.data.map((u) => (
-                                        <tr key={u.id} className="hover:bg-muted/20">
-                                            <td className="px-4 py-3">
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium text-foreground">
-                                                        {u.name}
-                                                        {u.es_yo && (
-                                                            <span className="ml-2 text-[10px] font-bold text-primary uppercase">
-                                                                · tú
-                                                            </span>
-                                                        )}
-                                                    </span>
-                                                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                                        <Mail className="size-3" /> {u.email}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {u.rol ? (
-                                                    <Badge className={ROL_COLOR[u.rol] ?? ''}>
-                                                        {u.rol_label}
-                                                    </Badge>
-                                                ) : (
-                                                    <span className="text-xs text-muted-foreground">—</span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <span className="inline-flex items-center gap-1 text-sm">
-                                                    <Building2 className="size-3.5 text-muted-foreground" />
-                                                    {u.obras_count}
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Usuario</TableHead>
+                                    <TableHead>Rol</TableHead>
+                                    <TableHead>Obras</TableHead>
+                                    <TableHead>Último acceso</TableHead>
+                                    <TableHead>Estado</TableHead>
+                                    <TableHead className="text-right">
+                                        Acciones
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {usuarios.data.map((u) => (
+                                    <TableRow key={u.id}>
+                                        <TableCell>
+                                            <div className="flex flex-col">
+                                                <span className="font-medium text-foreground">
+                                                    {u.name}
+                                                    {u.es_yo && (
+                                                        <span className="ml-2 text-[10px] font-bold text-primary uppercase">
+                                                            · tú
+                                                        </span>
+                                                    )}
                                                 </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-xs text-muted-foreground">
-                                                {u.last_login_at ? (
-                                                    <span className="inline-flex items-center gap-1">
-                                                        <Clock className="size-3" />
-                                                        {u.last_login_at}
-                                                    </span>
-                                                ) : (
-                                                    'Nunca'
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {u.activo ? (
-                                                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                                                        <span className="size-2 rounded-full bg-emerald-500" />
-                                                        Activo
-                                                    </span>
-                                                ) : (
-                                                    <span
-                                                        className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500"
+                                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                    <Mail className="size-3" />{' '}
+                                                    {u.email}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            {u.rol ? (
+                                                <Badge
+                                                    className={
+                                                        ROL_COLOR[u.rol] ?? ''
+                                                    }
+                                                >
+                                                    {u.rol_label}
+                                                </Badge>
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground">
+                                                    —
+                                                </span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className="inline-flex items-center gap-1 text-sm">
+                                                <Building2 className="size-3.5 text-muted-foreground" />
+                                                {u.obras_count}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">
+                                            {u.last_login_at ? (
+                                                <span className="inline-flex items-center gap-1">
+                                                    <Clock className="size-3" />
+                                                    {u.last_login_at}
+                                                </span>
+                                            ) : (
+                                                'Nunca'
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            {u.activo ? (
+                                                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                                                    <span className="size-2 rounded-full bg-emerald-500" />
+                                                    Activo
+                                                </span>
+                                            ) : (
+                                                <span
+                                                    className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500"
+                                                    title={
+                                                        u.motivo_desactivacion ??
+                                                        'Sin motivo registrado'
+                                                    }
+                                                >
+                                                    <span className="size-2 rounded-full bg-slate-400" />
+                                                    Desactivado
+                                                </span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        disabled={u.es_yo}
+                                                        aria-label={`Acciones para ${u.name}`}
                                                         title={
-                                                            u.motivo_desactivacion ??
-                                                            'Sin motivo registrado'
+                                                            u.es_yo
+                                                                ? 'No puedes modificarte a ti mismo'
+                                                                : undefined
                                                         }
                                                     >
-                                                        <span className="size-2 rounded-full bg-slate-400" />
-                                                        Desactivado
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 text-right">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            disabled={u.es_yo}
-                                                            title={
-                                                                u.es_yo
-                                                                    ? 'No puedes modificarte a ti mismo'
-                                                                    : undefined
-                                                            }
-                                                        >
-                                                            <MoreVertical className="size-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuLabel>{u.name}</DropdownMenuLabel>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem
-                                                            onClick={() => {
-                                                                setUsuarioRol(u);
-                                                                setNuevoRol(u.rol ?? '');
-                                                            }}
-                                                        >
-                                                            <ShieldCheck className="size-4" />
-                                                            Cambiar rol
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() => {
-                                                                setUsuarioObjetivo(u);
-                                                                setMotivo('');
-                                                            }}
-                                                            className={
-                                                                u.activo
-                                                                    ? 'text-destructive focus:text-destructive'
-                                                                    : ''
-                                                            }
-                                                        >
-                                                            <Power className="size-4" />
-                                                            {u.activo ? 'Desactivar' : 'Reactivar'}
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                                        <MoreVertical className="size-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>
+                                                        {u.name}
+                                                    </DropdownMenuLabel>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            setUsuarioRol(u);
+                                                            formRol.setData(
+                                                                'rol',
+                                                                u.rol ?? '',
+                                                            );
+                                                        }}
+                                                    >
+                                                        <ShieldCheck className="size-4" />
+                                                        Cambiar rol
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            setUsuarioObjetivo(
+                                                                u,
+                                                            );
+                                                            formToggle.reset();
+                                                        }}
+                                                        className={
+                                                            u.activo
+                                                                ? 'text-destructive focus:text-destructive'
+                                                                : ''
+                                                        }
+                                                    >
+                                                        <Power className="size-4" />
+                                                        {u.activo
+                                                            ? 'Desactivar'
+                                                            : 'Reactivar'}
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
                     </Card>
                 )}
 
                 {/* Paginación */}
-                {usuarios.meta.last_page > 1 && (
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <div>
-                            {usuarios.meta.from ?? 0}–{usuarios.meta.to ?? 0} de{' '}
-                            {usuarios.meta.total}
-                        </div>
-                        <div className="flex gap-1">
-                            {usuarios.links.map((l, i) => (
-                                <Button
-                                    key={i}
-                                    size="sm"
-                                    variant={l.active ? 'default' : 'outline'}
-                                    disabled={!l.url}
-                                    onClick={() =>
-                                        l.url &&
-                                        router.visit(l.url, { preserveScroll: true })
-                                    }
-                                >
-                                    <span dangerouslySetInnerHTML={{ __html: l.label }} />
-                                </Button>
-                            ))}
-                        </div>
-                    </div>
-                )}
+                <Paginacion meta={usuarios.meta} links={usuarios.links} />
             </div>
 
             {/* === Modal: desactivar/reactivar === */}
@@ -510,7 +543,7 @@ export default function AdminUsuarios({ usuarios, filtros, roles, rolesGlobales,
                 onOpenChange={(open) => {
                     if (!open) {
                         setUsuarioObjetivo(null);
-                        setMotivo('');
+                        formToggle.reset();
                     }
                 }}
             >
@@ -524,14 +557,16 @@ export default function AdminUsuarios({ usuarios, filtros, roles, rolesGlobales,
                         <DialogDescription>
                             {usuarioObjetivo?.activo ? (
                                 <>
-                                    <strong>{usuarioObjetivo?.name}</strong> ya no podrá iniciar
-                                    sesión. Sus datos y participaciones en obras se conservan.
-                                    Se cerrarán todas sus sesiones activas.
+                                    <strong>{usuarioObjetivo?.name}</strong> ya
+                                    no podrá iniciar sesión. Sus datos y
+                                    participaciones en obras se conservan. Se
+                                    cerrarán todas sus sesiones activas.
                                 </>
                             ) : (
                                 <>
-                                    <strong>{usuarioObjetivo?.name}</strong> podrá volver a iniciar
-                                    sesión con sus credenciales actuales.
+                                    <strong>{usuarioObjetivo?.name}</strong>{' '}
+                                    podrá volver a iniciar sesión con sus
+                                    credenciales actuales.
                                 </>
                             )}
                         </DialogDescription>
@@ -543,13 +578,16 @@ export default function AdminUsuarios({ usuarios, filtros, roles, rolesGlobales,
                             <Textarea
                                 id="motivo"
                                 rows={3}
-                                value={motivo}
-                                onChange={(e) => setMotivo(e.target.value)}
+                                value={formToggle.data.motivo}
+                                onChange={(e) =>
+                                    formToggle.setData('motivo', e.target.value)
+                                }
                                 placeholder="Ej. Dejó de trabajar con RNFC el 30/04/2026"
                                 maxLength={250}
                             />
                             <p className="text-xs text-muted-foreground">
-                                Queda registrado en auditoría. No es visible para el usuario.
+                                Queda registrado en auditoría. No es visible
+                                para el usuario.
                             </p>
                         </div>
                     )}
@@ -559,14 +597,19 @@ export default function AdminUsuarios({ usuarios, filtros, roles, rolesGlobales,
                             variant="outline"
                             onClick={() => {
                                 setUsuarioObjetivo(null);
-                                setMotivo('');
+                                formToggle.reset();
                             }}
                         >
                             Cancelar
                         </Button>
                         <Button
-                            variant={usuarioObjetivo?.activo ? 'destructive' : 'default'}
+                            variant={
+                                usuarioObjetivo?.activo
+                                    ? 'destructive'
+                                    : 'default'
+                            }
                             onClick={confirmarToggle}
+                            disabled={formToggle.processing}
                         >
                             {usuarioObjetivo?.activo
                                 ? 'Sí, desactivar'
@@ -582,7 +625,7 @@ export default function AdminUsuarios({ usuarios, filtros, roles, rolesGlobales,
                 onOpenChange={(open) => {
                     if (!open) {
                         setUsuarioRol(null);
-                        setNuevoRol('');
+                        formRol.reset();
                     }
                 }}
             >
@@ -598,7 +641,10 @@ export default function AdminUsuarios({ usuarios, filtros, roles, rolesGlobales,
 
                     <div className="grid gap-2">
                         <Label>Nuevo rol</Label>
-                        <Select value={nuevoRol} onValueChange={setNuevoRol}>
+                        <Select
+                            value={formRol.data.rol}
+                            onValueChange={(v) => formRol.setData('rol', v)}
+                        >
                             <SelectTrigger>
                                 <SelectValue placeholder="Selecciona un rol" />
                             </SelectTrigger>
@@ -617,14 +663,18 @@ export default function AdminUsuarios({ usuarios, filtros, roles, rolesGlobales,
                             variant="outline"
                             onClick={() => {
                                 setUsuarioRol(null);
-                                setNuevoRol('');
+                                formRol.reset();
                             }}
                         >
                             Cancelar
                         </Button>
                         <Button
                             onClick={confirmarCambioRol}
-                            disabled={!nuevoRol || nuevoRol === usuarioRol?.rol}
+                            disabled={
+                                formRol.processing ||
+                                !formRol.data.rol ||
+                                formRol.data.rol === usuarioRol?.rol
+                            }
                         >
                             Confirmar
                         </Button>
@@ -638,41 +688,54 @@ export default function AdminUsuarios({ usuarios, filtros, roles, rolesGlobales,
                 onOpenChange={(open) => {
                     if (!open) {
                         setInvitarOpen(false);
-                        setInvitarEmail('');
-                        setInvitarRol('');
+                        formInvitar.reset();
                     }
                 }}
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Invitar usuario a la plataforma</DialogTitle>
+                        <DialogTitle>
+                            Invitar usuario a la plataforma
+                        </DialogTitle>
                         <DialogDescription>
-                            Envía una invitación por correo para que se registre con un rol
-                            global. El enlace expira en 7 días.
+                            Envía una invitación por correo para que se registre
+                            con un rol global. El enlace expira en 7 días.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="grid gap-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="invitar-email">Correo electrónico</Label>
+                            <Label htmlFor="invitar-email">
+                                Correo electrónico
+                            </Label>
                             <Input
                                 id="invitar-email"
                                 type="email"
-                                value={invitarEmail}
-                                onChange={(e) => setInvitarEmail(e.target.value)}
+                                value={formInvitar.data.email}
+                                onChange={(e) =>
+                                    formInvitar.setData('email', e.target.value)
+                                }
                                 placeholder="correo@ejemplo.com"
                                 autoFocus
                             />
                         </div>
                         <div className="grid gap-2">
                             <Label>Rol global</Label>
-                            <Select value={invitarRol} onValueChange={setInvitarRol}>
+                            <Select
+                                value={formInvitar.data.rol_global}
+                                onValueChange={(v) =>
+                                    formInvitar.setData('rol_global', v)
+                                }
+                            >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Selecciona un rol" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {rolesGlobales.map((r) => (
-                                        <SelectItem key={r.value} value={r.value}>
+                                        <SelectItem
+                                            key={r.value}
+                                            value={r.value}
+                                        >
                                             {r.label}
                                         </SelectItem>
                                     ))}
@@ -686,21 +749,26 @@ export default function AdminUsuarios({ usuarios, filtros, roles, rolesGlobales,
                             variant="outline"
                             onClick={() => {
                                 setInvitarOpen(false);
-                                setInvitarEmail('');
-                                setInvitarRol('');
+                                formInvitar.reset();
                             }}
                         >
                             Cancelar
                         </Button>
                         <Button
                             onClick={confirmarInvitacionGlobal}
-                            disabled={!invitarEmail || !invitarRol}
+                            disabled={
+                                formInvitar.processing ||
+                                !formInvitar.data.email ||
+                                !formInvitar.data.rol_global
+                            }
                         >
                             Enviar invitación
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {dialog}
         </>
     );
 }
@@ -735,8 +803,7 @@ function KpiCard({
 
 AdminUsuarios.layout = {
     title: 'Usuarios',
-    description:
-        'Administra cuentas, roles globales y acceso a la plataforma.',
+    description: 'Administra cuentas, roles globales y acceso a la plataforma.',
     breadcrumbs: [
         { title: 'Panel', href: '/dashboard' },
         { title: 'Administración', href: '/admin' },

@@ -119,11 +119,11 @@ function SlotCard({
 export default function BrandingSettings({ urls, slots }: Props) {
     return (
         <>
-            <Head title="Configuración · Marca" />
+            <Head title="Configuración · Firma y certificaciones" />
 
             <div className="space-y-6">
                 <Heading
-                    title="Marca institucional"
+                    title="Firma y certificaciones"
                     description="Carga la firma digitalizada y los logos de las certificaciones ISO de la empresa. Aparecerán automáticamente en los certificados emitidos."
                 />
 
@@ -172,6 +172,6 @@ export default function BrandingSettings({ urls, slots }: Props) {
 BrandingSettings.layout = {
     breadcrumbs: [
         { title: 'Configuración', href: '/settings/profile' },
-        { title: 'Marca', href: '/settings/branding' },
+        { title: 'Firma y certificaciones', href: '/settings/branding' },
     ],
 };

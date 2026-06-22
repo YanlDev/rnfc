@@ -25,9 +25,18 @@ const sidebarGroups: NavGroup[] = [
         ],
     },
     {
+        label: 'Certificados',
+        items: [
+            {
+                title: 'Firma y certificaciones',
+                href: '/settings/branding',
+                icon: null,
+            },
+        ],
+    },
+    {
         label: 'Sitio público',
         items: [
-            { title: 'Marca', href: '/settings/branding', icon: null },
             { title: 'Galería del home', href: '/settings/home', icon: null },
         ],
     },
