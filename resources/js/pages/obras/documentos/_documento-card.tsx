@@ -24,29 +24,49 @@ export type DocumentoCardData = DocumentoPreview & {
 type Props = {
     documento: DocumentoCardData;
     obraId: number;
-    puedeAdministrar: boolean;
+    puedeSubir: boolean; // subir nueva versión
+    puedeEliminar: boolean; // eliminar documento
     onPreview: () => void;
+    variant?: 'grid' | 'lista';
 };
 
-function IconoArchivo({ mime, className }: { mime: string; className: string }) {
-    if (mime.startsWith('image/')) return <FileImage className={className} />;
-    if (mime === 'application/pdf') return <FileText className={className} />;
+function IconoArchivo({
+    mime,
+    className,
+}: {
+    mime: string;
+    className: string;
+}) {
+    if (mime.startsWith('image/')) {
+        return <FileImage className={className} />;
+    }
+
+    if (mime === 'application/pdf') {
+        return <FileText className={className} />;
+    }
+
     if (
         mime.includes('spreadsheet') ||
         mime.includes('excel') ||
         mime.includes('csv')
-    )
+    ) {
         return <FileSpreadsheet className={className} />;
-    if (mime.includes('word') || mime.includes('document'))
+    }
+
+    if (mime.includes('word') || mime.includes('document')) {
         return <FileText className={className} />;
+    }
+
     return <File className={className} />;
 }
 
 export default function DocumentoCard({
     documento,
     obraId,
-    puedeAdministrar,
+    puedeSubir,
+    puedeEliminar,
     onPreview,
+    variant = 'grid',
 }: Props) {
     const versionInputRef = useRef<HTMLInputElement>(null);
 
@@ -64,11 +84,117 @@ export default function DocumentoCard({
     };
 
     const eliminar = () => {
-        if (!confirm(`¿Eliminar «${documento.nombre}» y todas sus versiones?`)) return;
+        if (
+            !confirm(`¿Eliminar «${documento.nombre}» y todas sus versiones?`)
+        ) {
+            return;
+        }
+
         router.delete(`/obras/${obraId}/documentos/${documento.id}`, {
             preserveScroll: true,
         });
     };
+
+    const inputVersion = puedeSubir && (
+        <input
+            ref={versionInputRef}
+            type="file"
+            className="hidden"
+            onChange={(e) => {
+                const file = e.target.files?.[0];
+
+                if (file) {
+                    subirVersion(file);
+                }
+
+                e.target.value = '';
+            }}
+        />
+    );
+
+    if (variant === 'lista') {
+        return (
+            <div className="flex items-center gap-3 border-b border-border px-3 py-2 last:border-0 hover:bg-muted/40">
+                <button
+                    type="button"
+                    onClick={onPreview}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                >
+                    {documento.es_imagen ? (
+                        <img
+                            src={documento.url_preview}
+                            alt=""
+                            loading="lazy"
+                            className="size-9 shrink-0 rounded object-cover"
+                        />
+                    ) : (
+                        <IconoArchivo
+                            mime={documento.mime}
+                            className="size-7 shrink-0 text-muted-foreground"
+                        />
+                    )}
+                    <div className="min-w-0">
+                        <div
+                            className="truncate text-sm font-medium"
+                            title={documento.nombre}
+                        >
+                            {documento.nombre}
+                            {documento.version > 1 && (
+                                <span className="ml-1.5 text-[10px] text-muted-foreground">
+                                    v{documento.version}
+                                </span>
+                            )}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                            {documento.tamano_humano} ·{' '}
+                            {new Date(documento.updated_at).toLocaleDateString(
+                                'es-PE',
+                            )}
+                            {documento.subido_por
+                                ? ` · ${documento.subido_por}`
+                                : ''}
+                        </div>
+                    </div>
+                </button>
+                <div className="flex shrink-0 items-center gap-0.5">
+                    <Button
+                        asChild
+                        size="icon"
+                        variant="ghost"
+                        className="size-8"
+                        title="Descargar"
+                    >
+                        <a href={documento.url_descarga}>
+                            <Download className="size-4" />
+                        </a>
+                    </Button>
+                    {inputVersion}
+                    {puedeSubir && (
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            className="size-8"
+                            onClick={() => versionInputRef.current?.click()}
+                            title="Subir nueva versión"
+                        >
+                            <Upload className="size-4" />
+                        </Button>
+                    )}
+                    {puedeEliminar && (
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            className="size-8"
+                            onClick={eliminar}
+                            title="Eliminar"
+                        >
+                            <Trash2 className="size-4 text-destructive" />
+                        </Button>
+                    )}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <Card className="group overflow-hidden p-0 transition-all hover:shadow-md">
@@ -76,7 +202,7 @@ export default function DocumentoCard({
             <button
                 type="button"
                 onClick={onPreview}
-                className="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-muted/40"
+                className="relative flex h-28 w-full items-center justify-center overflow-hidden bg-muted/40"
             >
                 {documento.es_imagen ? (
                     <img
@@ -111,8 +237,14 @@ export default function DocumentoCard({
                     {documento.nombre}
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="tabular-nums">{documento.tamano_humano}</span>
-                    <span>{new Date(documento.updated_at).toLocaleDateString('es-PE')}</span>
+                    <span className="tabular-nums">
+                        {documento.tamano_humano}
+                    </span>
+                    <span>
+                        {new Date(documento.updated_at).toLocaleDateString(
+                            'es-PE',
+                        )}
+                    </span>
                 </div>
                 {documento.subido_por && (
                     <div className="text-xs text-muted-foreground">
@@ -133,7 +265,7 @@ export default function DocumentoCard({
                                 <Download className="size-4" />
                             </a>
                         </Button>
-                        {puedeAdministrar && (
+                        {puedeSubir && (
                             <>
                                 <input
                                     ref={versionInputRef}
@@ -141,14 +273,20 @@ export default function DocumentoCard({
                                     className="hidden"
                                     onChange={(e) => {
                                         const file = e.target.files?.[0];
-                                        if (file) subirVersion(file);
+
+                                        if (file) {
+                                            subirVersion(file);
+                                        }
+
                                         e.target.value = '';
                                     }}
                                 />
                                 <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={() => versionInputRef.current?.click()}
+                                    onClick={() =>
+                                        versionInputRef.current?.click()
+                                    }
                                     title="Subir nueva versión"
                                 >
                                     <Upload className="size-4" />
@@ -165,7 +303,7 @@ export default function DocumentoCard({
                             </>
                         )}
                     </div>
-                    {puedeAdministrar && (
+                    {puedeEliminar && (
                         <Button
                             size="sm"
                             variant="ghost"

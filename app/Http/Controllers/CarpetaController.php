@@ -10,6 +10,7 @@ use App\Models\Documento;
 use App\Models\Obra;
 use App\Services\CarpetaService;
 use App\Services\PlantillaCarpetasService;
+use App\Support\PermisosObra;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -60,7 +61,12 @@ class CarpetaController extends Controller
             'obra' => $obraData,
             'carpetas' => $carpetas,
             'plantillaDisponible' => $plantilla->plantilla(),
+            // puedeAdministrar = gestionar carpetas. Subir/eliminar documentos
+            // son permisos independientes (un asistente puede subir sin gestionar
+            // carpetas).
             'puedeAdministrar' => $this->puedeAdministrarObra($obra),
+            'puedeSubir' => PermisosObra::puede(request()->user(), $obra, 'documento.subir'),
+            'puedeEliminarDoc' => PermisosObra::puede(request()->user(), $obra, 'documento.eliminar'),
             'carpetaActiva' => $carpetaActiva,
             'documentos' => $documentos,
         ]);

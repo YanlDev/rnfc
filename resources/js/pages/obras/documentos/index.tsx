@@ -7,8 +7,11 @@ import {
     FolderOpen,
     FolderPlus,
     FolderTree,
+    LayoutGrid,
+    List,
     Pencil,
     Plus,
+    Search,
     Sparkles,
     Trash2,
 } from 'lucide-react';
@@ -50,6 +53,8 @@ type Props = {
     carpetas: Carpeta[];
     plantillaDisponible: GrupoPlantilla[];
     puedeAdministrar: boolean;
+    puedeSubir: boolean;
+    puedeEliminarDoc: boolean;
     carpetaActiva: CarpetaActiva | null;
     documentos: DocumentoCardData[];
 };
@@ -358,6 +363,8 @@ export default function DocumentosIndex({
     carpetas,
     plantillaDisponible,
     puedeAdministrar,
+    puedeSubir,
+    puedeEliminarDoc,
     carpetaActiva,
     documentos,
 }: Props) {
@@ -392,6 +399,26 @@ export default function DocumentosIndex({
     const [mostrandoNuevaRaiz, setMostrandoNuevaRaiz] = useState(false);
     const [docPreview, setDocPreview] = useState<DocumentoPreview | null>(null);
     const formRaiz = useForm({ nombre: '', parent_id: null as number | null });
+
+    // Vista (cuadrícula/lista) recordada en localStorage + filtro por nombre.
+    const [vista, setVista] = useState<'grid' | 'lista'>(() =>
+        typeof window !== 'undefined' &&
+        localStorage.getItem('rnfc.docs.vista') === 'lista'
+            ? 'lista'
+            : 'grid',
+    );
+    const cambiarVista = (v: 'grid' | 'lista') => {
+        setVista(v);
+        localStorage.setItem('rnfc.docs.vista', v);
+    };
+    const [filtro, setFiltro] = useState('');
+    const documentosFiltrados = useMemo(() => {
+        const q = filtro.trim().toLowerCase();
+
+        return q
+            ? documentos.filter((d) => d.nombre.toLowerCase().includes(q))
+            : documentos;
+    }, [documentos, filtro]);
 
     const crearRaiz = (e: React.FormEvent) => {
         e.preventDefault();
@@ -571,7 +598,7 @@ export default function DocumentosIndex({
                                         ))}
                                     </div>
 
-                                    {puedeAdministrar && (
+                                    {puedeSubir && (
                                         <Dropzone
                                             urlSubida={`/obras/${obra.id}/carpetas/${carpetaActiva.id}/documentos`}
                                             onComplete={recargarDocumentos}
@@ -586,21 +613,127 @@ export default function DocumentosIndex({
                                             </p>
                                         </Card>
                                     ) : (
-                                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                            {documentos.map((d) => (
-                                                <DocumentoCard
-                                                    key={d.id}
-                                                    documento={d}
-                                                    obraId={obra.id}
-                                                    puedeAdministrar={
-                                                        puedeAdministrar
-                                                    }
-                                                    onPreview={() =>
-                                                        setDocPreview(d)
-                                                    }
-                                                />
-                                            ))}
-                                        </div>
+                                        <>
+                                            {/* barra: buscador + contador + vista */}
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <div className="relative min-w-0 flex-1">
+                                                    <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                                                    <Input
+                                                        value={filtro}
+                                                        onChange={(e) =>
+                                                            setFiltro(
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        placeholder="Buscar archivo…"
+                                                        className="h-9 pl-8"
+                                                    />
+                                                </div>
+                                                <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                                                    {documentosFiltrados.length}
+                                                    {documentosFiltrados.length !==
+                                                    documentos.length
+                                                        ? ` / ${documentos.length}`
+                                                        : ''}{' '}
+                                                    {documentos.length === 1
+                                                        ? 'archivo'
+                                                        : 'archivos'}
+                                                </span>
+                                                <div className="flex shrink-0 items-center rounded-md border border-border p-0.5">
+                                                    <Button
+                                                        type="button"
+                                                        size="icon"
+                                                        variant={
+                                                            vista === 'grid'
+                                                                ? 'secondary'
+                                                                : 'ghost'
+                                                        }
+                                                        className="size-7"
+                                                        title="Cuadrícula"
+                                                        onClick={() =>
+                                                            cambiarVista('grid')
+                                                        }
+                                                    >
+                                                        <LayoutGrid className="size-4" />
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        size="icon"
+                                                        variant={
+                                                            vista === 'lista'
+                                                                ? 'secondary'
+                                                                : 'ghost'
+                                                        }
+                                                        className="size-7"
+                                                        title="Lista"
+                                                        onClick={() =>
+                                                            cambiarVista(
+                                                                'lista',
+                                                            )
+                                                        }
+                                                    >
+                                                        <List className="size-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            {documentosFiltrados.length ===
+                                            0 ? (
+                                                <Card className="p-8 text-center">
+                                                    <p className="text-sm text-muted-foreground">
+                                                        Ningún archivo coincide
+                                                        con «{filtro}».
+                                                    </p>
+                                                </Card>
+                                            ) : vista === 'grid' ? (
+                                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                                                    {documentosFiltrados.map(
+                                                        (d) => (
+                                                            <DocumentoCard
+                                                                key={d.id}
+                                                                documento={d}
+                                                                obraId={obra.id}
+                                                                puedeSubir={
+                                                                    puedeSubir
+                                                                }
+                                                                puedeEliminar={
+                                                                    puedeEliminarDoc
+                                                                }
+                                                                onPreview={() =>
+                                                                    setDocPreview(
+                                                                        d,
+                                                                    )
+                                                                }
+                                                            />
+                                                        ),
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="overflow-hidden rounded-lg border border-border">
+                                                    {documentosFiltrados.map(
+                                                        (d) => (
+                                                            <DocumentoCard
+                                                                key={d.id}
+                                                                variant="lista"
+                                                                documento={d}
+                                                                obraId={obra.id}
+                                                                puedeSubir={
+                                                                    puedeSubir
+                                                                }
+                                                                puedeEliminar={
+                                                                    puedeEliminarDoc
+                                                                }
+                                                                onPreview={() =>
+                                                                    setDocPreview(
+                                                                        d,
+                                                                    )
+                                                                }
+                                                            />
+                                                        ),
+                                                    )}
+                                                </div>
+                                            )}
+                                        </>
                                     )}
                                 </>
                             )}

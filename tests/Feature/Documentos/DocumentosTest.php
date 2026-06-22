@@ -164,3 +164,18 @@ it('un asistente vinculado a la obra puede previsualizar y subir (por defecto)',
         )
         ->assertRedirect();
 });
+
+it('la página de documentos habilita subir a un asistente sin gestionar carpetas', function () {
+    $obra = Obra::factory()->create();
+    $asistente = usuarioEnObra($obra, \App\Enums\RolObra::Asistente);
+
+    $this->actingAs($asistente)
+        ->get(route('obras.documentos.index', $obra))
+        ->assertOk()
+        ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->component('obras/documentos/index')
+            ->where('puedeSubir', true)        // documento.subir
+            ->where('puedeAdministrar', false) // carpeta.gestionar
+            ->where('puedeEliminarDoc', false) // documento.eliminar
+        );
+});
