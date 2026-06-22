@@ -90,7 +90,6 @@ type Props = {
     usuarios: Paginado<Usuario>;
     filtros: { q: string; estado: string; rol: string };
     roles: RolOpcion[];
-    rolesGlobales: RolOpcion[];
     kpis: {
         total: number;
         activos: number;
@@ -110,7 +109,6 @@ export default function AdminUsuarios({
     usuarios,
     filtros,
     roles,
-    rolesGlobales,
     kpis,
     invitacionesPendientes,
 }: Props) {
@@ -134,7 +132,7 @@ export default function AdminUsuarios({
     const [invitarOpen, setInvitarOpen] = useState(false);
     const formInvitar = useForm<{ email: string; rol_global: string }>({
         email: '',
-        rol_global: '',
+        rol_global: 'admin',
     });
 
     const { confirm, dialog } = useConfirm();
@@ -182,11 +180,7 @@ export default function AdminUsuarios({
     };
 
     const confirmarInvitacionGlobal = () => {
-        if (
-            !formInvitar.data.email ||
-            !formInvitar.data.rol_global ||
-            formInvitar.processing
-        ) {
+        if (!formInvitar.data.email || formInvitar.processing) {
             return;
         }
 
@@ -310,7 +304,7 @@ export default function AdminUsuarios({
                         onClick={() => setInvitarOpen(true)}
                     >
                         <UserPlus className="mr-2 size-4" />
-                        Invitar usuario
+                        Invitar administrador
                     </Button>
                 </div>
 
@@ -689,11 +683,12 @@ export default function AdminUsuarios({
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>
-                            Invitar usuario a la plataforma
+                            Invitar administrador
                         </DialogTitle>
                         <DialogDescription>
-                            Envía una invitación por correo para que se registre
-                            con un rol global. El enlace expira en 7 días.
+                            Crea una cuenta con permisos de administrador de
+                            plataforma. Para sumar gente a una obra, hazlo desde
+                            el equipo de la obra. El enlace expira en 7 días.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -713,29 +708,6 @@ export default function AdminUsuarios({
                                 autoFocus
                             />
                         </div>
-                        <div className="grid gap-2">
-                            <Label>Rol global</Label>
-                            <Select
-                                value={formInvitar.data.rol_global}
-                                onValueChange={(v) =>
-                                    formInvitar.setData('rol_global', v)
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecciona un rol" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {rolesGlobales.map((r) => (
-                                        <SelectItem
-                                            key={r.value}
-                                            value={r.value}
-                                        >
-                                            {r.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
                     </div>
 
                     <DialogFooter>
@@ -752,8 +724,7 @@ export default function AdminUsuarios({
                             onClick={confirmarInvitacionGlobal}
                             disabled={
                                 formInvitar.processing ||
-                                !formInvitar.data.email ||
-                                !formInvitar.data.rol_global
+                                !formInvitar.data.email
                             }
                         >
                             Enviar invitación

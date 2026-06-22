@@ -33,6 +33,7 @@ import {
     ChartTooltipContent,
 } from '@/components/ui/chart';
 import type { ChartConfig } from '@/components/ui/chart';
+import { cn } from '@/lib/utils';
 
 type Kpis = {
     obras_total: number;
@@ -95,23 +96,24 @@ type Props = {
     usuariosActivos: UsuarioActivoRow[];
 };
 
-const COLORES_ESTADO: Record<string, string> = {
-    planificacion: '#94a3b8',
-    en_ejecucion: '#5da235',
-    paralizada: '#ffd21c',
-    finalizada: '#145694',
-    archivada: '#64748b',
-};
+/**
+ * Paleta sobria: escala de azules tomada de los tokens --chart-1..5 de
+ * app.css. Se adapta sola al modo oscuro y mantiene un look ejecutivo.
+ */
+const PALETA = [
+    'var(--chart-1)',
+    'var(--chart-2)',
+    'var(--chart-3)',
+    'var(--chart-4)',
+    'var(--chart-5)',
+];
 
-const COLORES_TIPO_CERT = [
-    '#145694',
-    '#2850da',
-    '#5da235',
-    '#9ed146',
-    '#ffd21c',
-    '#1aa39c',
-    '#c1272d',
-    '#5d6166',
+const ORDEN_ESTADO = [
+    'en_ejecucion',
+    'planificacion',
+    'finalizada',
+    'paralizada',
+    'archivada',
 ];
 
 const ICONOS_ACTIVIDAD: Record<
@@ -140,41 +142,69 @@ function bytesHumano(bytes: number) {
     return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
 }
 
-function KpiCard({
+function colorEstado(value: string) {
+    const i = ORDEN_ESTADO.indexOf(value);
+    return PALETA[(i < 0 ? 0 : i) % PALETA.length];
+}
+
+function Kpi({
     label,
     value,
     sub,
     Icono,
-    acento,
+    alerta = false,
 }: {
     label: string;
     value: string | number;
     sub?: string;
     Icono: React.ComponentType<{ className?: string }>;
-    acento: string;
+    alerta?: boolean;
 }) {
     return (
-        <Card className="relative overflow-hidden">
-            <span
-                aria-hidden
-                className="absolute inset-x-0 top-0 h-1"
-                style={{ backgroundColor: acento }}
-            />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        <div className="flex flex-col gap-2 p-4">
+            <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
                     {label}
-                </CardTitle>
-                <Icono className="size-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold tabular-nums">{value}</div>
-                {sub && (
-                    <div className="mt-0.5 text-xs text-muted-foreground">
-                        {sub}
-                    </div>
-                )}
-            </CardContent>
-        </Card>
+                </span>
+                <Icono
+                    className={cn(
+                        'size-4',
+                        alerta ? 'text-amber-500' : 'text-muted-foreground/70',
+                    )}
+                />
+            </div>
+            <div className="text-2xl font-semibold tabular-nums text-foreground">
+                {value}
+            </div>
+            {sub && (
+                <div className="truncate text-xs text-muted-foreground">
+                    {sub}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function PanelTitulo({
+    Icono,
+    children,
+}: {
+    Icono: React.ComponentType<{ className?: string }>;
+    children: React.ReactNode;
+}) {
+    return (
+        <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Icono className="size-4" />
+            {children}
+        </CardTitle>
+    );
+}
+
+function RankingNumero({ n }: { n: number }) {
+    return (
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground tabular-nums">
+            {n}
+        </span>
     );
 }
 
@@ -189,30 +219,24 @@ export default function AdminPanel({
 }: Props) {
     const datosEstadoChart = estadosObras
         .filter((e) => e.total > 0)
-        .map((e) => ({
-            ...e,
-            fill: COLORES_ESTADO[e.value] ?? '#5d6166',
-        }));
+        .map((e) => ({ ...e, fill: colorEstado(e.value) }));
 
     const configEstado: ChartConfig = Object.fromEntries(
         estadosObras.map((e) => [
             e.value,
-            { label: e.label, color: COLORES_ESTADO[e.value] ?? '#5d6166' },
+            { label: e.label, color: colorEstado(e.value) },
         ]),
     );
 
     const datosCertChart = certificadosPorTipo.map((t, i) => ({
         ...t,
-        fill: COLORES_TIPO_CERT[i % COLORES_TIPO_CERT.length],
+        fill: PALETA[i % PALETA.length],
     }));
 
     const configCert: ChartConfig = Object.fromEntries(
         certificadosPorTipo.map((t, i) => [
             t.value,
-            {
-                label: t.label,
-                color: COLORES_TIPO_CERT[i % COLORES_TIPO_CERT.length],
-            },
+            { label: t.label, color: PALETA[i % PALETA.length] },
         ]),
     );
 
@@ -226,17 +250,16 @@ export default function AdminPanel({
     return (
         <>
             <Head title="Administración" />
-            <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                {/* KPIs principales */}
-                <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <KpiCard
+            <div className="flex flex-1 flex-col gap-5 p-4 md:p-6">
+                {/* KPIs — panel único con divisores, estética sobria */}
+                <section className="grid grid-cols-2 divide-x divide-y divide-border overflow-hidden rounded-xl border border-border bg-card lg:grid-cols-4">
+                    <Kpi
                         label="Obras"
                         value={kpis.obras_total}
                         sub={`${kpis.obras_en_ejecucion} en ejecución · ${kpis.obras_finalizadas} finalizadas`}
                         Icono={Building2}
-                        acento="#145694"
                     />
-                    <KpiCard
+                    <Kpi
                         label="Certificados"
                         value={kpis.certificados_total}
                         sub={
@@ -245,44 +268,38 @@ export default function AdminPanel({
                                 : 'Todos vigentes'
                         }
                         Icono={Award}
-                        acento="#2850da"
                     />
-                    <KpiCard
+                    <Kpi
                         label="Documentos"
                         value={kpis.documentos_total}
                         sub={`${kpis.documentos_con_versiones} con versiones · ${kpis.carpetas_total} carpetas`}
                         Icono={FolderTree}
-                        acento="#5da235"
                     />
-                    <KpiCard
+                    <Kpi
                         label="Asientos cuaderno"
                         value={kpis.asientos_total}
                         sub={`${kpis.eventos_total} eventos de calendario`}
                         Icono={NotebookPen}
-                        acento="#9ed146"
                     />
-                    <KpiCard
+                    <Kpi
                         label="Usuarios"
                         value={kpis.usuarios_total}
                         sub={`${kpis.usuarios_activos} con obras asignadas`}
                         Icono={Users}
-                        acento="#1aa39c"
                     />
-                    <KpiCard
+                    <Kpi
                         label="Invitaciones"
                         value={kpis.invitaciones_pendientes}
                         sub="pendientes de aceptación"
                         Icono={Mail}
-                        acento="#ffd21c"
                     />
-                    <KpiCard
+                    <Kpi
                         label="Almacenamiento"
                         value={bytesHumano(kpis.almacenamiento_total_bytes)}
                         sub="ocupado por documentos"
                         Icono={HardDrive}
-                        acento="#c1272d"
                     />
-                    <KpiCard
+                    <Kpi
                         label="Obras paralizadas"
                         value={kpis.obras_paralizadas}
                         sub={
@@ -291,19 +308,17 @@ export default function AdminPanel({
                                 : 'Ninguna paralizada'
                         }
                         Icono={Bell}
-                        acento="#3e4142"
+                        alerta={kpis.obras_paralizadas > 0}
                     />
                 </section>
 
-                {/* Charts */}
+                {/* Charts de distribución */}
                 <section className="grid gap-4 lg:grid-cols-2">
-                    {/* Donut estado de obras */}
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <Building2 className="size-5 text-primary" />
-                                Distribución de obras por estado
-                            </CardTitle>
+                            <PanelTitulo Icono={Building2}>
+                                Obras por estado
+                            </PanelTitulo>
                         </CardHeader>
                         <CardContent>
                             {datosEstadoChart.length === 0 ? (
@@ -313,7 +328,7 @@ export default function AdminPanel({
                             ) : (
                                 <ChartContainer
                                     config={configEstado}
-                                    className="mx-auto aspect-square max-h-[280px]"
+                                    className="mx-auto aspect-square max-h-[260px]"
                                 >
                                     <PieChart>
                                         <ChartTooltip
@@ -328,7 +343,7 @@ export default function AdminPanel({
                                             data={datosEstadoChart}
                                             dataKey="total"
                                             nameKey="value"
-                                            innerRadius={60}
+                                            innerRadius={62}
                                             strokeWidth={2}
                                         >
                                             {datosEstadoChart.map((entry) => (
@@ -349,13 +364,11 @@ export default function AdminPanel({
                         </CardContent>
                     </Card>
 
-                    {/* Donut tipos de certificado */}
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <Award className="size-5 text-primary" />
+                            <PanelTitulo Icono={Award}>
                                 Certificados por tipo
-                            </CardTitle>
+                            </PanelTitulo>
                         </CardHeader>
                         <CardContent>
                             {datosCertChart.length === 0 ? (
@@ -365,7 +378,7 @@ export default function AdminPanel({
                             ) : (
                                 <ChartContainer
                                     config={configCert}
-                                    className="mx-auto aspect-square max-h-[280px]"
+                                    className="mx-auto aspect-square max-h-[260px]"
                                 >
                                     <PieChart>
                                         <ChartTooltip
@@ -380,7 +393,7 @@ export default function AdminPanel({
                                             data={datosCertChart}
                                             dataKey="total"
                                             nameKey="value"
-                                            innerRadius={60}
+                                            innerRadius={62}
                                             strokeWidth={2}
                                         >
                                             {datosCertChart.map((entry) => (
@@ -402,14 +415,13 @@ export default function AdminPanel({
                     </Card>
                 </section>
 
-                {/* Almacenamiento bar chart */}
+                {/* Almacenamiento + usuarios activos */}
                 <section className="grid gap-4 lg:grid-cols-[2fr_1fr]">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <HardDrive className="size-5 text-primary" />
-                                Top 5 obras por almacenamiento
-                            </CardTitle>
+                            <PanelTitulo Icono={HardDrive}>
+                                Top obras por almacenamiento
+                            </PanelTitulo>
                         </CardHeader>
                         <CardContent>
                             {datosAlmacenamiento.length === 0 ? (
@@ -419,7 +431,10 @@ export default function AdminPanel({
                             ) : (
                                 <ChartContainer
                                     config={{
-                                        mb: { label: 'MB', color: '#145694' },
+                                        mb: {
+                                            label: 'MB',
+                                            color: 'var(--chart-1)',
+                                        },
                                     }}
                                     className="aspect-[16/7] max-h-[260px] w-full"
                                 >
@@ -437,6 +452,7 @@ export default function AdminPanel({
                                             dataKey="nombre"
                                             tickLine={false}
                                             axisLine={false}
+                                            tickMargin={8}
                                         />
                                         <YAxis
                                             tickLine={false}
@@ -444,7 +460,8 @@ export default function AdminPanel({
                                         />
                                         <ChartTooltip
                                             cursor={{
-                                                fill: 'rgba(20, 86, 148, 0.08)',
+                                                fill: 'var(--muted)',
+                                                fillOpacity: 0.5,
                                             }}
                                             content={
                                                 <ChartTooltipContent
@@ -465,7 +482,7 @@ export default function AdminPanel({
                                         />
                                         <Bar
                                             dataKey="mb"
-                                            fill="#145694"
+                                            fill="var(--chart-1)"
                                             radius={[6, 6, 0, 0]}
                                         />
                                     </BarChart>
@@ -476,12 +493,11 @@ export default function AdminPanel({
 
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <Trophy className="size-5 text-primary" />
-                                Top usuarios activos
-                            </CardTitle>
+                            <PanelTitulo Icono={Trophy}>
+                                Usuarios más activos
+                            </PanelTitulo>
                         </CardHeader>
-                        <CardContent className="space-y-2">
+                        <CardContent className="space-y-1.5">
                             {usuariosActivos.length === 0 ? (
                                 <p className="py-8 text-center text-sm text-muted-foreground">
                                     Sin actividad todavía.
@@ -490,22 +506,23 @@ export default function AdminPanel({
                                 usuariosActivos.map((u, i) => (
                                     <div
                                         key={u.id}
-                                        className="flex items-center justify-between gap-2 rounded-md border border-border p-2 text-sm"
+                                        className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-muted/50"
                                     >
-                                        <div className="flex min-w-0 items-center gap-2">
-                                            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary tabular-nums">
-                                                {i + 1}
-                                            </span>
+                                        <div className="flex min-w-0 items-center gap-2.5">
+                                            <RankingNumero n={i + 1} />
                                             <div className="min-w-0">
                                                 <div className="truncate font-medium">
                                                     {u.name}
                                                 </div>
-                                                <div className="truncate text-[10px] text-muted-foreground">
+                                                <div className="truncate text-[11px] text-muted-foreground">
                                                     {u.email}
                                                 </div>
                                             </div>
                                         </div>
-                                        <Badge variant="secondary">
+                                        <Badge
+                                            variant="secondary"
+                                            className="shrink-0"
+                                        >
                                             {u.obras}{' '}
                                             {u.obras === 1 ? 'obra' : 'obras'}
                                         </Badge>
@@ -516,16 +533,15 @@ export default function AdminPanel({
                     </Card>
                 </section>
 
-                {/* Documentos por obra + Actividad reciente */}
+                {/* Ranking carpetas + actividad reciente */}
                 <section className="grid gap-4 lg:grid-cols-[1fr_2fr]">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <FileText className="size-5 text-primary" />
-                                Top obras por carpetas
-                            </CardTitle>
+                            <PanelTitulo Icono={FileText}>
+                                Obras con más carpetas
+                            </PanelTitulo>
                         </CardHeader>
-                        <CardContent className="space-y-2">
+                        <CardContent className="space-y-1.5">
                             {documentosPorObra.length === 0 ? (
                                 <p className="py-8 text-center text-sm text-muted-foreground">
                                     Sin obras todavía.
@@ -535,22 +551,23 @@ export default function AdminPanel({
                                     <Link
                                         key={o.obra_id}
                                         href={`/obras/${o.obra_id}/documentos`}
-                                        className="flex items-center justify-between gap-2 rounded-md border border-border p-2 text-sm hover:bg-muted/30"
+                                        className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-muted/50"
                                     >
-                                        <div className="flex min-w-0 items-center gap-2">
-                                            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary tabular-nums">
-                                                {i + 1}
-                                            </span>
+                                        <div className="flex min-w-0 items-center gap-2.5">
+                                            <RankingNumero n={i + 1} />
                                             <div className="min-w-0">
-                                                <div className="truncate font-mono text-[10px] font-semibold text-primary">
+                                                <div className="truncate font-mono text-[11px] font-semibold text-muted-foreground">
                                                     {o.codigo}
                                                 </div>
-                                                <div className="truncate text-xs">
+                                                <div className="truncate text-sm">
                                                     {o.nombre}
                                                 </div>
                                             </div>
                                         </div>
-                                        <Badge variant="secondary">
+                                        <Badge
+                                            variant="secondary"
+                                            className="shrink-0"
+                                        >
                                             {o.carpetas}
                                         </Badge>
                                     </Link>
@@ -561,10 +578,9 @@ export default function AdminPanel({
 
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <Activity className="size-5 text-primary" />
+                            <PanelTitulo Icono={Activity}>
                                 Actividad reciente
-                            </CardTitle>
+                            </PanelTitulo>
                         </CardHeader>
                         <CardContent>
                             {actividadReciente.length === 0 ? (
@@ -572,7 +588,7 @@ export default function AdminPanel({
                                     Sin actividad registrada todavía.
                                 </p>
                             ) : (
-                                <ul className="space-y-1">
+                                <ul className="space-y-0.5">
                                     {actividadReciente.map((ev) => {
                                         const Icono =
                                             ICONOS_ACTIVIDAD[ev.icono] ??
@@ -584,15 +600,9 @@ export default function AdminPanel({
                                             >
                                                 <Link
                                                     href={ev.enlace}
-                                                    className="flex items-start gap-3 rounded-md p-2 transition-colors hover:bg-muted/40"
+                                                    className="flex items-start gap-3 rounded-lg p-2 transition-colors hover:bg-muted/50"
                                                 >
-                                                    <div
-                                                        className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full"
-                                                        style={{
-                                                            backgroundColor: `${ev.color}1a`,
-                                                            color: ev.color,
-                                                        }}
-                                                    >
+                                                    <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                                                         <Icono className="size-4" />
                                                     </div>
                                                     <div className="min-w-0 flex-1">

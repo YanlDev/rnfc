@@ -54,6 +54,11 @@ test('user with active invitation can register and gets attached to obra', funct
 
     $user = User::where('email', 'invitado@example.com')->firstOrFail();
     expect($obra->fresh()->usuarios()->where('users.id', $user->id)->exists())->toBeTrue();
+
+    // Aunque la invitación es de obra (sin rol global), el usuario queda como
+    // "usuario" de plataforma y puede navegar el listado de obras.
+    expect($user->hasRole(\App\Enums\RolGlobal::Usuario->value))->toBeTrue();
+    $this->actingAs($user)->get(route('obras.index'))->assertOk();
 });
 
 test('expired invitation does not allow registration', function () {

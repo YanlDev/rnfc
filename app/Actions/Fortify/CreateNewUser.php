@@ -4,6 +4,7 @@ namespace App\Actions\Fortify;
 
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
+use App\Enums\RolGlobal;
 use App\Models\Invitacion;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -100,6 +101,12 @@ class CreateNewUser implements CreatesNewUsers
             }
 
             $invitacion->update(['aceptada_at' => now()]);
+        }
+
+        // Todo usuario debe tener al menos el rol global "usuario" para poder
+        // navegar la plataforma (los invitados a una obra no traen rol global).
+        if ($user->roles()->count() === 0) {
+            $user->assignRole(RolGlobal::Usuario->value);
         }
 
         if ($tokenSesion) {
