@@ -5,9 +5,9 @@ import { cn } from '@/lib/utils';
 /**
  * Trazo de ingeniería vial: una carretera serpenteante en planta que se dibuja
  * poco a poco con anime.js (v4), con anotaciones de plano (progresivas, cotas,
- * radio, norte, escala). Los bordes de la calzada se calculan midiendo la curva
- * real (normales por muestreo) para que las cotas queden pegadas al trazo.
- * Respeta prefers-reduced-motion.
+ * radio, hitos de planificación, norte). Los bordes de la calzada se calculan
+ * midiendo la curva real (normales por muestreo) para que las anotaciones
+ * queden pegadas al trazo y no se superpongan. Respeta prefers-reduced-motion.
  */
 const MONO = "'Geist Mono', ui-monospace, monospace";
 
@@ -17,17 +17,36 @@ const EJE =
 
 const HALF = 11; // semiancho de calzada (px)
 const N = 180; // muestras
-const ESTACIONES = [0, 45, 90, 135, 180]; // índices de muestra para progresivas
+
+// Progresivas (lado +normal). Índices separados para no chocar entre sí.
+const ESTACIONES: [number, string][] = [
+    [0, '0+000'],
+    [60, '0+200'],
+    [120, '0+400'],
+    [178, '0+600'],
+];
+
+// Hitos de planificación (lado +normal, índices intermedios).
+const HITOS: [number, string][] = [
+    [30, 'H1 · Mov. tierras'],
+    [95, 'H2 · Pavimento'],
+    [152, 'H3 · Entrega'],
+];
+
+const AI = 32; // ancla cota de ancho (lado -normal)
+const RI = 92; // ancla radio de curva (lado -normal)
 
 type Pt = [number, number];
+type Anno = { x: number; y: number; lx: number; ly: number; t: string };
 
 type Geo = {
     left: string;
     right: string;
     ticks: string[];
     stations: { x: number; y: number; t: string }[];
+    hitos: Anno[];
     ancho: { x: number; y: number };
-    radio: { x: number; y: number; lx: number; ly: number };
+    radio: Anno;
 };
 
 const toPath = (pts: Pt[]) =>
@@ -40,7 +59,7 @@ export function Blueprint({ className }: { className?: string }) {
     const eje = useRef<SVGPathElement | null>(null);
     const [geo, setGeo] = useState<Geo | null>(null);
 
-    // Medición: muestrea el eje y deriva bordes, ticks y anclas de cotas.
+    // Medición: muestrea el eje y deriva bordes y anclas de anotación.
     useLayoutEffect(() => {
         const path = eje.current;
 
@@ -79,33 +98,40 @@ export function Blueprint({ className }: { className?: string }) {
         ]);
 
         const ticks = ESTACIONES.map(
-            (i) =>
+            ([i]) =>
                 `M${left[i][0].toFixed(1)},${left[i][1].toFixed(1)} L${right[i][0].toFixed(1)},${right[i][1].toFixed(1)}`,
         );
 
-        const stations = ESTACIONES.map((i, k) => ({
-            x: left[i][0] + nx[i] * 13,
-            y: left[i][1] + ny[i] * 13,
-            t: `0+${(k * 100).toString().padStart(3, '0')}`,
+        const stations = ESTACIONES.map(([i, t]) => ({
+            x: cx[i] + nx[i] * (HALF + 13),
+            y: cy[i] + ny[i] * (HALF + 13),
+            t,
         }));
 
-        const ai = 30; // ancla cota de ancho
-        const ri = 90; // ancla radio (curva central)
+        const hitos: Anno[] = HITOS.map(([i, t]) => ({
+            lx: cx[i] + nx[i] * HALF,
+            ly: cy[i] + ny[i] * HALF,
+            x: cx[i] + nx[i] * (HALF + 16),
+            y: cy[i] + ny[i] * (HALF + 16),
+            t,
+        }));
 
         setGeo({
             left: toPath(left),
             right: toPath(right),
             ticks,
             stations,
+            hitos,
             ancho: {
-                x: right[ai][0] - nx[ai] * 16,
-                y: right[ai][1] - ny[ai] * 16,
+                x: cx[AI] - nx[AI] * (HALF + 14),
+                y: cy[AI] - ny[AI] * (HALF + 14),
             },
             radio: {
-                x: cx[ri] + nx[ri] * 40,
-                y: cy[ri] + ny[ri] * 40,
-                lx: cx[ri] + nx[ri] * HALF,
-                ly: cy[ri] + ny[ri] * HALF,
+                lx: cx[RI] - nx[RI] * HALF,
+                ly: cy[RI] - ny[RI] * HALF,
+                x: cx[RI] - nx[RI] * (HALF + 34),
+                y: cy[RI] - ny[RI] * (HALF + 34),
+                t: 'R = 50.00 m',
             },
         });
     }, []);
@@ -150,9 +176,20 @@ export function Blueprint({ className }: { className?: string }) {
                     opacity: [0, 1],
                     translateY: [4, 0],
                     duration: 420,
-                    delay: stagger(45),
+                    delay: stagger(40),
                 },
-                1250,
+                1200,
+            )
+            .add(
+                '.road-hito',
+                {
+                    opacity: [0, 1],
+                    scale: [0.5, 1],
+                    duration: 460,
+                    delay: stagger(110),
+                    ease: 'outBack',
+                },
+                1450,
             );
 
         return () => {
@@ -168,7 +205,7 @@ export function Blueprint({ className }: { className?: string }) {
             className={cn('h-auto w-full', className)}
             fill="none"
             role="img"
-            aria-label="Planta de trazo vial con progresivas y cotas"
+            aria-label="Planta de trazo vial con progresivas, cotas e hitos"
         >
             {/* bloque de título */}
             <g className="road-anno" fill="#93c5fd" style={{ opacity: 0 }}>
@@ -194,11 +231,11 @@ export function Blueprint({ className }: { className?: string }) {
 
             {/* norte */}
             <g className="road-anno" style={{ opacity: 0 }}>
-                <path d="M412,20 L412,46" stroke="#64748b" strokeWidth="1" />
-                <path d="M412,18 l-4,8 l8,0 Z" fill="#93c5fd" />
+                <path d="M414,18 L414,44" stroke="#64748b" strokeWidth="1" />
+                <path d="M414,16 l-4,8 l8,0 Z" fill="#93c5fd" />
                 <text
-                    x="412"
-                    y="58"
+                    x="414"
+                    y="56"
                     fontSize="9"
                     fontWeight="700"
                     fontFamily={MONO}
@@ -262,18 +299,18 @@ export function Blueprint({ className }: { className?: string }) {
                     </g>
 
                     {/* cota de ancho de calzada */}
-                    <g className="road-anno" style={{ opacity: 0 }}>
-                        <text
-                            x={geo.ancho.x.toFixed(1)}
-                            y={geo.ancho.y.toFixed(1)}
-                            fontSize="8.5"
-                            fontFamily={MONO}
-                            fill="#cfe0ff"
-                            textAnchor="middle"
-                        >
-                            B = 7.20 m
-                        </text>
-                    </g>
+                    <text
+                        className="road-anno"
+                        x={geo.ancho.x.toFixed(1)}
+                        y={geo.ancho.y.toFixed(1)}
+                        fontSize="8.5"
+                        fontFamily={MONO}
+                        fill="#cfe0ff"
+                        textAnchor="middle"
+                        style={{ opacity: 0 }}
+                    >
+                        B = 7.20 m
+                    </text>
 
                     {/* radio de curva */}
                     <g className="road-anno" style={{ opacity: 0 }}>
@@ -285,15 +322,51 @@ export function Blueprint({ className }: { className?: string }) {
                         />
                         <text
                             x={geo.radio.x.toFixed(1)}
-                            y={(geo.radio.y - 4).toFixed(1)}
+                            y={(geo.radio.y - 5).toFixed(1)}
                             fontSize="8.5"
                             fontFamily={MONO}
                             fill="#38bdf8"
                             textAnchor="middle"
                         >
-                            R = 50.00 m
+                            {geo.radio.t}
                         </text>
                     </g>
+
+                    {/* hitos de planificación */}
+                    {geo.hitos.map((h, i) => (
+                        <g
+                            key={`h${i}`}
+                            className="road-hito"
+                            style={{
+                                transformBox: 'fill-box',
+                                transformOrigin: 'center',
+                                opacity: 0,
+                            }}
+                        >
+                            <path
+                                d={`M${h.lx.toFixed(1)},${h.ly.toFixed(1)} L${h.x.toFixed(1)},${h.y.toFixed(1)}`}
+                                stroke="#34d399"
+                                strokeWidth="1"
+                                strokeDasharray="3 3"
+                            />
+                            <polygon
+                                points={`${h.x.toFixed(1)},${(h.y - 5).toFixed(1)} ${(h.x + 5).toFixed(1)},${h.y.toFixed(1)} ${h.x.toFixed(1)},${(h.y + 5).toFixed(1)} ${(h.x - 5).toFixed(1)},${h.y.toFixed(1)}`}
+                                fill="rgba(52,211,153,0.18)"
+                                stroke="#34d399"
+                                strokeWidth="1.2"
+                            />
+                            <text
+                                x={h.x.toFixed(1)}
+                                y={(h.y + 16).toFixed(1)}
+                                fontSize="7.5"
+                                fontFamily={MONO}
+                                fill="#34d399"
+                                textAnchor="middle"
+                            >
+                                {h.t}
+                            </text>
+                        </g>
+                    ))}
                 </>
             )}
         </svg>

@@ -83,7 +83,7 @@ export function Hero() {
                     <div className="glow-blue absolute -inset-10 -z-10" />
                     <div className="bg-blueprint-fine relative overflow-hidden rounded-2xl border border-[var(--c-border-strong)] bg-[#08182d]/40 p-4 md:p-6">
                         <div className="mb-2 flex items-center justify-between text-[10px] font-bold tracking-[0.2em] text-slate-400 uppercase">
-                            <span>Planta · trazo vial</span>
+                            <span>Ingeniería vial</span>
                             <span className="text-sky-400/70">RNFC</span>
                         </div>
                         <Blueprint />
