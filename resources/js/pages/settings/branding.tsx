@@ -10,6 +10,7 @@ type Slot = 'firma' | 'iso1' | 'iso2' | 'iso3';
 type Props = {
     urls: Record<Slot, string | null>;
     slots: Record<Slot, string>;
+    personalizados: Record<Slot, boolean>;
 };
 
 function SlotCard({
@@ -17,11 +18,13 @@ function SlotCard({
     titulo,
     url,
     aspecto,
+    personalizado,
 }: {
     slot: Slot;
     titulo: string;
     url: string | null;
     aspecto: 'firma' | 'iso';
+    personalizado: boolean;
 }) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [subiendo, setSubiendo] = useState(false);
@@ -50,7 +53,14 @@ function SlotCard({
     return (
         <Card>
             <CardHeader className="pb-3">
-                <CardTitle className="text-base">{titulo}</CardTitle>
+                <CardTitle className="flex items-center justify-between gap-2 text-base">
+                    {titulo}
+                    {!personalizado && url && (
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+                            Por defecto
+                        </span>
+                    )}
+                </CardTitle>
                 <CardDescription>
                     PNG con fondo transparente, máx. 2 MB.
                     {aspecto === 'firma'
@@ -98,9 +108,9 @@ function SlotCard({
                         onClick={() => inputRef.current?.click()}
                     >
                         <Upload className="size-4" />
-                        {url ? 'Reemplazar' : 'Subir PNG'}
+                        {personalizado ? 'Reemplazar' : 'Subir PNG'}
                     </Button>
-                    {url && (
+                    {personalizado && (
                         <Button
                             type="button"
                             size="sm"
@@ -116,7 +126,11 @@ function SlotCard({
     );
 }
 
-export default function BrandingSettings({ urls, slots }: Props) {
+export default function BrandingSettings({
+    urls,
+    slots,
+    personalizados,
+}: Props) {
     return (
         <>
             <Head title="Configuración · Firma y certificaciones" />
@@ -136,6 +150,7 @@ export default function BrandingSettings({ urls, slots }: Props) {
                         titulo={slots.firma}
                         url={urls.firma}
                         aspecto="firma"
+                        personalizado={personalizados.firma}
                     />
                 </section>
 
@@ -149,18 +164,21 @@ export default function BrandingSettings({ urls, slots }: Props) {
                             titulo={slots.iso1}
                             url={urls.iso1}
                             aspecto="iso"
+                            personalizado={personalizados.iso1}
                         />
                         <SlotCard
                             slot="iso2"
                             titulo={slots.iso2}
                             url={urls.iso2}
                             aspecto="iso"
+                            personalizado={personalizados.iso2}
                         />
                         <SlotCard
                             slot="iso3"
                             titulo={slots.iso3}
                             url={urls.iso3}
                             aspecto="iso"
+                            personalizado={personalizados.iso3}
                         />
                     </div>
                 </section>

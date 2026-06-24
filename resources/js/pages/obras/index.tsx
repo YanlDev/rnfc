@@ -121,7 +121,7 @@ function ObraCard({ obra }: { obra: Obra }) {
                     </div>
                 )}
 
-                <span className="absolute top-3 left-3 rounded-md bg-white/90 px-2 py-1 font-mono text-[11px] font-semibold tracking-[0.12em] text-foreground uppercase shadow-sm backdrop-blur">
+                <span className="absolute top-3 left-3 rounded-md bg-white/90 px-2 py-1 font-mono text-[11px] font-semibold tracking-[0.12em] text-neutral-900 uppercase shadow-sm backdrop-blur">
                     {obra.codigo}
                 </span>
                 <EstadoObraBadge

@@ -82,6 +82,11 @@ class Obra extends Model
         return $this->hasMany(EventoCalendario::class);
     }
 
+    public function cajaMovimientos(): HasMany
+    {
+        return $this->hasMany(CajaMovimiento::class);
+    }
+
     public function certificados(): HasMany
     {
         return $this->hasMany(Certificado::class);

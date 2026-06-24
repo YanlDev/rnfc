@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\PermisosController;
 use App\Http\Controllers\Admin\UsuariosController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AsientoCuadernoController;
+use App\Http\Controllers\CajaController;
 use App\Http\Controllers\CalendarioSelectorController;
 use App\Http\Controllers\CarpetaController;
 use App\Http\Controllers\CertificadoController;
@@ -90,6 +91,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('uploads/{sesion}/chunk', [UploadController::class, 'chunk'])->name('uploads.chunk');
     Route::post('uploads/{sesion}/completar', [UploadController::class, 'completar'])->name('uploads.completar');
     Route::get('uploads/{sesion}/estado', [UploadController::class, 'estado'])->name('uploads.estado');
+
+    // Caja chica por obra
+    Route::get('obras/{obra}/caja', [CajaController::class, 'index'])->name('obras.caja.index');
+    Route::post('obras/{obra}/caja', [CajaController::class, 'store'])->name('obras.caja.store');
+    Route::delete('obras/{obra}/caja/{movimiento}', [CajaController::class, 'destroy'])->name('obras.caja.destroy');
+    Route::get('obras/{obra}/caja/{movimiento}/comprobante', [CajaController::class, 'comprobante'])->name('obras.caja.comprobante');
 
     // Cuaderno de Obra Digital — selector global (sidebar)
     Route::get('cuaderno', CuadernoSelectorController::class)->name('cuaderno.selector');

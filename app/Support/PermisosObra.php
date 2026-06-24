@@ -45,6 +45,11 @@ class PermisosObra
             'equipo.gestionar' => 'Gestionar el equipo',
             'obra.editar' => 'Editar datos de la obra',
         ],
+        'Caja chica' => [
+            'caja.ver' => 'Ver caja chica',
+            'caja.registrar' => 'Registrar movimientos',
+            'caja.gestionar' => 'Gestionar caja (eliminar)',
+        ],
     ];
 
     /**

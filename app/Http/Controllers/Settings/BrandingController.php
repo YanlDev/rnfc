@@ -18,6 +18,7 @@ class BrandingController extends Controller
         return Inertia::render('settings/branding', [
             'urls' => $this->branding->urls(),
             'slots' => BrandingService::slots(),
+            'personalizados' => $this->branding->personalizados(),
         ]);
     }
 

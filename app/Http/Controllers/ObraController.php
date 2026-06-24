@@ -6,6 +6,7 @@ use App\Enums\EstadoObra;
 use App\Enums\RolGlobal;
 use App\Http\Requests\StoreObraRequest;
 use App\Http\Requests\UpdateObraRequest;
+use App\Models\CajaMovimiento;
 use App\Models\Obra;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -95,6 +96,7 @@ class ObraController extends Controller
             'asientosCuaderno',
             'eventosCalendario',
             'usuarios',
+            'cajaMovimientos',
         ]);
 
         return Inertia::render('obras/show', [
@@ -104,8 +106,10 @@ class ObraController extends Controller
                 'cuaderno' => $obra->asientos_cuaderno_count,
                 'calendario' => $obra->eventos_calendario_count,
                 'equipo' => $obra->usuarios_count,
+                'caja' => $obra->caja_movimientos_count,
             ],
             'puedeAdministrar' => request()->user()?->can('update', $obra) ?? false,
+            'puedeVerCaja' => request()->user()?->can('viewAny', [CajaMovimiento::class, $obra]) ?? false,
         ]);
     }
 

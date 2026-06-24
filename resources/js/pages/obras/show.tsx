@@ -13,6 +13,7 @@ import {
     Trash2,
     User,
     Users,
+    Wallet,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { EstadoObraBadge } from '@/components/estado-obra-badge';
@@ -44,12 +45,14 @@ type Contadores = {
     cuaderno: number;
     calendario: number;
     equipo: number;
+    caja: number;
 };
 
 type ShowProps = {
     obra: ObraData;
     contadores: Contadores;
     puedeAdministrar: boolean;
+    puedeVerCaja: boolean;
 };
 
 function formatearMonto(monto: number | null): string {
@@ -65,7 +68,10 @@ function formatearMonto(monto: number | null): string {
 }
 
 /** Progreso 0-100 según los días transcurridos entre inicio y fin previsto. */
-function progresoDias(inicio: string | null, fin: string | null): number | null {
+function progresoDias(
+    inicio: string | null,
+    fin: string | null,
+): number | null {
     if (!inicio || !fin) {
         return null;
     }
@@ -178,7 +184,7 @@ function ImagenProyecto({
                                 type="button"
                                 onClick={() => inputRef.current?.click()}
                                 disabled={subiendo}
-                                className="inline-flex items-center gap-1.5 rounded-md bg-white/90 px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-white"
+                                className="inline-flex items-center gap-1.5 rounded-md bg-white/90 px-2.5 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white"
                             >
                                 <ImagePlus className="size-3.5" />
                                 {subiendo ? 'Subiendo…' : 'Cambiar'}
@@ -240,7 +246,7 @@ function AccesoDirecto({
             <div className="min-w-0 flex-1">
                 <div className="font-semibold text-foreground">{label}</div>
                 <div className="text-sm text-muted-foreground">
-                    <span className="font-semibold tabular-nums text-foreground">
+                    <span className="font-semibold text-foreground tabular-nums">
                         {valor}
                     </span>{' '}
                     {unidad}
@@ -255,6 +261,7 @@ export default function ObraShow({
     obra,
     contadores,
     puedeAdministrar,
+    puedeVerCaja,
 }: ShowProps) {
     const eliminar = () => {
         const ok = confirm(
@@ -357,8 +364,7 @@ export default function ObraShow({
 
                         {/* Mapa */}
                         <div className="h-56 overflow-hidden rounded-lg border border-border md:col-span-2 lg:col-span-1">
-                            {obra.latitud !== null &&
-                            obra.longitud !== null ? (
+                            {obra.latitud !== null && obra.longitud !== null ? (
                                 <MapaUbicacion
                                     latitud={obra.latitud}
                                     longitud={obra.longitud}
@@ -380,7 +386,7 @@ export default function ObraShow({
                             <span className="font-medium text-foreground">
                                 Progreso general
                             </span>
-                            <span className="font-semibold tabular-nums text-muted-foreground">
+                            <span className="font-semibold text-muted-foreground tabular-nums">
                                 {progreso !== null ? `${progreso}%` : '—'}
                             </span>
                         </div>
@@ -429,6 +435,15 @@ export default function ObraShow({
                         valor={contadores.equipo}
                         unidad="integrantes"
                     />
+                    {puedeVerCaja && (
+                        <AccesoDirecto
+                            href={`/obras/${obra.id}/caja`}
+                            icono={Wallet}
+                            label="Caja chica"
+                            valor={contadores.caja}
+                            unidad="movimientos"
+                        />
+                    )}
                 </div>
             </div>
         </>
