@@ -1,4 +1,3 @@
-import { router } from '@inertiajs/react';
 import {
     AlertCircle,
     CheckCircle2,
@@ -9,17 +8,20 @@ import {
 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { formatearBytes } from '@/lib/bytes';
+import { subirEnChunks } from '@/lib/chunked-upload';
+import type { FaseSubida } from '@/lib/chunked-upload';
 
 type ArchivoEnSubida = {
     id: string;
     file: File;
     progreso: number;
-    estado: 'pendiente' | 'subiendo' | 'exito' | 'error';
+    fase: FaseSubida;
     error?: string;
 };
 
 type Props = {
-    urlSubida: string;
+    obraId: number;
+    carpetaId: number;
     onComplete?: () => void;
 };
 
@@ -27,68 +29,54 @@ function genId() {
     return Math.random().toString(36).slice(2, 11);
 }
 
-export default function Dropzone({ urlSubida, onComplete }: Props) {
+export default function Dropzone({ obraId, carpetaId, onComplete }: Props) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [dragOver, setDragOver] = useState(false);
     const [archivos, setArchivos] = useState<ArchivoEnSubida[]>([]);
 
-    const subirArchivo = (item: ArchivoEnSubida) => {
-        const form = new FormData();
-        form.append('archivo', item.file);
-
-        router.post(urlSubida, form, {
-            forceFormData: true,
-            preserveScroll: true,
-            preserveState: true,
-            only: ['documentos'],
-            onProgress: (p) => {
-                const pct = p?.percentage ?? 0;
-                setArchivos((prev) =>
-                    prev.map((a) =>
-                        a.id === item.id
-                            ? { ...a, estado: 'subiendo', progreso: pct }
-                            : a,
-                    ),
-                );
-            },
-            onSuccess: () => {
-                setArchivos((prev) =>
-                    prev.map((a) =>
-                        a.id === item.id
-                            ? { ...a, estado: 'exito', progreso: 100 }
-                            : a,
-                    ),
-                );
-                // Auto-limpiar después de un momento
-                setTimeout(() => {
-                    setArchivos((prev) => prev.filter((a) => a.id !== item.id));
-                    onComplete?.();
-                }, 1500);
-            },
-            onError: (errors) => {
-                const msg =
-                    Object.values(errors)[0] ?? 'Error al subir el archivo';
-                setArchivos((prev) =>
-                    prev.map((a) =>
-                        a.id === item.id
-                            ? { ...a, estado: 'error', error: String(msg) }
-                            : a,
-                    ),
-                );
-            },
-        });
+    const actualizar = (id: string, cambios: Partial<ArchivoEnSubida>) => {
+        setArchivos((prev) =>
+            prev.map((a) => (a.id === id ? { ...a, ...cambios } : a)),
+        );
     };
 
-    const agregarArchivos = (files: FileList | File[]) => {
+    const subirArchivo = async (item: ArchivoEnSubida) => {
+        try {
+            await subirEnChunks({
+                obraId,
+                carpetaId,
+                file: item.file,
+                onProgreso: (pct) => actualizar(item.id, { progreso: pct }),
+                onFase: (fase) => actualizar(item.id, { fase }),
+            });
+
+            actualizar(item.id, { fase: 'completado', progreso: 100 });
+            setTimeout(() => {
+                setArchivos((prev) => prev.filter((a) => a.id !== item.id));
+                onComplete?.();
+            }, 1500);
+        } catch (e) {
+            actualizar(item.id, {
+                fase: 'error',
+                error: e instanceof Error ? e.message : 'Error al subir.',
+            });
+        }
+    };
+
+    const agregarArchivos = async (files: FileList | File[]) => {
         const nuevos: ArchivoEnSubida[] = Array.from(files).map((f) => ({
             id: genId(),
             file: f,
             progreso: 0,
-            estado: 'pendiente',
+            fase: 'iniciando',
         }));
         setArchivos((prev) => [...prev, ...nuevos]);
-        // Disparar uploads en serie ligera (Inertia uno a la vez evita carreras).
-        nuevos.forEach((item) => subirArchivo(item));
+
+        // En serie: un archivo a la vez para no saturar el ancho de banda de
+        // subida del server ni el disco temporal con varios GB simultáneos.
+        for (const item of nuevos) {
+            await subirArchivo(item);
+        }
     };
 
     const onDrop = (e: React.DragEvent) => {
@@ -156,7 +144,8 @@ export default function Dropzone({ urlSubida, onComplete }: Props) {
                             </span>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                            PDF, imágenes, planos, documentos · máx. 50 MB
+                            PDF, imágenes, planos, documentos · archivos grandes
+                            permitidos
                         </div>
                     </div>
                 </div>
@@ -170,11 +159,13 @@ export default function Dropzone({ urlSubida, onComplete }: Props) {
                             className="flex items-center gap-3 rounded-md border border-border bg-card p-3"
                         >
                             <div className="shrink-0">
-                                {a.estado === 'exito' ? (
+                                {a.fase === 'completado' ? (
                                     <CheckCircle2 className="size-5 text-[var(--color-brand-verde)]" />
-                                ) : a.estado === 'error' ? (
+                                ) : a.fase === 'error' ? (
                                     <AlertCircle className="size-5 text-destructive" />
-                                ) : a.estado === 'subiendo' ? (
+                                ) : a.fase === 'subiendo' ||
+                                  a.fase === 'procesando' ||
+                                  a.fase === 'iniciando' ? (
                                     <Loader2 className="size-5 animate-spin text-primary" />
                                 ) : (
                                     <FileUp className="size-5 text-muted-foreground" />
@@ -189,20 +180,28 @@ export default function Dropzone({ urlSubida, onComplete }: Props) {
                                         {formatearBytes(a.file.size)}
                                     </div>
                                 </div>
-                                {a.estado !== 'error' && (
+                                {a.fase !== 'error' && (
                                     <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                                         <div
                                             className={
                                                 'h-full transition-all duration-200 ' +
-                                                (a.estado === 'exito'
+                                                (a.fase === 'completado'
                                                     ? 'bg-[var(--color-brand-verde)]'
-                                                    : 'bg-primary')
+                                                    : 'bg-primary') +
+                                                (a.fase === 'procesando'
+                                                    ? ' animate-pulse'
+                                                    : '')
                                             }
                                             style={{ width: `${a.progreso}%` }}
                                         />
                                     </div>
                                 )}
-                                {a.estado === 'error' && (
+                                {a.fase === 'procesando' && (
+                                    <div className="mt-1 text-xs text-muted-foreground">
+                                        Procesando en el servidor…
+                                    </div>
+                                )}
+                                {a.fase === 'error' && (
                                     <div className="mt-1 text-xs text-destructive">
                                         {a.error}
                                     </div>

@@ -11,3 +11,6 @@ Artisan::command('inspire', function () {
 // Avisa diariamente a los miembros de obra los vencimientos que caen
 // hoy y dentro de 3/7 días.
 Schedule::command('rnfc:notificar-vencimientos')->dailyAt('07:00');
+
+// Limpia sesiones de subida en trozos abandonadas (y sus temporales en disco).
+Schedule::command('rnfc:limpiar-subidas')->dailyAt('03:30');

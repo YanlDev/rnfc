@@ -656,7 +656,8 @@ export default function DocumentosIndex({
 
                                     {puedeSubir && (
                                         <Dropzone
-                                            urlSubida={`/obras/${obra.id}/carpetas/${carpetaActiva.id}/documentos`}
+                                            obraId={obra.id}
+                                            carpetaId={carpetaActiva.id}
                                             onComplete={recargarDocumentos}
                                         />
                                     )}

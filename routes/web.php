@@ -19,6 +19,7 @@ use App\Http\Controllers\LandingController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\ObraController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\UploadController;
 use App\Http\Controllers\VerificacionController;
 use Illuminate\Support\Facades\Route;
 
@@ -83,6 +84,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('obras/{obra}/documentos/{documento}/descargar', [DocumentoController::class, 'descargar'])->name('obras.documentos.descargar');
     Route::get('obras/{obra}/documentos/{documento}/preview', [DocumentoController::class, 'preview'])->name('obras.documentos.preview');
     Route::delete('obras/{obra}/documentos/{documento}', [DocumentoController::class, 'destroy'])->name('obras.documentos.destroy');
+
+    // Subida en trozos (chunked) para archivos grandes (planos de varios GB).
+    Route::post('obras/{obra}/uploads', [UploadController::class, 'iniciar'])->name('uploads.iniciar');
+    Route::post('uploads/{sesion}/chunk', [UploadController::class, 'chunk'])->name('uploads.chunk');
+    Route::post('uploads/{sesion}/completar', [UploadController::class, 'completar'])->name('uploads.completar');
+    Route::get('uploads/{sesion}/estado', [UploadController::class, 'estado'])->name('uploads.estado');
 
     // Cuaderno de Obra Digital — selector global (sidebar)
     Route::get('cuaderno', CuadernoSelectorController::class)->name('cuaderno.selector');

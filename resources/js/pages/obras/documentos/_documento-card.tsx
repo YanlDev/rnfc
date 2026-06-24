@@ -7,13 +7,16 @@ import {
     FileSpreadsheet,
     FileText,
     History,
+    Loader2,
     Trash2,
     Upload,
 } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { subirEnChunks } from '@/lib/chunked-upload';
+import type { FaseSubida } from '@/lib/chunked-upload';
 import type { DocumentoPreview } from './_preview-modal';
 
 export type DocumentoCardData = DocumentoPreview & {
@@ -69,18 +72,35 @@ export default function DocumentoCard({
     variant = 'grid',
 }: Props) {
     const versionInputRef = useRef<HTMLInputElement>(null);
+    const [versionFase, setVersionFase] = useState<FaseSubida | null>(null);
+    const [versionPct, setVersionPct] = useState(0);
 
-    const subirVersion = (file: File) => {
-        const form = new FormData();
-        form.append('archivo', file);
-        router.post(
-            `/obras/${obraId}/documentos/${documento.id}/version`,
-            form,
-            {
-                forceFormData: true,
-                preserveScroll: true,
-            },
-        );
+    const subiendoVersion =
+        versionFase !== null &&
+        versionFase !== 'completado' &&
+        versionFase !== 'error';
+
+    const subirVersion = async (file: File) => {
+        try {
+            setVersionPct(0);
+            setVersionFase('iniciando');
+            await subirEnChunks({
+                obraId,
+                documentoId: documento.id,
+                file,
+                onProgreso: setVersionPct,
+                onFase: setVersionFase,
+            });
+            setVersionFase(null);
+            router.reload({ only: ['documentos'] });
+        } catch (e) {
+            setVersionFase('error');
+            alert(
+                e instanceof Error
+                    ? e.message
+                    : 'No se pudo subir la nueva versión.',
+            );
+        }
     };
 
     const eliminar = () => {
@@ -174,10 +194,21 @@ export default function DocumentoCard({
                             size="icon"
                             variant="ghost"
                             className="size-8"
+                            disabled={subiendoVersion}
                             onClick={() => versionInputRef.current?.click()}
-                            title="Subir nueva versión"
+                            title={
+                                subiendoVersion
+                                    ? versionFase === 'procesando'
+                                        ? 'Procesando…'
+                                        : `Subiendo… ${versionPct}%`
+                                    : 'Subir nueva versión'
+                            }
                         >
-                            <Upload className="size-4" />
+                            {subiendoVersion ? (
+                                <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                                <Upload className="size-4" />
+                            )}
                         </Button>
                     )}
                     {puedeEliminar && (
@@ -284,12 +315,23 @@ export default function DocumentoCard({
                                 <Button
                                     size="sm"
                                     variant="ghost"
+                                    disabled={subiendoVersion}
                                     onClick={() =>
                                         versionInputRef.current?.click()
                                     }
-                                    title="Subir nueva versión"
+                                    title={
+                                        subiendoVersion
+                                            ? versionFase === 'procesando'
+                                                ? 'Procesando…'
+                                                : `Subiendo… ${versionPct}%`
+                                            : 'Subir nueva versión'
+                                    }
                                 >
-                                    <Upload className="size-4" />
+                                    {subiendoVersion ? (
+                                        <Loader2 className="size-4 animate-spin" />
+                                    ) : (
+                                        <Upload className="size-4" />
+                                    )}
                                 </Button>
                                 {documento.version > 1 && (
                                     <Button
