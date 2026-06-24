@@ -52,12 +52,12 @@ class CarpetaController extends Controller
             $carpeta = $carpetas->firstWhere('id', $carpetaSeleccionadaId);
             if ($carpeta) {
                 $carpetaActiva = [
-                    'id' => $carpeta->id,
-                    'nombre' => $carpeta->nombre,
-                    'ruta' => $carpeta->ruta,
+                    'id' => $carpeta['id'],
+                    'nombre' => $carpeta['nombre'],
+                    'ruta' => $carpeta['ruta'],
                 ];
                 $documentos = Documento::query()
-                    ->where('carpeta_id', $carpeta->id)
+                    ->where('carpeta_id', $carpeta['id'])
                     ->vigentes()
                     ->with('subidoPor:id,name')
                     ->latest('updated_at')
