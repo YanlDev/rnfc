@@ -38,7 +38,7 @@ class UsuariosController extends Controller implements HasMiddleware
     public function index(Request $request): Response
     {
         $q = trim((string) $request->query('q', ''));
-        $estado = $request->query('estado', 'todos'); // activos | desactivados | todos
+        $estado = $request->query('estado', 'todos'); // activos | desactivados | eliminados | todos
         $rol = $request->query('rol', 'todos');
 
         $query = User::query()
@@ -57,6 +57,8 @@ class UsuariosController extends Controller implements HasMiddleware
             $query->activos();
         } elseif ($estado === 'desactivados') {
             $query->desactivados();
+        } elseif ($estado === 'eliminados') {
+            $query->onlyTrashed();
         }
 
         if ($rol !== 'todos') {
@@ -73,6 +75,7 @@ class UsuariosController extends Controller implements HasMiddleware
             'admins' => User::whereHas('roles', fn ($qb) => $qb->where('name', RolGlobal::Admin->value))
                 ->activos()
                 ->count(),
+            'eliminados' => User::onlyTrashed()->count(),
         ];
 
         return Inertia::render('admin/usuarios', [
@@ -94,6 +97,7 @@ class UsuariosController extends Controller implements HasMiddleware
                         'desactivado_por' => $u->desactivadoPor?->name,
                         'motivo_desactivacion' => $u->motivo_desactivacion,
                         'created_at' => $u->created_at?->format('Y-m-d'),
+                        'eliminado_at' => $u->deleted_at?->format('Y-m-d H:i'),
                         'es_yo' => $u->id === Auth::id(),
                     ];
                 })->all(),
@@ -242,5 +246,67 @@ class UsuariosController extends Controller implements HasMiddleware
 
         return redirect()->route('admin.usuarios.index')
             ->with('success', "Rol de {$usuario->name} actualizado a ".RolGlobal::from($nuevoRol)->label().'.');
+    }
+
+    /**
+     * Envía un usuario a la papelera (soft delete). Se conserva la autoría en
+     * certificados, cuadernos, caja, etc.; solo se le quita el acceso.
+     */
+    public function eliminar(Request $request, User $usuario): RedirectResponse
+    {
+        if ($usuario->id === $request->user()->id) {
+            throw ValidationException::withMessages([
+                'usuario' => 'No puedes eliminar tu propia cuenta.',
+            ]);
+        }
+
+        // No dejar el sistema sin ningún administrador activo.
+        if ($usuario->hasRole(RolGlobal::Admin->value)) {
+            $otrosAdmins = User::whereHas('roles', fn ($q) => $q->where('name', RolGlobal::Admin->value))
+                ->where('id', '!=', $usuario->id)
+                ->activos()
+                ->count();
+
+            if ($otrosAdmins === 0) {
+                throw ValidationException::withMessages([
+                    'usuario' => 'No puedes eliminar al único administrador activo.',
+                ]);
+            }
+        }
+
+        // Cerrar sesiones activas para revocar el acceso de inmediato.
+        DB::table('sessions')
+            ->where('user_id', $usuario->id)
+            ->delete();
+
+        $usuario->delete();
+
+        Log::warning('Usuario eliminado (papelera)', [
+            'usuario_id' => $usuario->id,
+            'por' => $request->user()->id,
+        ]);
+
+        return redirect()->route('admin.usuarios.index')
+            ->with('success', "Usuario {$usuario->name} enviado a la papelera.");
+    }
+
+    /**
+     * Restaura un usuario que estaba en la papelera.
+     */
+    public function restaurar(Request $request, User $usuario): RedirectResponse
+    {
+        if (! $usuario->trashed()) {
+            return redirect()->route('admin.usuarios.index');
+        }
+
+        $usuario->restore();
+
+        Log::info('Usuario restaurado', [
+            'usuario_id' => $usuario->id,
+            'por' => $request->user()->id,
+        ]);
+
+        return redirect()->route('admin.usuarios.index')
+            ->with('success', "Usuario {$usuario->name} restaurado.");
     }
 }

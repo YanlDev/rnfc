@@ -72,6 +72,7 @@ type Usuario = {
     desactivado_por: string | null;
     motivo_desactivacion: string | null;
     created_at: string;
+    eliminado_at: string | null;
     es_yo: boolean;
 };
 
@@ -95,6 +96,7 @@ type Props = {
         activos: number;
         desactivados: number;
         admins: number;
+        eliminados: number;
     };
     invitacionesPendientes: InvitacionPendienteGlobal[];
 };
@@ -223,6 +225,38 @@ export default function AdminUsuarios({
         );
     };
 
+    const eliminarUsuario = async (u: Usuario) => {
+        const ok = await confirm({
+            titulo: `¿Enviar a ${u.name} a la papelera?`,
+            descripcion:
+                'Perderá el acceso y se cerrarán sus sesiones. Se conserva su autoría en certificados, cuadernos y caja. Podrás restaurarlo desde la papelera.',
+            confirmar: 'Sí, eliminar',
+            cancelar: 'Cancelar',
+            destructivo: true,
+        });
+
+        if (!ok) {
+            return;
+        }
+
+        router.delete(`/admin/usuarios/${u.id}`, {
+            preserveScroll: true,
+            onError: (errors) => {
+                if (errors.usuario) {
+                    toast.error(errors.usuario);
+                }
+            },
+        });
+    };
+
+    const restaurarUsuario = (u: Usuario) => {
+        router.patch(
+            `/admin/usuarios/${u.id}/restaurar`,
+            {},
+            { preserveScroll: true },
+        );
+    };
+
     return (
         <>
             <Head title="Usuarios" />
@@ -281,6 +315,12 @@ export default function AdminUsuarios({
                             </SelectItem>
                             <SelectItem value="desactivados">
                                 Solo desactivados
+                            </SelectItem>
+                            <SelectItem value="eliminados">
+                                Papelera{' '}
+                                {kpis.eliminados > 0
+                                    ? `(${kpis.eliminados})`
+                                    : ''}
                             </SelectItem>
                         </SelectContent>
                     </Select>
@@ -441,7 +481,15 @@ export default function AdminUsuarios({
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                            {u.activo ? (
+                                            {u.eliminado_at ? (
+                                                <span
+                                                    className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400"
+                                                    title={`Eliminado el ${u.eliminado_at}`}
+                                                >
+                                                    <Trash2 className="size-3" />
+                                                    En papelera
+                                                </span>
+                                            ) : u.activo ? (
                                                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
                                                     <span className="size-2 rounded-full bg-emerald-500" />
                                                     Activo
@@ -481,36 +529,66 @@ export default function AdminUsuarios({
                                                         {u.name}
                                                     </DropdownMenuLabel>
                                                     <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        onClick={() => {
-                                                            setUsuarioRol(u);
-                                                            formRol.setData(
-                                                                'rol',
-                                                                u.rol ?? '',
-                                                            );
-                                                        }}
-                                                    >
-                                                        <ShieldCheck className="size-4" />
-                                                        Cambiar rol
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => {
-                                                            setUsuarioObjetivo(
-                                                                u,
-                                                            );
-                                                            formToggle.reset();
-                                                        }}
-                                                        className={
-                                                            u.activo
-                                                                ? 'text-destructive focus:text-destructive'
-                                                                : ''
-                                                        }
-                                                    >
-                                                        <Power className="size-4" />
-                                                        {u.activo
-                                                            ? 'Desactivar'
-                                                            : 'Reactivar'}
-                                                    </DropdownMenuItem>
+                                                    {u.eliminado_at ? (
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                restaurarUsuario(
+                                                                    u,
+                                                                )
+                                                            }
+                                                        >
+                                                            <RotateCcw className="size-4" />
+                                                            Restaurar
+                                                        </DropdownMenuItem>
+                                                    ) : (
+                                                        <>
+                                                            <DropdownMenuItem
+                                                                onClick={() => {
+                                                                    setUsuarioRol(
+                                                                        u,
+                                                                    );
+                                                                    formRol.setData(
+                                                                        'rol',
+                                                                        u.rol ??
+                                                                            '',
+                                                                    );
+                                                                }}
+                                                            >
+                                                                <ShieldCheck className="size-4" />
+                                                                Cambiar rol
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={() => {
+                                                                    setUsuarioObjetivo(
+                                                                        u,
+                                                                    );
+                                                                    formToggle.reset();
+                                                                }}
+                                                                className={
+                                                                    u.activo
+                                                                        ? 'text-destructive focus:text-destructive'
+                                                                        : ''
+                                                                }
+                                                            >
+                                                                <Power className="size-4" />
+                                                                {u.activo
+                                                                    ? 'Desactivar'
+                                                                    : 'Reactivar'}
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={() =>
+                                                                    eliminarUsuario(
+                                                                        u,
+                                                                    )
+                                                                }
+                                                                className="text-destructive focus:text-destructive"
+                                                            >
+                                                                <Trash2 className="size-4" />
+                                                                Eliminar
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>

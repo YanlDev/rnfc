@@ -53,6 +53,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('admin.usuarios.toggle-activo');
     Route::patch('admin/usuarios/{usuario}/rol', [UsuariosController::class, 'cambiarRol'])
         ->name('admin.usuarios.rol');
+    Route::delete('admin/usuarios/{usuario}', [UsuariosController::class, 'eliminar'])
+        ->name('admin.usuarios.eliminar');
+    Route::patch('admin/usuarios/{usuario}/restaurar', [UsuariosController::class, 'restaurar'])
+        ->name('admin.usuarios.restaurar')
+        ->withTrashed();
     // Matriz de permisos por rol de obra
     Route::get('admin/permisos', [PermisosController::class, 'index'])
         ->name('admin.permisos.index');
