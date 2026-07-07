@@ -42,13 +42,23 @@ class InvitarGlobalRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            $email = strtolower($this->input('email'));
+            $email = mb_strtolower(trim((string) $this->input('email')));
 
-            $yaRegistrado = User::whereRaw('LOWER(email) = ?', [$email])->exists();
+            $usuario = User::withTrashed()->where('email', $email)->first();
 
-            if ($yaRegistrado) {
-                $validator->errors()->add('email', 'Este correo ya tiene una cuenta registrada. Usa "Cambiar rol" desde la tabla de usuarios.');
+            if ($usuario === null) {
+                return;
             }
+
+            // El email de un usuario en papelera sigue ocupado (unique): la
+            // invitación se enviaría pero el registro fallaría siempre.
+            if ($usuario->trashed()) {
+                $validator->errors()->add('email', 'Este correo pertenece a un usuario que está en la papelera. Restáuralo desde la tabla de usuarios en lugar de invitarlo.');
+
+                return;
+            }
+
+            $validator->errors()->add('email', 'Este correo ya tiene una cuenta registrada. Usa "Cambiar rol" desde la tabla de usuarios.');
         });
     }
 }

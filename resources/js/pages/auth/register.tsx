@@ -79,14 +79,14 @@ export default function Register({
                     <div className="font-semibold text-foreground">
                         Aceptando invitación
                     </div>
-                    {esGlobal ? (
+                    {invitacion ? (
                         <div className="text-muted-foreground">
-                            Rol: <strong className="text-foreground">{invitacionActiva.rol}</strong>
+                            Obra: <strong className="text-foreground">{invitacion.obra}</strong>
+                            {' '}· Rol: <strong className="text-foreground">{invitacion.rol}</strong>
                         </div>
                     ) : (
                         <div className="text-muted-foreground">
-                            Obra: <strong className="text-foreground">{invitacionActiva.obra}</strong>
-                            {' '}· Rol: <strong className="text-foreground">{invitacionActiva.rol}</strong>
+                            Rol: <strong className="text-foreground">{invitacionActiva.rol}</strong>
                         </div>
                     )}
                 </div>

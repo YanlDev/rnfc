@@ -116,15 +116,17 @@ it('aceptar invitación global al registrarse asigna el rol correctamente', func
 it('usuario con invitación global es redirigido al dashboard al aceptar con sesión activa', function () {
     $user = User::factory()->create(['email' => 'futuro@externo.com']);
 
+    // El correo lleva el token plano; en la BD se guarda su hash.
+    $token = Invitacion::generarToken();
     $inv = Invitacion::create([
         'email' => 'futuro@externo.com',
         'rol_global' => RolGlobal::Admin->value,
-        'token' => Invitacion::generarToken(),
+        'token' => Invitacion::hashToken($token),
         'expira_at' => now()->addDays(7),
     ]);
 
     $this->actingAs($user)
-        ->post(route('invitaciones.aceptar', $inv->token))
+        ->post(route('invitaciones.aceptar', $token))
         ->assertRedirect(route('dashboard'));
 
     expect($user->fresh()->hasRole(RolGlobal::Admin->value))->toBeTrue();
@@ -172,7 +174,7 @@ it('admin puede reenviar una invitación global renovando token y expiración', 
     Mail::assertQueued(InvitacionGlobal::class, fn ($m) => $m->hasTo('reenviar@externo.com'));
 });
 
-it('reenviar reactiva una invitación global previamente cancelada', function () {
+it('reenviar no reactiva una invitación global previamente cancelada', function () {
     $inv = Invitacion::create([
         'email' => 'reactivar@externo.com',
         'rol_global' => RolGlobal::Admin->value,
@@ -185,13 +187,14 @@ it('reenviar reactiva una invitación global previamente cancelada', function ()
 
     $this->actingAs(admin())
         ->post(route('admin.invitaciones.reenviar', $inv))
-        ->assertRedirect();
+        ->assertSessionHasErrors('invitacion');
 
+    // Una cancelación es definitiva: para volver a invitar se crea una nueva.
     $inv->refresh();
-    expect($inv->cancelada_at)->toBeNull();
-    expect($inv->estaActiva())->toBeTrue();
+    expect($inv->cancelada_at)->not->toBeNull();
+    expect($inv->estaActiva())->toBeFalse();
 
-    Mail::assertQueued(InvitacionGlobal::class, fn ($m) => $m->hasTo('reactivar@externo.com'));
+    Mail::assertNothingQueued();
 });
 
 it('un no-admin no puede cancelar invitaciones globales', function (string $rol) {

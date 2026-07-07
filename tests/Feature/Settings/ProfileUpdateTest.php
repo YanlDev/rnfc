@@ -64,7 +64,9 @@ test('user can delete their account', function () {
         ->assertRedirect(route('home'));
 
     $this->assertGuest();
-    expect($user->fresh())->toBeNull();
+    // Con SoftDeletes la cuenta va a la papelera, no se borra en duro.
+    expect($user->fresh()->trashed())->toBeTrue();
+    expect(User::find($user->id))->toBeNull();
 });
 
 test('correct password must be provided to delete account', function () {

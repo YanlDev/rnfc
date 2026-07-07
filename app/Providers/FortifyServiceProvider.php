@@ -5,8 +5,10 @@ namespace App\Providers;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Models\Invitacion;
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -41,6 +43,20 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
+
+        // Los emails se guardan en minúsculas (ver User::email()); sin esto,
+        // escribir "Juan@x.com" en el login fallaría por comparación exacta.
+        Fortify::authenticateUsing(function (Request $request): ?User {
+            $email = mb_strtolower(trim((string) $request->input(Fortify::username())));
+
+            $user = User::where('email', $email)->first();
+
+            if ($user && Hash::check((string) $request->input('password'), $user->password)) {
+                return $user;
+            }
+
+            return null;
+        });
     }
 
     /**
@@ -73,8 +89,9 @@ class FortifyServiceProvider extends ServiceProvider
             $invitacionGlobal = null;
 
             if ($token) {
+                // La sesión guarda el token plano; la BD, su hash.
                 $inv = Invitacion::with('obra:id,codigo,nombre')
-                    ->where('token', $token)
+                    ->where('token', Invitacion::hashToken($token))
                     ->first();
 
                 if ($inv && $inv->estaActiva()) {

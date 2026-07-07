@@ -45,6 +45,16 @@ class Invitacion extends Model
         return $this->belongsTo(User::class, 'invitado_por');
     }
 
+    /**
+     * Invitaciones aún válidas: ni aceptadas, ni canceladas, ni expiradas.
+     */
+    public function scopePendientes($query)
+    {
+        return $query->whereNull('aceptada_at')
+            ->whereNull('cancelada_at')
+            ->where('expira_at', '>', now());
+    }
+
     public function esGlobal(): bool
     {
         return $this->rol_global !== null;
@@ -75,5 +85,20 @@ class Invitacion extends Model
     public static function generarToken(): string
     {
         return Str::random(64);
+    }
+
+    /**
+     * El token se guarda hasheado: es una credencial de acceso y en texto
+     * plano cualquiera con lectura de la tabla podría aceptar invitaciones.
+     * El correo lleva el token plano; aquí se busca por su hash.
+     */
+    public static function hashToken(string $token): string
+    {
+        return hash('sha256', $token);
+    }
+
+    public static function buscarPorToken(string $token): ?self
+    {
+        return static::where('token', self::hashToken($token))->first();
     }
 }

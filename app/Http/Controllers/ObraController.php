@@ -10,6 +10,7 @@ use App\Models\CajaMovimiento;
 use App\Models\Obra;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -137,7 +138,26 @@ class ObraController extends Controller
         $this->authorize('delete', $obra);
 
         $codigo = $obra->codigo;
+        $obraId = $obra->id;
+        $imagenPath = $obra->imagen_path;
         $obra->delete();
+
+        // Todos los archivos de la obra (documentos, _caja, _cuaderno) viven
+        // bajo obras/{id}; la portada vive aparte en obras/imagenes/. Borrar
+        // ambos evita huérfanos en el disco. Best-effort: si el disco remoto
+        // falla, se registra para limpieza.
+        try {
+            Storage::disk('documentos')->deleteDirectory("obras/{$obraId}");
+
+            if ($imagenPath) {
+                Storage::disk('documentos')->delete($imagenPath);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('No se pudieron borrar los archivos de la obra', [
+                'obra_id' => $obraId,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return redirect()
             ->route('obras.index')

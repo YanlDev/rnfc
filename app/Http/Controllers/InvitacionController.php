@@ -12,13 +12,15 @@ class InvitacionController extends Controller
 {
     /**
      * Pantalla pública que se muestra al hacer clic en el link del correo.
-     * Si hay sesión iniciada con el mismo correo, ofrece aceptar directo.
-     * Si no, deriva al login/registro guardando el token en sesión.
+     * Nunca acepta en el GET (los escáneres de enlaces del correo visitan
+     * las URLs solos): si hay sesión con el mismo correo, muestra un botón
+     * de confirmación que dispara el POST. Si no hay sesión, deriva al
+     * login/registro guardando el token en sesión.
      */
     public function mostrar(string $token): Response|RedirectResponse
     {
         $invitacion = Invitacion::with('obra:id,codigo,nombre,entidad_contratante', 'invitador:id,name')
-            ->where('token', $token)
+            ->where('token', Invitacion::hashToken($token))
             ->first();
 
         if (! $invitacion || ! $invitacion->estaActiva()) {
@@ -28,24 +30,10 @@ class InvitacionController extends Controller
         }
 
         $user = request()->user();
-
-        // Mismo correo y sesión activa → aceptar de inmediato.
-        if ($user && strcasecmp($user->email, $invitacion->email) === 0) {
-            $this->aceptar($invitacion);
-
-            if ($invitacion->esGlobal()) {
-                return redirect()
-                    ->route('dashboard')
-                    ->with('success', 'Te uniste a la plataforma como '.$invitacion->rol_global->label().'.');
-            }
-
-            return redirect()
-                ->route('obras.show', $invitacion->obra_id)
-                ->with('success', "Te uniste a la obra {$invitacion->obra->nombre}.");
-        }
+        $puedeAceptar = $user !== null && strcasecmp($user->email, $invitacion->email) === 0;
 
         // Si está autenticado con otro correo, le pedimos cerrar sesión.
-        if ($user) {
+        if ($user && ! $puedeAceptar) {
             return Inertia::render('invitaciones/conflicto', [
                 'invitacion' => [
                     'email' => $invitacion->email,
@@ -57,8 +45,10 @@ class InvitacionController extends Controller
             ]);
         }
 
-        // No autenticado: guardamos el token en sesión y mostramos la pantalla pública.
-        session(['invitacion_token' => $invitacion->token]);
+        // No autenticado: guardamos el token (plano) para retomarlo tras el registro.
+        if (! $user) {
+            session(['invitacion_token' => $token]);
+        }
 
         if ($invitacion->esGlobal()) {
             return Inertia::render('invitaciones/aceptar-global', [
@@ -68,6 +58,8 @@ class InvitacionController extends Controller
                     'invitador' => $invitacion->invitador?->name,
                     'expira_at' => $invitacion->expira_at->format('d/m/Y H:i'),
                 ],
+                'puedeAceptar' => $puedeAceptar,
+                'token' => $puedeAceptar ? $token : null,
             ]);
         }
 
@@ -83,6 +75,8 @@ class InvitacionController extends Controller
                 'invitador' => $invitacion->invitador?->name,
                 'expira_at' => $invitacion->expira_at->format('d/m/Y H:i'),
             ],
+            'puedeAceptar' => $puedeAceptar,
+            'token' => $puedeAceptar ? $token : null,
         ]);
     }
 
@@ -91,7 +85,7 @@ class InvitacionController extends Controller
      */
     public function aceptarAuth(Request $request, string $token): RedirectResponse
     {
-        $invitacion = Invitacion::where('token', $token)->firstOrFail();
+        $invitacion = Invitacion::where('token', Invitacion::hashToken($token))->firstOrFail();
 
         abort_unless($invitacion->estaActiva(), 410, 'La invitación ya no es válida.');
         abort_unless(strcasecmp($request->user()->email, $invitacion->email) === 0, 403);

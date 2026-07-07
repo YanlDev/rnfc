@@ -3,11 +3,58 @@
 namespace App\Services;
 
 use App\Models\Carpeta;
+use App\Models\Documento;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class CarpetaService
 {
+    private const DISCO = 'documentos';
+
+    /**
+     * Elimina la carpeta (la BD borra en cascada subcarpetas y documentos)
+     * y luego los archivos físicos de todo el subárbol.
+     *
+     * El borrado físico se basa en documentos.archivo_path — no en el
+     * directorio de la carpeta — porque al renombrar carpetas la ruta lógica
+     * cambia pero los archivos se quedan en su ruta física original.
+     */
+    public function eliminar(Carpeta $carpeta): void
+    {
+        $carpetaIds = Carpeta::where('obra_id', $carpeta->obra_id)
+            ->where(fn ($q) => $q->whereKey($carpeta->id)
+                ->orWhere('ruta', 'like', $carpeta->ruta.'/%'))
+            ->pluck('id');
+
+        // Incluye versiones históricas (comparten carpeta_id con su raíz).
+        $rutasArchivos = Documento::whereIn('carpeta_id', $carpetaIds)
+            ->pluck('archivo_path')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $carpeta->delete();
+
+        if ($rutasArchivos->isEmpty()) {
+            return;
+        }
+
+        // Best-effort: si el disco remoto falla no revertimos la eliminación
+        // lógica; se registra para poder limpiar los huérfanos después.
+        try {
+            Storage::disk(self::DISCO)->delete($rutasArchivos->all());
+        } catch (\Throwable $e) {
+            Log::warning('No se pudieron borrar archivos físicos al eliminar la carpeta', [
+                'obra_id' => $carpeta->obra_id,
+                'carpeta_ruta' => $carpeta->ruta,
+                'archivos' => $rutasArchivos->count(),
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     /**
      * Renombra una carpeta y recalcula la ruta de todos sus descendientes,
      * reemplazando el prefijo viejo por el nuevo. La metadata organizativa

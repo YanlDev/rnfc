@@ -14,7 +14,13 @@ class InvitacionObra extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public readonly Invitacion $invitacion) {}
+    /**
+     * $tokenPlano viaja solo en el correo; en la BD queda su hash.
+     */
+    public function __construct(
+        public readonly Invitacion $invitacion,
+        public readonly string $tokenPlano,
+    ) {}
 
     public function envelope(): Envelope
     {
@@ -35,7 +41,7 @@ class InvitacionObra extends Mailable implements ShouldQueue
                 'invitacion' => $this->invitacion,
                 'obra' => $this->invitacion->obra,
                 'invitador' => $this->invitacion->invitador,
-                'urlAceptar' => route('invitaciones.mostrar', $this->invitacion->token),
+                'urlAceptar' => route('invitaciones.mostrar', $this->tokenPlano),
                 'rol' => $this->invitacion->rol_obra->label(),
             ],
         );

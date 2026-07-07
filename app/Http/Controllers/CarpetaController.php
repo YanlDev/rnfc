@@ -147,13 +147,13 @@ class CarpetaController extends Controller
             : back();
     }
 
-    public function destroy(Obra $obra, Carpeta $carpeta): RedirectResponse
+    public function destroy(Obra $obra, Carpeta $carpeta, CarpetaService $service): RedirectResponse
     {
         $this->authorize('delete', $carpeta);
         abort_unless($carpeta->obra_id === $obra->id, 404);
 
         $nombre = $carpeta->nombre;
-        $carpeta->delete();
+        $service->eliminar($carpeta);
 
         return back()->with('success', "Carpeta «{$nombre}» eliminada (junto con sus subcarpetas).");
     }

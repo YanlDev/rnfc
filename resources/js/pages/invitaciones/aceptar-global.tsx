@@ -1,5 +1,5 @@
-import { Head, Link } from '@inertiajs/react';
-import { LogIn, Mail, ShieldCheck, UserPlus } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { Check, LogIn, Mail, ShieldCheck, UserPlus } from 'lucide-react';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,9 +11,15 @@ type Props = {
         invitador: string | null;
         expira_at: string;
     };
+    puedeAceptar?: boolean;
+    token?: string | null;
 };
 
-export default function InvitacionAceptarGlobal({ invitacion }: Props) {
+export default function InvitacionAceptarGlobal({
+    invitacion,
+    puedeAceptar,
+    token,
+}: Props) {
     return (
         <>
             <Head title="Invitación a RNFC" />
@@ -59,25 +65,48 @@ export default function InvitacionAceptarGlobal({ invitacion }: Props) {
                             </div>
                         </div>
 
-                        <div className="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">
-                            Para aceptar esta invitación necesitas una cuenta
-                            con el correo <strong>{invitacion.email}</strong>.
-                        </div>
+                        {puedeAceptar && token ? (
+                            <>
+                                <div className="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">
+                                    Tu sesión coincide con el correo invitado.
+                                    Confirma para unirte a la plataforma.
+                                </div>
+                                <Button
+                                    className="w-full"
+                                    onClick={() =>
+                                        router.post(
+                                            `/invitaciones/${token}/aceptar`,
+                                        )
+                                    }
+                                >
+                                    <Check className="size-4" />
+                                    Aceptar invitación
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <div className="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">
+                                    Para aceptar esta invitación necesitas una
+                                    cuenta con el correo{' '}
+                                    <strong>{invitacion.email}</strong>.
+                                </div>
 
-                        <div className="grid gap-2 sm:grid-cols-2">
-                            <Button asChild>
-                                <Link href="/register">
-                                    <UserPlus className="size-4" />
-                                    Crear cuenta
-                                </Link>
-                            </Button>
-                            <Button asChild variant="outline">
-                                <Link href="/login">
-                                    <LogIn className="size-4" />
-                                    Ya tengo cuenta
-                                </Link>
-                            </Button>
-                        </div>
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                    <Button asChild>
+                                        <Link href="/register">
+                                            <UserPlus className="size-4" />
+                                            Crear cuenta
+                                        </Link>
+                                    </Button>
+                                    <Button asChild variant="outline">
+                                        <Link href="/login">
+                                            <LogIn className="size-4" />
+                                            Ya tengo cuenta
+                                        </Link>
+                                    </Button>
+                                </div>
+                            </>
+                        )}
                     </CardContent>
                 </Card>
             </div>

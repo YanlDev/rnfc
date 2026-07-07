@@ -557,6 +557,32 @@ export default function DocumentosIndex({
                                 </Button>
                             </div>
                         )}
+                        {mostrandoNuevaRaiz && puedeAdministrar && (
+                            <form
+                                onSubmit={crearRaiz}
+                                className="mx-auto mt-4 flex w-full max-w-xs items-center gap-1"
+                            >
+                                <Input
+                                    autoFocus
+                                    placeholder="Nombre de la carpeta…"
+                                    value={formRaiz.data.nombre}
+                                    onChange={(e) =>
+                                        formRaiz.setData(
+                                            'nombre',
+                                            e.target.value,
+                                        )
+                                    }
+                                    className="h-8 text-sm"
+                                />
+                                <Button
+                                    size="sm"
+                                    type="submit"
+                                    disabled={formRaiz.processing}
+                                >
+                                    OK
+                                </Button>
+                            </form>
+                        )}
                     </Card>
                 ) : (
                     <div className="grid flex-1 gap-4 lg:grid-cols-[320px_1fr]">

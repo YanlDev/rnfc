@@ -43,33 +43,40 @@ Route::get('invitaciones/{token}', [InvitacionController::class, 'mostrar'])
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
-    // Panel de Administración (acceso restringido a admin/gerente general)
-    Route::get('admin', AdminController::class)->name('admin.index');
+    // Panel de Administración: todo lo que cuelga de /admin exige rol global
+    // administrativo (middleware alias "admin" → EnsureUserIsAdmin).
+    Route::middleware('admin')->group(function () {
+        Route::get('admin', AdminController::class)->name('admin.index');
 
-    // Gestión de usuarios (admin / gerente general)
-    Route::get('admin/usuarios', [UsuariosController::class, 'index'])
-        ->name('admin.usuarios.index');
-    Route::patch('admin/usuarios/{usuario}/toggle-activo', [UsuariosController::class, 'toggleActivo'])
-        ->name('admin.usuarios.toggle-activo');
-    Route::patch('admin/usuarios/{usuario}/rol', [UsuariosController::class, 'cambiarRol'])
-        ->name('admin.usuarios.rol');
-    Route::delete('admin/usuarios/{usuario}', [UsuariosController::class, 'eliminar'])
-        ->name('admin.usuarios.eliminar');
-    Route::patch('admin/usuarios/{usuario}/restaurar', [UsuariosController::class, 'restaurar'])
-        ->name('admin.usuarios.restaurar')
-        ->withTrashed();
-    // Matriz de permisos por rol de obra
-    Route::get('admin/permisos', [PermisosController::class, 'index'])
-        ->name('admin.permisos.index');
-    Route::put('admin/permisos', [PermisosController::class, 'update'])
-        ->name('admin.permisos.update');
+        // Gestión de usuarios
+        Route::get('admin/usuarios', [UsuariosController::class, 'index'])
+            ->name('admin.usuarios.index');
+        Route::patch('admin/usuarios/{usuario}/toggle-activo', [UsuariosController::class, 'toggleActivo'])
+            ->name('admin.usuarios.toggle-activo');
+        Route::patch('admin/usuarios/{usuario}/rol', [UsuariosController::class, 'cambiarRol'])
+            ->name('admin.usuarios.rol');
+        Route::delete('admin/usuarios/{usuario}', [UsuariosController::class, 'eliminar'])
+            ->name('admin.usuarios.eliminar');
+        Route::patch('admin/usuarios/{usuario}/restaurar', [UsuariosController::class, 'restaurar'])
+            ->name('admin.usuarios.restaurar')
+            ->withTrashed();
 
-    Route::post('admin/invitar', [InvitacionGlobalController::class, 'store'])
-        ->name('admin.invitar');
-    Route::delete('admin/invitaciones/{invitacion}', [InvitacionGlobalController::class, 'cancelar'])
-        ->name('admin.invitaciones.cancelar');
-    Route::post('admin/invitaciones/{invitacion}/reenviar', [InvitacionGlobalController::class, 'reenviar'])
-        ->name('admin.invitaciones.reenviar');
+        // Matriz de permisos por rol de obra
+        Route::get('admin/permisos', [PermisosController::class, 'index'])
+            ->name('admin.permisos.index');
+        Route::put('admin/permisos', [PermisosController::class, 'update'])
+            ->name('admin.permisos.update');
+
+        // Invitaciones globales (throttle: cada intento puede enviar un correo)
+        Route::post('admin/invitar', [InvitacionGlobalController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('admin.invitar');
+        Route::delete('admin/invitaciones/{invitacion}', [InvitacionGlobalController::class, 'cancelar'])
+            ->name('admin.invitaciones.cancelar');
+        Route::post('admin/invitaciones/{invitacion}/reenviar', [InvitacionGlobalController::class, 'reenviar'])
+            ->middleware('throttle:10,1')
+            ->name('admin.invitaciones.reenviar');
+    });
 
     // Obras
     Route::resource('obras', ObraController::class);
@@ -133,11 +140,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Equipo de una obra
     Route::get('obras/{obra}/equipo', [EquipoObraController::class, 'index'])->name('obras.equipo.index');
-    Route::post('obras/{obra}/equipo/invitar', [EquipoObraController::class, 'invitar'])->name('obras.equipo.invitar');
+    Route::post('obras/{obra}/equipo/invitar', [EquipoObraController::class, 'invitar'])
+        ->middleware('throttle:10,1')
+        ->name('obras.equipo.invitar');
     Route::patch('obras/{obra}/equipo/{usuario}', [EquipoObraController::class, 'cambiarRol'])->name('obras.equipo.cambiar-rol');
     Route::delete('obras/{obra}/equipo/{usuario}', [EquipoObraController::class, 'remover'])->name('obras.equipo.remover');
     Route::delete('obras/{obra}/invitaciones/{invitacion}', [EquipoObraController::class, 'cancelarInvitacion'])->name('obras.invitaciones.cancelar');
-    Route::post('obras/{obra}/invitaciones/{invitacion}/reenviar', [EquipoObraController::class, 'reenviarInvitacion'])->name('obras.invitaciones.reenviar');
+    Route::post('obras/{obra}/invitaciones/{invitacion}/reenviar', [EquipoObraController::class, 'reenviarInvitacion'])
+        ->middleware('throttle:10,1')
+        ->name('obras.invitaciones.reenviar');
 
     // Aceptar invitación cuando ya hay sesión con el mismo correo
     Route::post('invitaciones/{token}/aceptar', [InvitacionController::class, 'aceptarAuth'])->name('invitaciones.aceptar');

@@ -8,8 +8,6 @@ use App\Models\Invitacion;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -18,20 +16,12 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class UsuariosController extends Controller implements HasMiddleware
+/**
+ * Las rutas de este controlador viven bajo el grupo middleware('admin')
+ * (ver routes/web.php): solo roles globales administrativos llegan aquí.
+ */
+class UsuariosController extends Controller
 {
-    public static function middleware(): array
-    {
-        return [
-            new Middleware(function (Request $request, \Closure $next) {
-                $user = $request->user();
-                abort_unless($user && $user->hasAnyRole(RolGlobal::rolesAdministrativos()), 403);
-
-                return $next($request);
-            }),
-        ];
-    }
-
     /**
      * Listado de usuarios con búsqueda y filtros.
      */
@@ -67,15 +57,22 @@ class UsuariosController extends Controller implements HasMiddleware
 
         $usuarios = $query->paginate(20)->withQueryString();
 
-        // KPIs
+        // KPIs: una pasada sobre users + una query para admins (whereHas roles).
+        $conteos = User::withTrashed()
+            ->selectRaw('SUM(CASE WHEN deleted_at IS NULL THEN 1 ELSE 0 END) AS total')
+            ->selectRaw('SUM(CASE WHEN deleted_at IS NULL AND desactivado_at IS NULL THEN 1 ELSE 0 END) AS activos')
+            ->selectRaw('SUM(CASE WHEN deleted_at IS NULL AND desactivado_at IS NOT NULL THEN 1 ELSE 0 END) AS desactivados')
+            ->selectRaw('SUM(CASE WHEN deleted_at IS NOT NULL THEN 1 ELSE 0 END) AS eliminados')
+            ->first();
+
         $kpis = [
-            'total' => User::count(),
-            'activos' => User::activos()->count(),
-            'desactivados' => User::desactivados()->count(),
+            'total' => (int) $conteos->total,
+            'activos' => (int) $conteos->activos,
+            'desactivados' => (int) $conteos->desactivados,
             'admins' => User::whereHas('roles', fn ($qb) => $qb->where('name', RolGlobal::Admin->value))
                 ->activos()
                 ->count(),
-            'eliminados' => User::onlyTrashed()->count(),
+            'eliminados' => (int) $conteos->eliminados,
         ];
 
         return Inertia::render('admin/usuarios', [
@@ -157,28 +154,28 @@ class UsuariosController extends Controller implements HasMiddleware
 
         if ($usuario->estaActivo()) {
             // Vamos a desactivarlo. Validar que no sea el último admin activo.
-            if ($usuario->hasRole(RolGlobal::Admin->value)) {
-                $adminsActivos = User::whereHas('roles', fn ($q) => $q->where('name', RolGlobal::Admin->value))
-                    ->activos()
-                    ->count();
+            DB::transaction(function () use ($request, $usuario) {
+                if ($usuario->hasRole(RolGlobal::Admin->value)) {
+                    $this->bloquearOperacionesDeAdmin();
 
-                if ($adminsActivos <= 1) {
-                    throw ValidationException::withMessages([
-                        'usuario' => 'No puedes desactivar al único administrador activo.',
-                    ]);
+                    if (! $this->hayOtroAdminActivo($usuario)) {
+                        throw ValidationException::withMessages([
+                            'usuario' => 'No puedes desactivar al único administrador activo.',
+                        ]);
+                    }
                 }
-            }
 
-            $usuario->forceFill([
-                'desactivado_at' => now(),
-                'desactivado_por' => $request->user()->id,
-                'motivo_desactivacion' => $request->input('motivo'),
-            ])->save();
+                $usuario->forceFill([
+                    'desactivado_at' => now(),
+                    'desactivado_por' => $request->user()->id,
+                    'motivo_desactivacion' => $request->input('motivo'),
+                ])->save();
 
-            // Cerrar sesiones activas del usuario
-            DB::table('sessions')
-                ->where('user_id', $usuario->id)
-                ->delete();
+                // Cerrar sesiones activas del usuario
+                DB::table('sessions')
+                    ->where('user_id', $usuario->id)
+                    ->delete();
+            });
 
             Log::warning('Usuario desactivado', [
                 'usuario_id' => $usuario->id,
@@ -221,21 +218,20 @@ class UsuariosController extends Controller implements HasMiddleware
             return redirect()->route('admin.usuarios.index');
         }
 
-        // Si está quitando admin, validar que quede al menos otro admin activo
-        if ($rolActual === RolGlobal::Admin->value && $nuevoRol !== RolGlobal::Admin->value) {
-            $otrosAdmins = User::whereHas('roles', fn ($q) => $q->where('name', RolGlobal::Admin->value))
-                ->where('id', '!=', $usuario->id)
-                ->activos()
-                ->count();
+        DB::transaction(function () use ($usuario, $rolActual, $nuevoRol) {
+            // Si está quitando admin, validar que quede al menos otro admin activo
+            if ($rolActual === RolGlobal::Admin->value && $nuevoRol !== RolGlobal::Admin->value) {
+                $this->bloquearOperacionesDeAdmin();
 
-            if ($otrosAdmins === 0) {
-                throw ValidationException::withMessages([
-                    'rol' => 'No puedes quitar el rol de Administrador al único admin del sistema.',
-                ]);
+                if (! $this->hayOtroAdminActivo($usuario)) {
+                    throw ValidationException::withMessages([
+                        'rol' => 'No puedes quitar el rol de Administrador al único admin del sistema.',
+                    ]);
+                }
             }
-        }
 
-        $usuario->syncRoles([$nuevoRol]);
+            $usuario->syncRoles([$nuevoRol]);
+        });
 
         Log::info('Rol global actualizado', [
             'usuario_id' => $usuario->id,
@@ -260,26 +256,31 @@ class UsuariosController extends Controller implements HasMiddleware
             ]);
         }
 
-        // No dejar el sistema sin ningún administrador activo.
-        if ($usuario->hasRole(RolGlobal::Admin->value)) {
-            $otrosAdmins = User::whereHas('roles', fn ($q) => $q->where('name', RolGlobal::Admin->value))
-                ->where('id', '!=', $usuario->id)
-                ->activos()
-                ->count();
+        DB::transaction(function () use ($usuario) {
+            // No dejar el sistema sin ningún administrador activo.
+            if ($usuario->hasRole(RolGlobal::Admin->value)) {
+                $this->bloquearOperacionesDeAdmin();
 
-            if ($otrosAdmins === 0) {
-                throw ValidationException::withMessages([
-                    'usuario' => 'No puedes eliminar al único administrador activo.',
-                ]);
+                if (! $this->hayOtroAdminActivo($usuario)) {
+                    throw ValidationException::withMessages([
+                        'usuario' => 'No puedes eliminar al único administrador activo.',
+                    ]);
+                }
             }
-        }
 
-        // Cerrar sesiones activas para revocar el acceso de inmediato.
-        DB::table('sessions')
-            ->where('user_id', $usuario->id)
-            ->delete();
+            // Cerrar sesiones activas para revocar el acceso de inmediato.
+            DB::table('sessions')
+                ->where('user_id', $usuario->id)
+                ->delete();
 
-        $usuario->delete();
+            // No dejar enlaces de invitación vivos apuntando a una cuenta
+            // en papelera (no podrían completarse jamás).
+            Invitacion::where('email', $usuario->email)
+                ->pendientes()
+                ->update(['cancelada_at' => now()]);
+
+            $usuario->delete();
+        });
 
         Log::warning('Usuario eliminado (papelera)', [
             'usuario_id' => $usuario->id,
@@ -308,5 +309,30 @@ class UsuariosController extends Controller implements HasMiddleware
 
         return redirect()->route('admin.usuarios.index')
             ->with('success', "Usuario {$usuario->name} restaurado.");
+    }
+
+    /**
+     * Serializa las operaciones que pueden dejar el sistema sin admins:
+     * dentro de una transacción, todas compiten por el lock de la misma
+     * fila del rol admin, así el check-then-act no tiene carrera (dos
+     * admins desactivándose mutuamente a la vez, por ejemplo).
+     */
+    private function bloquearOperacionesDeAdmin(): void
+    {
+        DB::table('roles')
+            ->where('name', RolGlobal::Admin->value)
+            ->lockForUpdate()
+            ->first();
+    }
+
+    /**
+     * ¿Queda al menos otro administrador activo además de $usuario?
+     */
+    private function hayOtroAdminActivo(User $usuario): bool
+    {
+        return User::whereHas('roles', fn ($q) => $q->where('name', RolGlobal::Admin->value))
+            ->where('id', '!=', $usuario->id)
+            ->activos()
+            ->exists();
     }
 }

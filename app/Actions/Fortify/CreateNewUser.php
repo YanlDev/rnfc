@@ -54,7 +54,7 @@ class CreateNewUser implements CreatesNewUsers
     private function tieneInvitacionActiva(string $email): bool
     {
         return Invitacion::query()
-            ->whereRaw('LOWER(email) = ?', [strtolower($email)])
+            ->where('email', mb_strtolower(trim($email)))
             ->whereNull('aceptada_at')
             ->whereNull('cancelada_at')
             ->where('expira_at', '>', now())
@@ -71,9 +71,7 @@ class CreateNewUser implements CreatesNewUsers
         $tokenSesion = session('invitacion_token');
 
         $query = Invitacion::query()
-            ->where(function ($q) use ($user) {
-                $q->whereRaw('LOWER(email) = ?', [strtolower($user->email)]);
-            })
+            ->where('email', $user->email)
             ->whereNull('aceptada_at')
             ->whereNull('cancelada_at')
             ->where('expira_at', '>', now());
