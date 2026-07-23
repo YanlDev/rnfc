@@ -32,6 +32,33 @@ class Obra extends Model
         'creado_por',
     ];
 
+    /**
+     * Genera el siguiente código secuencial OBR-YYYY-NNNN del año en curso.
+     * El código no lo elige el usuario: se asigna siempre en el servidor.
+     */
+    public static function generarCodigo(): string
+    {
+        $anio = (int) now()->format('Y');
+        $prefijo = "OBR-{$anio}-";
+
+        $ultima = self::query()
+            ->where('codigo', 'like', $prefijo.'%')
+            ->orderByDesc('codigo')
+            ->value('codigo');
+
+        $siguiente = 1;
+        if ($ultima && preg_match('/-(\d+)$/', $ultima, $m)) {
+            $siguiente = ((int) $m[1]) + 1;
+        }
+
+        // Por si existen huecos o códigos manuales antiguos que colisionen.
+        do {
+            $codigo = $prefijo.str_pad((string) $siguiente++, 4, '0', STR_PAD_LEFT);
+        } while (self::where('codigo', $codigo)->exists());
+
+        return $codigo;
+    }
+
     protected function casts(): array
     {
         return [

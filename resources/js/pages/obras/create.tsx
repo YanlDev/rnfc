@@ -10,12 +10,11 @@ import ObraFormFields, {
 
 type Props = {
     estados: EstadoOpcion[];
-    codigoSugerido: string;
 };
 
-export default function ObraCreate({ estados, codigoSugerido }: Props) {
+export default function ObraCreate({ estados }: Props) {
     const form = useForm<ObraFormData>({
-        codigo: codigoSugerido,
+        codigo: '',
         nombre: '',
         descripcion: '',
         ubicacion: '',
@@ -57,6 +56,7 @@ export default function ObraCreate({ estados, codigoSugerido }: Props) {
                     errors={form.errors}
                     setData={form.setData}
                     estados={estados}
+                    codigoAuto
                 />
             </form>
         </>

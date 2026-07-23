@@ -115,12 +115,16 @@ export default function AdminPermisos({
                         <SelectTrigger className="w-full sm:w-80">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="max-h-72 max-w-[min(var(--radix-select-trigger-width),calc(100vw-2rem))]">
                             <SelectItem value={DEFECTO}>
                                 Por defecto (todas las obras)
                             </SelectItem>
                             {obras.map((o) => (
-                                <SelectItem key={o.id} value={String(o.id)}>
+                                <SelectItem
+                                    key={o.id}
+                                    value={String(o.id)}
+                                    className="whitespace-normal"
+                                >
                                     {o.nombre}
                                     {o.personalizada ? ' — personalizada' : ''}
                                 </SelectItem>

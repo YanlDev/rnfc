@@ -305,10 +305,13 @@ export default function CertificadoCreate({ tipos, obras }: Props) {
                                                     form.setData('obra_id', v)
                                                 }
                                             >
-                                                <SelectTrigger id="obra_id">
+                                                <SelectTrigger
+                                                    id="obra_id"
+                                                    className="w-full"
+                                                >
                                                     <SelectValue placeholder="Selecciona la obra del sistema" />
                                                 </SelectTrigger>
-                                                <SelectContent>
+                                                <SelectContent className="max-h-72 max-w-[min(var(--radix-select-trigger-width),calc(100vw-2rem))]">
                                                     {obras.length === 0 && (
                                                         <div className="p-2 text-sm text-muted-foreground">
                                                             No hay obras registradas todavía.
@@ -318,6 +321,7 @@ export default function CertificadoCreate({ tipos, obras }: Props) {
                                                         <SelectItem
                                                             key={o.id}
                                                             value={String(o.id)}
+                                                            className="whitespace-normal"
                                                         >
                                                             {o.label}
                                                         </SelectItem>

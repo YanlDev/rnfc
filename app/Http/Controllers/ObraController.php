@@ -73,7 +73,6 @@ class ObraController extends Controller
 
         return Inertia::render('obras/create', [
             'estados' => $this->estadosOpciones(),
-            'codigoSugerido' => $this->sugerirCodigo(),
         ]);
     }
 
@@ -81,6 +80,7 @@ class ObraController extends Controller
     {
         $obra = Obra::create([
             ...$request->validated(),
+            'codigo' => Obra::generarCodigo(),
             'creado_por' => $request->user()?->id,
         ]);
 
@@ -191,26 +191,6 @@ class ObraController extends Controller
         return collect(EstadoObra::cases())
             ->map(fn (EstadoObra $e) => ['value' => $e->value, 'label' => $e->label()])
             ->all();
-    }
-
-    /**
-     * Sugiere un código secuencial OBR-YYYY-NNNN basado en el último registro del año.
-     */
-    private function sugerirCodigo(): string
-    {
-        $anio = (int) now()->format('Y');
-        $prefijo = "OBR-{$anio}-";
-        $ultima = Obra::query()
-            ->where('codigo', 'like', $prefijo.'%')
-            ->orderByDesc('codigo')
-            ->value('codigo');
-
-        $siguiente = 1;
-        if ($ultima && preg_match('/-(\d+)$/', $ultima, $m)) {
-            $siguiente = ((int) $m[1]) + 1;
-        }
-
-        return $prefijo.str_pad((string) $siguiente, 4, '0', STR_PAD_LEFT);
     }
 
     /**

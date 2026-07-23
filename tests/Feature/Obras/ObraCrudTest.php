@@ -53,7 +53,6 @@ it('admin puede crear una obra', function () {
 
     $this->actingAs($admin)
         ->post(route('obras.store'), [
-            'codigo' => 'OBR-2026-0001',
             'nombre' => 'Mejoramiento de pistas Av. Los Olivos',
             'estado' => EstadoObra::Planificacion->value,
             'entidad_contratante' => 'Municipalidad de Lima',
@@ -61,28 +60,33 @@ it('admin puede crear una obra', function () {
         ])
         ->assertRedirect();
 
-    $obra = Obra::where('codigo', 'OBR-2026-0001')->first();
+    $obra = Obra::first();
     expect($obra)->not->toBeNull();
+    expect($obra->codigo)->toMatch('/^OBR-\d{4}-\d{4}$/');
     expect($obra->creado_por)->toBe($admin->id);
     expect($obra->estado)->toBe(EstadoObra::Planificacion);
 });
 
-it('código de obra debe ser único', function () {
-    Obra::factory()->create(['codigo' => 'OBR-2026-0001']);
+it('el código se autogenera secuencial e ignora el que envíe el cliente', function () {
+    $anio = now()->format('Y');
+    Obra::factory()->create(['codigo' => "OBR-{$anio}-0001"]);
 
     $this->actingAs(adminUser())
         ->post(route('obras.store'), [
-            'codigo' => 'OBR-2026-0001',
+            // Intento de imponer un código manual: debe ignorarse.
+            'codigo' => 'HACKEADO-999',
             'nombre' => 'Otra obra',
             'estado' => EstadoObra::Planificacion->value,
         ])
-        ->assertSessionHasErrors('codigo');
+        ->assertRedirect();
+
+    $nueva = Obra::where('nombre', 'Otra obra')->first();
+    expect($nueva->codigo)->toBe("OBR-{$anio}-0002");
 });
 
 it('fecha fin prevista debe ser posterior al inicio', function () {
     $this->actingAs(adminUser())
         ->post(route('obras.store'), [
-            'codigo' => 'OBR-2026-0002',
             'nombre' => 'Obra mal fechada',
             'estado' => EstadoObra::Planificacion->value,
             'fecha_inicio' => '2026-06-01',

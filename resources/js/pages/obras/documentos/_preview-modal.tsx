@@ -1,10 +1,12 @@
 import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import OfficePreview, { tipoOffice } from './_office-preview';
 
 export type DocumentoPreview = {
     id: number;
     nombre: string;
     mime: string;
+    tamano: number;
     tamano_humano: string;
     version: number;
     es_imagen: boolean;
@@ -72,6 +74,14 @@ export default function PreviewModal({ documento, onClose }: Props) {
                         src={documento.url_preview}
                         title={documento.nombre}
                         className="h-full w-full max-w-5xl rounded-md border-0 bg-white shadow-2xl"
+                    />
+                ) : tipoOffice(documento.nombre) ? (
+                    <OfficePreview
+                        key={documento.id}
+                        tipo={tipoOffice(documento.nombre)!}
+                        url={documento.url_preview}
+                        nombre={documento.nombre}
+                        urlDescarga={documento.url_descarga}
                     />
                 ) : (
                     <div className="max-w-md rounded-lg bg-card p-8 text-center">

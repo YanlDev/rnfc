@@ -1,13 +1,16 @@
 import { router } from '@inertiajs/react';
 import {
     Download,
+    DraftingCompass,
     Eye,
     File,
+    FileArchive,
     FileImage,
     FileSpreadsheet,
     FileText,
     History,
     Loader2,
+    Presentation,
     Trash2,
     Upload,
 } from 'lucide-react';
@@ -17,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type { FaseSubida } from '@/lib/chunked-upload';
 import { ACCEPT_ATTR, subirDocumento } from '@/lib/subir-documento';
+import PdfThumbnail from './_pdf-thumbnail';
 import type { DocumentoPreview } from './_preview-modal';
 
 export type DocumentoCardData = DocumentoPreview & {
@@ -33,34 +37,88 @@ type Props = {
     variant?: 'grid' | 'lista';
 };
 
-function IconoArchivo({
-    mime,
-    className,
-}: {
-    mime: string;
-    className: string;
-}) {
+type TipoVisual = {
+    Icono: React.ComponentType<{ className?: string }>;
+    color: string; // clase de color del icono y la etiqueta
+    etiqueta: string; // extensión visible (PDF, DOCX, ZIP…)
+};
+
+/**
+ * Icono + color + etiqueta según la extensión (con el MIME de respaldo),
+ * para que ZIP, XLSX, DOCX, DWG… se distingan de un vistazo.
+ */
+function tipoVisual(nombre: string, mime: string): TipoVisual {
+    const ext = (nombre.split('.').pop() ?? '').toLowerCase();
+    const etiqueta = ext.toUpperCase();
+
     if (mime.startsWith('image/')) {
-        return <FileImage className={className} />;
+        return { Icono: FileImage, color: 'text-violet-500', etiqueta };
     }
-
-    if (mime === 'application/pdf') {
-        return <FileText className={className} />;
+    if (ext === 'pdf' || mime === 'application/pdf') {
+        return { Icono: FileText, color: 'text-red-500', etiqueta: 'PDF' };
     }
-
     if (
+        ['xls', 'xlsx', 'csv'].includes(ext) ||
         mime.includes('spreadsheet') ||
         mime.includes('excel') ||
         mime.includes('csv')
     ) {
-        return <FileSpreadsheet className={className} />;
+        return { Icono: FileSpreadsheet, color: 'text-emerald-600', etiqueta };
+    }
+    if (['doc', 'docx'].includes(ext) || mime.includes('word')) {
+        return { Icono: FileText, color: 'text-blue-600', etiqueta };
+    }
+    if (['ppt', 'pptx'].includes(ext) || mime.includes('presentation')) {
+        return { Icono: Presentation, color: 'text-orange-500', etiqueta };
+    }
+    if (
+        ['zip', 'rar', '7z'].includes(ext) ||
+        mime.includes('zip') ||
+        mime.includes('compressed')
+    ) {
+        return { Icono: FileArchive, color: 'text-amber-600', etiqueta };
+    }
+    if (['dwg', 'dxf'].includes(ext)) {
+        return { Icono: DraftingCompass, color: 'text-cyan-600', etiqueta };
+    }
+    if (ext === 'txt') {
+        return { Icono: FileText, color: 'text-muted-foreground', etiqueta };
     }
 
-    if (mime.includes('word') || mime.includes('document')) {
-        return <FileText className={className} />;
+    return {
+        Icono: File,
+        color: 'text-muted-foreground',
+        etiqueta: etiqueta || 'ARCHIVO',
+    };
+}
+
+function IconoArchivo({
+    nombre,
+    mime,
+    className,
+    conEtiqueta = false,
+}: {
+    nombre: string;
+    mime: string;
+    className: string;
+    conEtiqueta?: boolean;
+}) {
+    const { Icono, color, etiqueta } = tipoVisual(nombre, mime);
+
+    if (!conEtiqueta) {
+        return <Icono className={`${className} ${color}`} />;
     }
 
-    return <File className={className} />;
+    return (
+        <div className="flex flex-col items-center gap-1">
+            <Icono className={`${className} ${color}`} />
+            <span
+                className={`text-[10px] font-bold tracking-widest ${color}`}
+            >
+                {etiqueta}
+            </span>
+        </div>
+    );
 }
 
 export default function DocumentoCard({
@@ -150,8 +208,9 @@ export default function DocumentoCard({
                         />
                     ) : (
                         <IconoArchivo
+                            nombre={documento.nombre}
                             mime={documento.mime}
-                            className="size-7 shrink-0 text-muted-foreground"
+                            className="size-7 shrink-0"
                         />
                     )}
                     <div className="min-w-0">
@@ -243,10 +302,25 @@ export default function DocumentoCard({
                         className="size-full object-cover transition-transform group-hover:scale-105"
                         loading="lazy"
                     />
+                ) : documento.es_pdf ? (
+                    <PdfThumbnail
+                        url={documento.url_preview}
+                        tamano={documento.tamano}
+                        fallback={
+                            <IconoArchivo
+                                nombre={documento.nombre}
+                                mime={documento.mime}
+                                className="size-12 transition-transform group-hover:scale-110"
+                                conEtiqueta
+                            />
+                        }
+                    />
                 ) : (
                     <IconoArchivo
+                        nombre={documento.nombre}
                         mime={documento.mime}
-                        className="size-14 text-muted-foreground transition-transform group-hover:scale-110"
+                        className="size-12 transition-transform group-hover:scale-110"
+                        conEtiqueta
                     />
                 )}
                 <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">

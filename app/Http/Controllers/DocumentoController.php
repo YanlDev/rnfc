@@ -123,6 +123,7 @@ class DocumentoController extends Controller
             $documento->archivo_path,
             $documento->nombre_original,
             $documento->mime,
+            cachePrivado: true,
         );
     }
 }

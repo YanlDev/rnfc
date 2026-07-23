@@ -41,6 +41,8 @@ type Props = {
     errors: Partial<Record<keyof ObraFormData, string>>;
     setData: <K extends keyof ObraFormData>(k: K, v: ObraFormData[K]) => void;
     estados: EstadoOpcion[];
+    /** En creación el código lo genera el servidor y no se edita. */
+    codigoAuto?: boolean;
 };
 
 function SeccionHeader({
@@ -72,6 +74,7 @@ export default function ObraFormFields({
     errors,
     setData,
     estados,
+    codigoAuto = false,
 }: Props) {
     return (
         <div className="flex flex-col gap-6">
@@ -83,14 +86,32 @@ export default function ObraFormFields({
                 />
                 <CardContent className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
-                        <Label htmlFor="codigo">Código *</Label>
-                        <Input
-                            id="codigo"
-                            value={data.codigo}
-                            onChange={(e) => setData('codigo', e.target.value)}
-                            placeholder="OBR-2026-0001"
-                        />
-                        <InputError message={errors.codigo} />
+                        <Label htmlFor="codigo">Código</Label>
+                        {codigoAuto ? (
+                            <>
+                                <Input
+                                    id="codigo"
+                                    disabled
+                                    placeholder="Se genera automáticamente"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Se asignará al crear la obra (formato
+                                    OBR-AAAA-NNNN).
+                                </p>
+                            </>
+                        ) : (
+                            <>
+                                <Input
+                                    id="codigo"
+                                    value={data.codigo}
+                                    onChange={(e) =>
+                                        setData('codigo', e.target.value)
+                                    }
+                                    placeholder="OBR-2026-0001"
+                                />
+                                <InputError message={errors.codigo} />
+                            </>
+                        )}
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="estado">Estado *</Label>

@@ -19,8 +19,9 @@ class StoreObraRequest extends FormRequest
      */
     public function rules(): array
     {
+        // El código NO se acepta del cliente: se autogenera en el servidor
+        // (ver Obra::generarCodigo y ObraController@store).
         return [
-            'codigo' => ['required', 'string', 'max:50', 'unique:obras,codigo'],
             'nombre' => ['required', 'string', 'max:5000'],
             'descripcion' => ['nullable', 'string', 'max:2000'],
             'ubicacion' => ['nullable', 'string', 'max:255'],
@@ -41,8 +42,6 @@ class StoreObraRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'codigo.required' => 'El código de la obra es obligatorio.',
-            'codigo.unique' => 'Ya existe una obra con este código.',
             'nombre.required' => 'El nombre de la obra es obligatorio.',
             'estado.required' => 'El estado de la obra es obligatorio.',
             'fecha_fin_prevista.after_or_equal' => 'La fecha de fin prevista debe ser posterior al inicio.',

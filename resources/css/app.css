@@ -200,3 +200,30 @@
         animation: none;
     }
 }
+
+/* === Previsualización de hojas de cálculo (SheetJS → tabla HTML) === */
+.hoja-preview table {
+    border-collapse: collapse;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+.hoja-preview td {
+    border: 1px solid #e5e7eb;
+    padding: 3px 8px;
+    white-space: nowrap;
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.hoja-preview tr:first-child td {
+    background: #f9fafb;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+}
+
+/* Página del .docx centrada sobre fondo gris (docx-preview) */
+.docx-preview-wrap .docx-wrapper {
+    background: transparent;
+    padding: 16px;
+}
