@@ -17,6 +17,7 @@ class Alquiler extends Model
     protected $fillable = [
         'obra_id',
         'inquilino',
+        'arrendador',
         'monto_mensual',
         'forma_pago',
         'fecha_inicio',

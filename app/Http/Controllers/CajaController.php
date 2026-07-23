@@ -242,6 +242,7 @@ class CajaController extends Controller
         return [
             'id' => $a->id,
             'inquilino' => $a->inquilino,
+            'arrendador' => $a->arrendador,
             'monto_mensual' => (float) $a->monto_mensual,
             'forma_pago' => $a->forma_pago->value,
             'forma_pago_label' => $a->forma_pago->label(),

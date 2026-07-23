@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import { Plus, Trash2 } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { CeldaFecha, CeldaMonto, CeldaSelect, CeldaTexto } from './_celdas';
 import type { Movimiento, Opcion } from './index';
 
@@ -20,6 +20,9 @@ const soles = (n: number) =>
 
 const recargar = () => router.reload({ only: ['movimientos', 'resumen'] });
 
+const entrada =
+    'w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm outline-none placeholder:text-muted-foreground/50 focus:ring-1 focus:ring-primary/40';
+
 export default function TablaDepositos({
     obraId,
     depositos,
@@ -33,7 +36,6 @@ export default function TablaDepositos({
     const filaVacia = { fecha: hoy, metodo: 'yape', descripcion: '', monto: '' };
     const [nueva, setNueva] = useState(filaVacia);
     const [guardando, setGuardando] = useState(false);
-    const primeraCeldaRef = useRef<HTMLInputElement>(null);
 
     const nuevaCompleta = nueva.fecha !== '' && parseFloat(nueva.monto) > 0;
 
@@ -63,7 +65,6 @@ export default function TablaDepositos({
                 onSuccess: () => {
                     setNueva({ ...filaVacia, fecha: nueva.fecha });
                     recargar();
-                    primeraCeldaRef.current?.focus();
                 },
                 onFinish: () => setGuardando(false),
             },
@@ -95,48 +96,120 @@ export default function TablaDepositos({
         });
     };
 
+    const total = depositos.reduce((s, m) => s + m.monto, 0);
+
     return (
-        <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] border-collapse text-sm">
-                <thead>
-                    <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-                        <th className="w-36 px-2 py-2 font-medium">Fecha</th>
-                        <th className="w-36 px-2 py-2 font-medium">Vía</th>
-                        <th className="px-2 py-2 font-medium">Detalle</th>
-                        <th className="w-28 px-2 py-2 text-right font-medium">
-                            Monto S/
-                        </th>
-                        <th className="w-12 px-2 py-2" />
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                    {depositos.map((m) => (
-                        <tr key={m.id} className="group hover:bg-muted/30">
-                            <td>
-                                <CeldaFecha
-                                    valor={m.fecha ?? ''}
-                                    max={hoy}
-                                    deshabilitado={!puedeEditar}
-                                    onConfirmar={(v) =>
-                                        actualizar(m, 'fecha', v)
-                                    }
-                                />
-                            </td>
-                            <td>
-                                <CeldaSelect
-                                    valor={m.metodo ?? ''}
-                                    opciones={metodos}
-                                    deshabilitado={!puedeEditar}
-                                    placeholder="—"
-                                    onConfirmar={(v) =>
-                                        actualizar(m, 'metodo', v)
-                                    }
-                                />
-                            </td>
-                            <td>
+        <div>
+            {/* ===================== DESKTOP: tabla ===================== */}
+            <div className="hidden overflow-x-auto md:block">
+                <table className="w-full border-collapse text-sm">
+                    <thead>
+                        <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                            <th className="w-36 px-2 py-2 font-medium">
+                                Fecha
+                            </th>
+                            <th className="w-36 px-2 py-2 font-medium">Vía</th>
+                            <th className="px-2 py-2 font-medium">Detalle</th>
+                            <th className="w-28 px-2 py-2 text-right font-medium">
+                                Monto S/
+                            </th>
+                            <th className="w-12 px-2 py-2" />
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                        {depositos.map((m) => (
+                            <tr key={m.id} className="group hover:bg-muted/30">
+                                <td>
+                                    <CeldaFecha
+                                        valor={m.fecha ?? ''}
+                                        max={hoy}
+                                        deshabilitado={!puedeEditar}
+                                        onConfirmar={(v) =>
+                                            actualizar(m, 'fecha', v)
+                                        }
+                                    />
+                                </td>
+                                <td>
+                                    <CeldaSelect
+                                        valor={m.metodo ?? ''}
+                                        opciones={metodos}
+                                        deshabilitado={!puedeEditar}
+                                        placeholder="—"
+                                        onConfirmar={(v) =>
+                                            actualizar(m, 'metodo', v)
+                                        }
+                                    />
+                                </td>
+                                <td>
+                                    <CeldaTexto
+                                        valor={m.descripcion}
+                                        deshabilitado={!puedeEditar}
+                                        onConfirmar={(v) => {
+                                            if (v.trim() !== '') {
+                                                actualizar(
+                                                    m,
+                                                    'descripcion',
+                                                    v.trim(),
+                                                );
+                                            }
+                                        }}
+                                    />
+                                </td>
+                                <td>
+                                    <CeldaMonto
+                                        valor={m.monto}
+                                        deshabilitado={!puedeEditar}
+                                        onConfirmar={(v) =>
+                                            actualizar(m, 'monto', v)
+                                        }
+                                    />
+                                </td>
+                                <td>
+                                    {puedeGestionar && (
+                                        <div className="flex justify-end pr-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                                            <button
+                                                type="button"
+                                                onClick={() => eliminar(m)}
+                                                className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                                                title="Eliminar"
+                                            >
+                                                <Trash2 className="size-4" />
+                                            </button>
+                                        </div>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                    {depositos.length > 0 && (
+                        <tfoot>
+                            <tr className="border-t border-border text-sm font-semibold">
+                                <td
+                                    colSpan={3}
+                                    className="px-2 py-2 text-right text-xs uppercase tracking-wide text-muted-foreground"
+                                >
+                                    Total depósitos
+                                </td>
+                                <td className="px-2 py-2 text-right tabular-nums">
+                                    {soles(total)}
+                                </td>
+                                <td />
+                            </tr>
+                        </tfoot>
+                    )}
+                </table>
+            </div>
+
+            {/* ===================== MÓVIL: tarjetas ===================== */}
+            <div className="divide-y divide-border/60 md:hidden">
+                {depositos.map((m) => (
+                    <div key={m.id} className="flex flex-col gap-2 p-3">
+                        <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
                                 <CeldaTexto
                                     valor={m.descripcion}
                                     deshabilitado={!puedeEditar}
+                                    className="!px-2 font-medium"
                                     onConfirmar={(v) => {
                                         if (v.trim() !== '') {
                                             actualizar(
@@ -147,8 +220,43 @@ export default function TablaDepositos({
                                         }
                                     }}
                                 />
-                            </td>
-                            <td>
+                            </div>
+                            <div className="shrink-0 text-right text-base font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+                                {soles(m.monto)}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <label className="flex flex-col gap-0.5">
+                                <span className="px-1 text-[11px] uppercase text-muted-foreground">
+                                    Fecha
+                                </span>
+                                <CeldaFecha
+                                    valor={m.fecha ?? ''}
+                                    max={hoy}
+                                    deshabilitado={!puedeEditar}
+                                    onConfirmar={(v) =>
+                                        actualizar(m, 'fecha', v)
+                                    }
+                                />
+                            </label>
+                            <label className="flex flex-col gap-0.5">
+                                <span className="px-1 text-[11px] uppercase text-muted-foreground">
+                                    Vía
+                                </span>
+                                <CeldaSelect
+                                    valor={m.metodo ?? ''}
+                                    opciones={metodos}
+                                    deshabilitado={!puedeEditar}
+                                    placeholder="—"
+                                    onConfirmar={(v) =>
+                                        actualizar(m, 'metodo', v)
+                                    }
+                                />
+                            </label>
+                            <label className="flex flex-col gap-0.5">
+                                <span className="px-1 text-[11px] uppercase text-muted-foreground">
+                                    Monto S/
+                                </span>
                                 <CeldaMonto
                                     valor={m.monto}
                                     deshabilitado={!puedeEditar}
@@ -156,136 +264,117 @@ export default function TablaDepositos({
                                         actualizar(m, 'monto', v)
                                     }
                                 />
-                            </td>
-                            <td>
-                                {puedeGestionar && (
-                                    <div className="flex justify-end pr-1">
-                                        <button
-                                            type="button"
-                                            onClick={() => eliminar(m)}
-                                            className="rounded p-1 text-muted-foreground/40 opacity-0 transition-opacity hover:bg-muted hover:text-destructive group-hover:opacity-100"
-                                            title="Eliminar"
-                                        >
-                                            <Trash2 className="size-4" />
-                                        </button>
-                                    </div>
-                                )}
-                            </td>
-                        </tr>
-                    ))}
-
-                    {/* Fila de entrada */}
-                    {puedeRegistrar && (
-                        <tr className="bg-primary/[0.03]">
-                            <td>
-                                <input
-                                    ref={primeraCeldaRef}
-                                    type="date"
-                                    value={nueva.fecha}
-                                    max={hoy}
-                                    onChange={(e) =>
-                                        setNueva({
-                                            ...nueva,
-                                            fecha: e.target.value,
-                                        })
-                                    }
-                                    className="w-full rounded-sm bg-transparent px-2 py-1.5 text-sm tabular-nums outline-none focus:bg-primary/5 focus:ring-1 focus:ring-primary/40"
-                                />
-                            </td>
-                            <td>
-                                <select
-                                    value={nueva.metodo}
-                                    onChange={(e) =>
-                                        setNueva({
-                                            ...nueva,
-                                            metodo: e.target.value,
-                                        })
-                                    }
-                                    className="w-full appearance-none rounded-sm bg-transparent px-2 py-1.5 text-sm outline-none focus:bg-primary/5 focus:ring-1 focus:ring-primary/40"
+                            </label>
+                        </div>
+                        {puedeGestionar && (
+                            <div className="flex items-center justify-end gap-1 border-t border-border/50 pt-1">
+                                <button
+                                    type="button"
+                                    onClick={() => eliminar(m)}
+                                    className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                                    title="Eliminar"
                                 >
-                                    {metodos.map((m) => (
-                                        <option key={m.value} value={m.value}>
-                                            {m.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </td>
-                            <td>
-                                <input
-                                    type="text"
-                                    value={nueva.descripcion}
-                                    placeholder="Detalle (opcional)"
-                                    onChange={(e) =>
-                                        setNueva({
-                                            ...nueva,
-                                            descripcion: e.target.value,
-                                        })
-                                    }
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            guardarNueva();
-                                        }
-                                    }}
-                                    className="w-full rounded-sm bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground/50 focus:bg-primary/5 focus:ring-1 focus:ring-primary/40"
-                                />
-                            </td>
-                            <td>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0.01"
-                                    inputMode="decimal"
-                                    value={nueva.monto}
-                                    placeholder="0.00"
-                                    onChange={(e) =>
-                                        setNueva({
-                                            ...nueva,
-                                            monto: e.target.value,
-                                        })
-                                    }
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            guardarNueva();
-                                        }
-                                    }}
-                                    className="w-full rounded-sm bg-transparent px-2 py-1.5 text-right text-sm tabular-nums outline-none placeholder:text-muted-foreground/50 focus:bg-primary/5 focus:ring-1 focus:ring-primary/40"
-                                />
-                            </td>
-                            <td>
-                                <div className="flex justify-end pr-1">
-                                    <button
-                                        type="button"
-                                        onClick={guardarNueva}
-                                        disabled={!nuevaCompleta || guardando}
-                                        className="rounded p-1 text-primary transition-opacity disabled:opacity-25"
-                                        title="Agregar (Enter)"
-                                    >
-                                        <Plus className="size-4" />
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    )}
-                </tbody>
+                                    <Trash2 className="size-4" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                ))}
                 {depositos.length > 0 && (
-                    <tfoot>
-                        <tr className="border-t border-border text-sm font-semibold">
-                            <td
-                                colSpan={3}
-                                className="px-2 py-2 text-right text-xs uppercase tracking-wide text-muted-foreground"
-                            >
-                                Total depósitos
-                            </td>
-                            <td className="px-2 py-2 text-right tabular-nums">
-                                {soles(
-                                    depositos.reduce((s, m) => s + m.monto, 0),
-                                )}
-                            </td>
-                            <td />
-                        </tr>
-                    </tfoot>
+                    <div className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold">
+                        <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                            Total depósitos
+                        </span>
+                        <span className="tabular-nums">{soles(total)}</span>
+                    </div>
                 )}
-            </table>
+            </div>
+
+            {/* ===================== Agregar nuevo ===================== */}
+            {puedeRegistrar && (
+                <div className="border-t-2 border-dashed border-border bg-primary/[0.03] p-3">
+                    <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Agregar depósito
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[9rem_9rem_1fr_8rem_auto]">
+                        <input
+                            type="date"
+                            value={nueva.fecha}
+                            max={hoy}
+                            aria-label="Fecha"
+                            onChange={(e) =>
+                                setNueva({ ...nueva, fecha: e.target.value })
+                            }
+                            className={`${entrada} tabular-nums`}
+                        />
+                        <select
+                            value={nueva.metodo}
+                            aria-label="Vía"
+                            onChange={(e) =>
+                                setNueva({ ...nueva, metodo: e.target.value })
+                            }
+                            className={entrada}
+                        >
+                            {metodos.map((m) => (
+                                <option key={m.value} value={m.value}>
+                                    {m.label}
+                                </option>
+                            ))}
+                        </select>
+                        <input
+                            type="text"
+                            value={nueva.descripcion}
+                            placeholder="Detalle (opcional)"
+                            aria-label="Detalle"
+                            onChange={(e) =>
+                                setNueva({
+                                    ...nueva,
+                                    descripcion: e.target.value,
+                                })
+                            }
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    guardarNueva();
+                                }
+                            }}
+                            className={`${entrada} col-span-full sm:col-span-2 lg:col-span-1`}
+                        />
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            inputMode="decimal"
+                            value={nueva.monto}
+                            placeholder="Monto S/"
+                            aria-label="Monto"
+                            onChange={(e) =>
+                                setNueva({ ...nueva, monto: e.target.value })
+                            }
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    guardarNueva();
+                                }
+                            }}
+                            className={`${entrada} text-right tabular-nums`}
+                        />
+                        <button
+                            type="button"
+                            onClick={guardarNueva}
+                            disabled={!nuevaCompleta || guardando}
+                            className="col-span-full inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-40 lg:col-span-1"
+                        >
+                            <Plus className="size-4" />
+                            Agregar
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {depositos.length === 0 && !puedeRegistrar && (
+                <p className="p-6 text-center text-sm text-muted-foreground">
+                    Aún no hay depósitos registrados.
+                </p>
+            )}
         </div>
     );
 }

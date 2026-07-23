@@ -42,6 +42,7 @@ export type AlquilerPago = {
 export type Alquiler = {
     id: number;
     inquilino: string;
+    arrendador: string | null;
     monto_mensual: number;
     forma_pago: string;
     forma_pago_label: string;
@@ -245,9 +246,8 @@ export default function CajaIndex({
 
                 {puedeRegistrar && pestana !== 'alquileres' && (
                     <p className="text-xs text-muted-foreground">
-                        Escribe directo en la tabla, como en Excel: la última
-                        fila agrega un registro nuevo (Enter para guardar) y
-                        cualquier celda se corrige haciendo clic sobre ella.
+                        Completa la fila «Agregar» y pulsa el botón (o Enter). Para
+                        corregir algo, haz clic sobre el dato y escribe encima.
                     </p>
                 )}
             </div>

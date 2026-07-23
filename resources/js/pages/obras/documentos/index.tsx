@@ -3,6 +3,7 @@ import {
     ArrowLeft,
     ChevronDown,
     ChevronRight,
+    FileText,
     Folder,
     FolderOpen,
     FolderPlus,
@@ -98,6 +99,45 @@ function contarContenido(nodo: NodoArbol): {
     return { archivos, subcarpetas };
 }
 
+/** Badge elegante con el contenido de una carpeta: subcarpetas y archivos. */
+function BadgeConteo({
+    archivos,
+    subcarpetas,
+}: {
+    archivos: number;
+    subcarpetas: number;
+}) {
+    if (archivos === 0 && subcarpetas === 0) {
+        return null;
+    }
+
+    return (
+        <span className="ml-auto flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground tabular-nums">
+            {subcarpetas > 0 && (
+                <span
+                    className="flex items-center gap-0.5"
+                    title={`${subcarpetas} ${subcarpetas === 1 ? 'subcarpeta' : 'subcarpetas'}`}
+                >
+                    <Folder className="size-3" />
+                    {subcarpetas}
+                </span>
+            )}
+            {subcarpetas > 0 && archivos > 0 && (
+                <span className="opacity-40">·</span>
+            )}
+            {archivos > 0 && (
+                <span
+                    className="flex items-center gap-0.5"
+                    title={`${archivos} ${archivos === 1 ? 'archivo' : 'archivos'}`}
+                >
+                    <FileText className="size-3" />
+                    {archivos}
+                </span>
+            )}
+        </span>
+    );
+}
+
 function obtenerLinea(carpetaId: number, carpetas: Carpeta[]): Carpeta[] {
     const mapa = new Map(carpetas.map((c) => [c.id, c]));
     const linea: Carpeta[] = [];
@@ -135,6 +175,7 @@ const NodoCarpeta = memo(function NodoCarpeta({
     const expandido = expandidos.has(nodo.id);
     const tieneHijos = nodo.hijos.length > 0;
     const esActiva = carpetaActivaId === nodo.id;
+    const conteo = useMemo(() => contarContenido(nodo), [nodo]);
 
     const toggle = () => {
         const next = new Set(expandidos);
@@ -310,6 +351,17 @@ const NodoCarpeta = memo(function NodoCarpeta({
                         {nodo.nombre}
                     </span>
                 )}
+                {!editando && conteo.archivos > 0 && (
+                    <span
+                        className={
+                            'shrink-0 rounded-full bg-muted px-1.5 text-[10px] font-medium text-muted-foreground tabular-nums ' +
+                            (puedeAdministrar ? 'group-hover:hidden' : '')
+                        }
+                        title={`${conteo.archivos} ${conteo.archivos === 1 ? 'archivo' : 'archivos'}`}
+                    >
+                        {conteo.archivos}
+                    </span>
+                )}
                 {puedeAdministrar && !editando && (
                     <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                         <button
@@ -402,6 +454,21 @@ export default function DocumentosIndex({
     documentos,
 }: Props) {
     const arbol = useMemo(() => construirArbol(carpetas), [carpetas]);
+
+    // Conteo recursivo (archivos + subcarpetas) por carpeta, para los badges.
+    const conteos = useMemo(() => {
+        const mapa = new Map<
+            number,
+            { archivos: number; subcarpetas: number }
+        >();
+        const visitar = (n: NodoArbol) => {
+            mapa.set(n.id, contarContenido(n));
+            n.hijos.forEach(visitar);
+        };
+        arbol.forEach(visitar);
+
+        return mapa;
+    }, [arbol]);
     const lineaActiva = useMemo(
         () => (carpetaActiva ? obtenerLinea(carpetaActiva.id, carpetas) : []),
         [carpetaActiva, carpetas],
@@ -807,6 +874,22 @@ export default function DocumentosIndex({
                                                                                 c.nombre
                                                                             }
                                                                         </span>
+                                                                        <BadgeConteo
+                                                                            archivos={
+                                                                                conteos.get(
+                                                                                    c.id,
+                                                                                )
+                                                                                    ?.archivos ??
+                                                                                0
+                                                                            }
+                                                                            subcarpetas={
+                                                                                conteos.get(
+                                                                                    c.id,
+                                                                                )
+                                                                                    ?.subcarpetas ??
+                                                                                0
+                                                                            }
+                                                                        />
                                                                     </button>
                                                                 ),
                                                             )}
@@ -867,6 +950,22 @@ export default function DocumentosIndex({
                                                                 >
                                                                     {c.nombre}
                                                                 </span>
+                                                                <BadgeConteo
+                                                                    archivos={
+                                                                        conteos.get(
+                                                                            c.id,
+                                                                        )
+                                                                            ?.archivos ??
+                                                                        0
+                                                                    }
+                                                                    subcarpetas={
+                                                                        conteos.get(
+                                                                            c.id,
+                                                                        )
+                                                                            ?.subcarpetas ??
+                                                                        0
+                                                                    }
+                                                                />
                                                                 <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
                                                             </button>
                                                         ),

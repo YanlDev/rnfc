@@ -64,6 +64,31 @@ it('pagar un mes crea el egreso (recibo) en la caja', function () {
     expect($movimiento->descripcion)->toContain('PAGO ALQUILER ING MANUEL');
 });
 
+it('el egreso del pago registra al arrendador como proveedor', function () {
+    $obra = Obra::factory()->create();
+    $alquiler = $obra->alquileres()->create([
+        'inquilino' => 'ING FLOR',
+        'arrendador' => 'ROMAN ARAPA ALVAREZ',
+        'monto_mensual' => 140,
+        'forma_pago' => 'fin_de_mes',
+        'fecha_inicio' => '2026-04-01',
+    ]);
+
+    $this->actingAs(adminAlq())
+        ->post(route('obras.alquileres.pagar', [$obra, $alquiler]), [
+            'periodo' => '2026-05',
+            'fecha_pago' => now()->toDateString(),
+            'monto' => 140,
+        ])
+        ->assertRedirect();
+
+    $movimiento = AlquilerPago::first()->cajaMovimiento;
+    // El proveedor identifica a quién se depositó (el dueño), y la
+    // descripción identifica el cuarto (el inquilino).
+    expect($movimiento->proveedor)->toBe('ROMAN ARAPA ALVAREZ');
+    expect($movimiento->descripcion)->toContain('ING FLOR');
+});
+
 it('no permite pagar dos veces el mismo mes', function () {
     $obra = Obra::factory()->create();
     $alquiler = $obra->alquileres()->create([

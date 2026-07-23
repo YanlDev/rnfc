@@ -29,6 +29,7 @@ class AlquilerController extends Controller
 
         $data = $request->validate([
             'inquilino' => ['required', 'string', 'max:255'],
+            'arrendador' => ['nullable', 'string', 'max:255'],
             'monto_mensual' => ['required', 'numeric', 'gt:0', 'max:9999999999.99'],
             'forma_pago' => ['required', Rule::in(FormaPagoAlquiler::values())],
             'fecha_inicio' => ['required', 'date'],
@@ -46,6 +47,7 @@ class AlquilerController extends Controller
 
         $data = $request->validate([
             'inquilino' => ['sometimes', 'required', 'string', 'max:255'],
+            'arrendador' => ['sometimes', 'nullable', 'string', 'max:255'],
             'monto_mensual' => ['sometimes', 'required', 'numeric', 'gt:0', 'max:9999999999.99'],
             'forma_pago' => ['sometimes', 'required', Rule::in(FormaPagoAlquiler::values())],
             'fecha_inicio' => ['sometimes', 'required', 'date'],
@@ -96,7 +98,9 @@ class AlquilerController extends Controller
             $movimiento = $obra->cajaMovimientos()->create([
                 'tipo' => TipoMovimientoCaja::Egreso,
                 'tipo_comprobante' => TipoComprobante::Recibo,
-                'proveedor' => $alquiler->inquilino,
+                // El pago se deposita al arrendador (dueño); si no se registró,
+                // usamos el inquilino como referencia.
+                'proveedor' => $alquiler->arrendador ?: $alquiler->inquilino,
                 'monto' => $data['monto'],
                 'descripcion' => "PAGO ALQUILER {$alquiler->inquilino} {$mes}",
                 'fecha' => $data['fecha_pago'],

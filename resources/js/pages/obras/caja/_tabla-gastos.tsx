@@ -22,6 +22,10 @@ const soles = (n: number) =>
 const recargar = () =>
     router.reload({ only: ['movimientos', 'resumen', 'proveedores'] });
 
+// Estilos base compartidos por los inputs de las filas/tarjetas de entrada.
+const entrada =
+    'w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm outline-none placeholder:text-muted-foreground/50 focus:ring-1 focus:ring-primary/40';
+
 export default function TablaGastos({
     obraId,
     gastos,
@@ -33,7 +37,6 @@ export default function TablaGastos({
     const hoy = new Date().toISOString().slice(0, 10);
     const puedeEditar = puedeRegistrar || puedeGestionar;
 
-    // Fila de entrada, siempre lista al final — como la siguiente fila de un Excel.
     const filaVacia = {
         fecha: hoy,
         tipo_comprobante: 'boleta',
@@ -43,7 +46,6 @@ export default function TablaGastos({
     };
     const [nueva, setNueva] = useState(filaVacia);
     const [guardando, setGuardando] = useState(false);
-    const primeraCeldaRef = useRef<HTMLInputElement>(null);
     const archivoRef = useRef<HTMLInputElement>(null);
     const [movimientoAdjunto, setMovimientoAdjunto] = useState<number | null>(
         null,
@@ -75,7 +77,6 @@ export default function TablaGastos({
                 onSuccess: () => {
                     setNueva({ ...filaVacia, fecha: nueva.fecha });
                     recargar();
-                    primeraCeldaRef.current?.focus();
                 },
                 onFinish: () => setGuardando(false),
             },
@@ -133,8 +134,47 @@ export default function TablaGastos({
         setMovimientoAdjunto(null);
     };
 
+    const total = gastos.reduce((s, m) => s + m.monto, 0);
+
+    const accionesFila = (m: Movimiento) => (
+        <>
+            {m.tiene_comprobante && m.url_comprobante ? (
+                <a
+                    href={m.url_comprobante}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded p-1.5 text-primary hover:bg-muted"
+                    title="Ver comprobante"
+                >
+                    <Paperclip className="size-4" />
+                </a>
+            ) : (
+                puedeEditar && (
+                    <button
+                        type="button"
+                        onClick={() => adjuntar(m.id)}
+                        className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        title="Adjuntar comprobante"
+                    >
+                        <Paperclip className="size-4" />
+                    </button>
+                )
+            )}
+            {puedeGestionar && (
+                <button
+                    type="button"
+                    onClick={() => eliminar(m)}
+                    className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                    title="Eliminar"
+                >
+                    <Trash2 className="size-4" />
+                </button>
+            )}
+        </>
+    );
+
     return (
-        <div className="overflow-x-auto">
+        <div>
             {/* input oculto para adjuntar comprobantes por fila */}
             <input
                 ref={archivoRef}
@@ -149,59 +189,122 @@ export default function TablaGastos({
                 ))}
             </datalist>
 
-            <table className="w-full min-w-[720px] border-collapse text-sm">
-                <thead>
-                    <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-                        <th className="w-36 px-2 py-2 font-medium">Fecha</th>
-                        <th className="w-28 px-2 py-2 font-medium">Comprob.</th>
-                        <th className="w-44 px-2 py-2 font-medium">
-                            Proveedor
-                        </th>
-                        <th className="px-2 py-2 font-medium">Motivo</th>
-                        <th className="w-28 px-2 py-2 text-right font-medium">
-                            Monto S/
-                        </th>
-                        <th className="w-20 px-2 py-2" />
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                    {gastos.map((m) => (
-                        <tr key={m.id} className="group hover:bg-muted/30">
-                            <td>
-                                <CeldaFecha
-                                    valor={m.fecha ?? ''}
-                                    max={hoy}
-                                    deshabilitado={!puedeEditar}
-                                    onConfirmar={(v) =>
-                                        actualizar(m, 'fecha', v)
-                                    }
-                                />
-                            </td>
-                            <td>
-                                <CeldaSelect
-                                    valor={m.tipo_comprobante ?? ''}
-                                    opciones={tiposComprobante}
-                                    deshabilitado={!puedeEditar}
-                                    placeholder="—"
-                                    onConfirmar={(v) =>
-                                        actualizar(m, 'tipo_comprobante', v)
-                                    }
-                                />
-                            </td>
-                            <td>
-                                <CeldaTexto
-                                    valor={m.proveedor ?? ''}
-                                    lista="proveedores-obra"
-                                    deshabilitado={!puedeEditar}
-                                    onConfirmar={(v) =>
-                                        actualizar(m, 'proveedor', v || null)
-                                    }
-                                />
-                            </td>
-                            <td>
+            {/* ===================== DESKTOP: tabla ===================== */}
+            <div className="hidden overflow-x-auto md:block">
+                <table className="w-full border-collapse text-sm">
+                    <thead>
+                        <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                            <th className="w-36 px-2 py-2 font-medium">
+                                Fecha
+                            </th>
+                            <th className="w-28 px-2 py-2 font-medium">
+                                Comprob.
+                            </th>
+                            <th className="w-44 px-2 py-2 font-medium">
+                                Proveedor
+                            </th>
+                            <th className="px-2 py-2 font-medium">Motivo</th>
+                            <th className="w-28 px-2 py-2 text-right font-medium">
+                                Monto S/
+                            </th>
+                            <th className="w-20 px-2 py-2" />
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                        {gastos.map((m) => (
+                            <tr key={m.id} className="group hover:bg-muted/30">
+                                <td>
+                                    <CeldaFecha
+                                        valor={m.fecha ?? ''}
+                                        max={hoy}
+                                        deshabilitado={!puedeEditar}
+                                        onConfirmar={(v) =>
+                                            actualizar(m, 'fecha', v)
+                                        }
+                                    />
+                                </td>
+                                <td>
+                                    <CeldaSelect
+                                        valor={m.tipo_comprobante ?? ''}
+                                        opciones={tiposComprobante}
+                                        deshabilitado={!puedeEditar}
+                                        placeholder="—"
+                                        onConfirmar={(v) =>
+                                            actualizar(m, 'tipo_comprobante', v)
+                                        }
+                                    />
+                                </td>
+                                <td>
+                                    <CeldaTexto
+                                        valor={m.proveedor ?? ''}
+                                        lista="proveedores-obra"
+                                        deshabilitado={!puedeEditar}
+                                        onConfirmar={(v) =>
+                                            actualizar(m, 'proveedor', v || null)
+                                        }
+                                    />
+                                </td>
+                                <td>
+                                    <CeldaTexto
+                                        valor={m.descripcion}
+                                        deshabilitado={!puedeEditar}
+                                        onConfirmar={(v) => {
+                                            if (v.trim() !== '') {
+                                                actualizar(
+                                                    m,
+                                                    'descripcion',
+                                                    v.trim(),
+                                                );
+                                            }
+                                        }}
+                                    />
+                                </td>
+                                <td>
+                                    <CeldaMonto
+                                        valor={m.monto}
+                                        deshabilitado={!puedeEditar}
+                                        onConfirmar={(v) =>
+                                            actualizar(m, 'monto', v)
+                                        }
+                                    />
+                                </td>
+                                <td>
+                                    <div className="flex items-center justify-end gap-0.5 pr-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                                        {accionesFila(m)}
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                    {gastos.length > 0 && (
+                        <tfoot>
+                            <tr className="border-t border-border text-sm font-semibold">
+                                <td
+                                    colSpan={4}
+                                    className="px-2 py-2 text-right text-xs uppercase tracking-wide text-muted-foreground"
+                                >
+                                    Total gastos
+                                </td>
+                                <td className="px-2 py-2 text-right tabular-nums">
+                                    {soles(total)}
+                                </td>
+                                <td />
+                            </tr>
+                        </tfoot>
+                    )}
+                </table>
+            </div>
+
+            {/* ===================== MÓVIL: tarjetas ===================== */}
+            <div className="divide-y divide-border/60 md:hidden">
+                {gastos.map((m) => (
+                    <div key={m.id} className="flex flex-col gap-2 p-3">
+                        <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
                                 <CeldaTexto
                                     valor={m.descripcion}
                                     deshabilitado={!puedeEditar}
+                                    className="!px-2 font-medium"
                                     onConfirmar={(v) => {
                                         if (v.trim() !== '') {
                                             actualizar(
@@ -212,8 +315,56 @@ export default function TablaGastos({
                                         }
                                     }}
                                 />
-                            </td>
-                            <td>
+                            </div>
+                            <div className="shrink-0 text-right text-base font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+                                {soles(m.monto)}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <label className="flex flex-col gap-0.5">
+                                <span className="px-1 text-[11px] uppercase text-muted-foreground">
+                                    Fecha
+                                </span>
+                                <CeldaFecha
+                                    valor={m.fecha ?? ''}
+                                    max={hoy}
+                                    deshabilitado={!puedeEditar}
+                                    onConfirmar={(v) =>
+                                        actualizar(m, 'fecha', v)
+                                    }
+                                />
+                            </label>
+                            <label className="flex flex-col gap-0.5">
+                                <span className="px-1 text-[11px] uppercase text-muted-foreground">
+                                    Comprobante
+                                </span>
+                                <CeldaSelect
+                                    valor={m.tipo_comprobante ?? ''}
+                                    opciones={tiposComprobante}
+                                    deshabilitado={!puedeEditar}
+                                    placeholder="—"
+                                    onConfirmar={(v) =>
+                                        actualizar(m, 'tipo_comprobante', v)
+                                    }
+                                />
+                            </label>
+                            <label className="col-span-2 flex flex-col gap-0.5">
+                                <span className="px-1 text-[11px] uppercase text-muted-foreground">
+                                    Proveedor
+                                </span>
+                                <CeldaTexto
+                                    valor={m.proveedor ?? ''}
+                                    lista="proveedores-obra"
+                                    deshabilitado={!puedeEditar}
+                                    onConfirmar={(v) =>
+                                        actualizar(m, 'proveedor', v || null)
+                                    }
+                                />
+                            </label>
+                            <label className="flex flex-col gap-0.5">
+                                <span className="px-1 text-[11px] uppercase text-muted-foreground">
+                                    Monto S/
+                                </span>
                                 <CeldaMonto
                                     valor={m.monto}
                                     deshabilitado={!puedeEditar}
@@ -221,178 +372,126 @@ export default function TablaGastos({
                                         actualizar(m, 'monto', v)
                                     }
                                 />
-                            </td>
-                            <td>
-                                <div className="flex items-center justify-end gap-0.5 pr-1">
-                                    {m.tiene_comprobante && m.url_comprobante ? (
-                                        <a
-                                            href={m.url_comprobante}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="rounded p-1 text-primary hover:bg-muted"
-                                            title="Ver comprobante"
-                                        >
-                                            <Paperclip className="size-4" />
-                                        </a>
-                                    ) : (
-                                        puedeEditar && (
-                                            <button
-                                                type="button"
-                                                onClick={() => adjuntar(m.id)}
-                                                className="rounded p-1 text-muted-foreground/40 opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100"
-                                                title="Adjuntar comprobante"
-                                            >
-                                                <Paperclip className="size-4" />
-                                            </button>
-                                        )
-                                    )}
-                                    {puedeGestionar && (
-                                        <button
-                                            type="button"
-                                            onClick={() => eliminar(m)}
-                                            className="rounded p-1 text-muted-foreground/40 opacity-0 transition-opacity hover:bg-muted hover:text-destructive group-hover:opacity-100"
-                                            title="Eliminar"
-                                        >
-                                            <Trash2 className="size-4" />
-                                        </button>
-                                    )}
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
-
-                    {/* Fila de entrada */}
-                    {puedeRegistrar && (
-                        <tr className="bg-primary/[0.03]">
-                            <td>
-                                <input
-                                    ref={primeraCeldaRef}
-                                    type="date"
-                                    value={nueva.fecha}
-                                    max={hoy}
-                                    onChange={(e) =>
-                                        setNueva({
-                                            ...nueva,
-                                            fecha: e.target.value,
-                                        })
-                                    }
-                                    className="w-full rounded-sm bg-transparent px-2 py-1.5 text-sm tabular-nums outline-none focus:bg-primary/5 focus:ring-1 focus:ring-primary/40"
-                                />
-                            </td>
-                            <td>
-                                <select
-                                    value={nueva.tipo_comprobante}
-                                    onChange={(e) =>
-                                        setNueva({
-                                            ...nueva,
-                                            tipo_comprobante: e.target.value,
-                                        })
-                                    }
-                                    className="w-full appearance-none rounded-sm bg-transparent px-2 py-1.5 text-sm outline-none focus:bg-primary/5 focus:ring-1 focus:ring-primary/40"
-                                >
-                                    {tiposComprobante.map((t) => (
-                                        <option key={t.value} value={t.value}>
-                                            {t.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </td>
-                            <td>
-                                <input
-                                    type="text"
-                                    value={nueva.proveedor}
-                                    list="proveedores-obra"
-                                    placeholder="Proveedor…"
-                                    onChange={(e) =>
-                                        setNueva({
-                                            ...nueva,
-                                            proveedor: e.target.value,
-                                        })
-                                    }
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            guardarNueva();
-                                        }
-                                    }}
-                                    className="w-full rounded-sm bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground/50 focus:bg-primary/5 focus:ring-1 focus:ring-primary/40"
-                                />
-                            </td>
-                            <td>
-                                <input
-                                    type="text"
-                                    value={nueva.descripcion}
-                                    placeholder="¿En qué se gastó?"
-                                    onChange={(e) =>
-                                        setNueva({
-                                            ...nueva,
-                                            descripcion: e.target.value,
-                                        })
-                                    }
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            guardarNueva();
-                                        }
-                                    }}
-                                    className="w-full rounded-sm bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground/50 focus:bg-primary/5 focus:ring-1 focus:ring-primary/40"
-                                />
-                            </td>
-                            <td>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0.01"
-                                    inputMode="decimal"
-                                    value={nueva.monto}
-                                    placeholder="0.00"
-                                    onChange={(e) =>
-                                        setNueva({
-                                            ...nueva,
-                                            monto: e.target.value,
-                                        })
-                                    }
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            guardarNueva();
-                                        }
-                                    }}
-                                    className="w-full rounded-sm bg-transparent px-2 py-1.5 text-right text-sm tabular-nums outline-none placeholder:text-muted-foreground/50 focus:bg-primary/5 focus:ring-1 focus:ring-primary/40"
-                                />
-                            </td>
-                            <td>
-                                <div className="flex justify-end pr-1">
-                                    <button
-                                        type="button"
-                                        onClick={guardarNueva}
-                                        disabled={!nuevaCompleta || guardando}
-                                        className="rounded p-1 text-primary transition-opacity disabled:opacity-25"
-                                        title="Agregar (Enter)"
-                                    >
-                                        <Plus className="size-4" />
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    )}
-                </tbody>
+                            </label>
+                        </div>
+                        {puedeEditar && (
+                            <div className="flex items-center justify-end gap-1 border-t border-border/50 pt-1">
+                                {accionesFila(m)}
+                            </div>
+                        )}
+                    </div>
+                ))}
                 {gastos.length > 0 && (
-                    <tfoot>
-                        <tr className="border-t border-border text-sm font-semibold">
-                            <td
-                                colSpan={4}
-                                className="px-2 py-2 text-right text-xs uppercase tracking-wide text-muted-foreground"
-                            >
-                                Total gastos
-                            </td>
-                            <td className="px-2 py-2 text-right tabular-nums">
-                                {soles(
-                                    gastos.reduce((s, m) => s + m.monto, 0),
-                                )}
-                            </td>
-                            <td />
-                        </tr>
-                    </tfoot>
+                    <div className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold">
+                        <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                            Total gastos
+                        </span>
+                        <span className="tabular-nums">{soles(total)}</span>
+                    </div>
                 )}
-            </table>
+            </div>
+
+            {/* ===================== Agregar nuevo ===================== */}
+            {puedeRegistrar && (
+                <div className="border-t-2 border-dashed border-border bg-primary/[0.03] p-3">
+                    <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Agregar gasto
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[9rem_8rem_1fr_8rem_auto]">
+                        <input
+                            type="date"
+                            value={nueva.fecha}
+                            max={hoy}
+                            aria-label="Fecha"
+                            onChange={(e) =>
+                                setNueva({ ...nueva, fecha: e.target.value })
+                            }
+                            className={`${entrada} tabular-nums`}
+                        />
+                        <select
+                            value={nueva.tipo_comprobante}
+                            aria-label="Tipo de comprobante"
+                            onChange={(e) =>
+                                setNueva({
+                                    ...nueva,
+                                    tipo_comprobante: e.target.value,
+                                })
+                            }
+                            className={entrada}
+                        >
+                            {tiposComprobante.map((t) => (
+                                <option key={t.value} value={t.value}>
+                                    {t.label}
+                                </option>
+                            ))}
+                        </select>
+                        <input
+                            type="text"
+                            value={nueva.descripcion}
+                            placeholder="Motivo del gasto"
+                            aria-label="Motivo del gasto"
+                            onChange={(e) =>
+                                setNueva({
+                                    ...nueva,
+                                    descripcion: e.target.value,
+                                })
+                            }
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    guardarNueva();
+                                }
+                            }}
+                            className={`${entrada} col-span-full sm:col-span-2 lg:col-span-1`}
+                        />
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            inputMode="decimal"
+                            value={nueva.monto}
+                            placeholder="Monto S/"
+                            aria-label="Monto"
+                            onChange={(e) =>
+                                setNueva({ ...nueva, monto: e.target.value })
+                            }
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    guardarNueva();
+                                }
+                            }}
+                            className={`${entrada} text-right tabular-nums`}
+                        />
+                        <input
+                            type="text"
+                            value={nueva.proveedor}
+                            list="proveedores-obra"
+                            placeholder="Proveedor (opcional)"
+                            aria-label="Proveedor"
+                            onChange={(e) =>
+                                setNueva({
+                                    ...nueva,
+                                    proveedor: e.target.value,
+                                })
+                            }
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    guardarNueva();
+                                }
+                            }}
+                            className={`${entrada} col-span-full sm:col-span-2 lg:col-span-full`}
+                        />
+                        <button
+                            type="button"
+                            onClick={guardarNueva}
+                            disabled={!nuevaCompleta || guardando}
+                            className="col-span-full inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-40 lg:col-span-1"
+                        >
+                            <Plus className="size-4" />
+                            Agregar
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {gastos.length === 0 && !puedeRegistrar && (
                 <p className="p-6 text-center text-sm text-muted-foreground">

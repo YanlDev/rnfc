@@ -71,6 +71,7 @@ export default function Alquileres({
 
     const [nuevo, setNuevo] = useState({
         inquilino: '',
+        arrendador: '',
         monto_mensual: '',
         forma_pago: 'fin_de_mes',
         fecha_inicio: hoy,
@@ -94,6 +95,7 @@ export default function Alquileres({
             onSuccess: () => {
                 setNuevo({
                     inquilino: '',
+                    arrendador: '',
                     monto_mensual: '',
                     forma_pago: 'fin_de_mes',
                     fecha_inicio: hoy,
@@ -158,99 +160,125 @@ export default function Alquileres({
         <div className="flex flex-col gap-4">
             {/* Alta rápida */}
             {puedeRegistrar && (
-                <div className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-border bg-primary/[0.03] p-3">
-                    <div className="min-w-40 flex-1">
-                        <label className="mb-1 block text-xs text-muted-foreground">
-                            Inquilino / concepto
-                        </label>
-                        <input
-                            type="text"
-                            value={nuevo.inquilino}
-                            placeholder="ING GENARO, OFICINA…"
-                            onChange={(e) =>
-                                setNuevo({
-                                    ...nuevo,
-                                    inquilino: e.target.value,
-                                })
-                            }
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    crearAlquiler();
+                <div className="rounded-lg border border-dashed border-border bg-primary/[0.03] p-3">
+                    <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Agregar alquiler
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                            <label className="mb-1 block text-xs text-muted-foreground">
+                                A quién se alquila (inquilino)
+                            </label>
+                            <input
+                                type="text"
+                                value={nuevo.inquilino}
+                                onChange={(e) =>
+                                    setNuevo({
+                                        ...nuevo,
+                                        inquilino: e.target.value,
+                                    })
                                 }
-                            }}
-                            className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground/50 focus:ring-1 focus:ring-primary/40"
-                        />
-                    </div>
-                    <div className="w-28">
-                        <label className="mb-1 block text-xs text-muted-foreground">
-                            Monto S/ mes
-                        </label>
-                        <input
-                            type="number"
-                            step="0.01"
-                            min="0.01"
-                            inputMode="decimal"
-                            value={nuevo.monto_mensual}
-                            placeholder="0.00"
-                            onChange={(e) =>
-                                setNuevo({
-                                    ...nuevo,
-                                    monto_mensual: e.target.value,
-                                })
-                            }
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    crearAlquiler();
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        crearAlquiler();
+                                    }
+                                }}
+                                className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/40"
+                            />
+                        </div>
+                        <div>
+                            <label className="mb-1 block text-xs text-muted-foreground">
+                                Dueño / arrendador (a quién se deposita)
+                            </label>
+                            <input
+                                type="text"
+                                value={nuevo.arrendador}
+                                onChange={(e) =>
+                                    setNuevo({
+                                        ...nuevo,
+                                        arrendador: e.target.value,
+                                    })
                                 }
-                            }}
-                            className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm tabular-nums outline-none focus:ring-1 focus:ring-primary/40"
-                        />
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        crearAlquiler();
+                                    }
+                                }}
+                                className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/40"
+                            />
+                        </div>
+                        <div>
+                            <label className="mb-1 block text-xs text-muted-foreground">
+                                Monto S/ al mes
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                inputMode="decimal"
+                                value={nuevo.monto_mensual}
+                                onChange={(e) =>
+                                    setNuevo({
+                                        ...nuevo,
+                                        monto_mensual: e.target.value,
+                                    })
+                                }
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        crearAlquiler();
+                                    }
+                                }}
+                                className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-right text-sm tabular-nums outline-none focus:ring-1 focus:ring-primary/40"
+                            />
+                        </div>
+                        <div>
+                            <label className="mb-1 block text-xs text-muted-foreground">
+                                Forma de pago
+                            </label>
+                            <select
+                                value={nuevo.forma_pago}
+                                onChange={(e) =>
+                                    setNuevo({
+                                        ...nuevo,
+                                        forma_pago: e.target.value,
+                                    })
+                                }
+                                className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/40"
+                            >
+                                {formasPago.map((f) => (
+                                    <option key={f.value} value={f.value}>
+                                        {f.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="mb-1 block text-xs text-muted-foreground">
+                                Inicio del alquiler
+                            </label>
+                            <input
+                                type="date"
+                                value={nuevo.fecha_inicio}
+                                onChange={(e) =>
+                                    setNuevo({
+                                        ...nuevo,
+                                        fecha_inicio: e.target.value,
+                                    })
+                                }
+                                className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm tabular-nums outline-none focus:ring-1 focus:ring-primary/40"
+                            />
+                        </div>
+                        <div className="flex items-end sm:col-span-2 lg:col-span-3">
+                            <Button
+                                className="w-full sm:w-auto"
+                                onClick={crearAlquiler}
+                                disabled={!nuevoCompleto || guardando}
+                            >
+                                <Plus className="size-4" />
+                                Agregar alquiler
+                            </Button>
+                        </div>
                     </div>
-                    <div className="w-36">
-                        <label className="mb-1 block text-xs text-muted-foreground">
-                            Forma de pago
-                        </label>
-                        <select
-                            value={nuevo.forma_pago}
-                            onChange={(e) =>
-                                setNuevo({
-                                    ...nuevo,
-                                    forma_pago: e.target.value,
-                                })
-                            }
-                            className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-primary/40"
-                        >
-                            {formasPago.map((f) => (
-                                <option key={f.value} value={f.value}>
-                                    {f.label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="w-36">
-                        <label className="mb-1 block text-xs text-muted-foreground">
-                            Inicio
-                        </label>
-                        <input
-                            type="date"
-                            value={nuevo.fecha_inicio}
-                            onChange={(e) =>
-                                setNuevo({
-                                    ...nuevo,
-                                    fecha_inicio: e.target.value,
-                                })
-                            }
-                            className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm tabular-nums outline-none focus:ring-1 focus:ring-primary/40"
-                        />
-                    </div>
-                    <Button
-                        size="sm"
-                        onClick={crearAlquiler}
-                        disabled={!nuevoCompleto || guardando}
-                    >
-                        <Plus className="size-4" />
-                        Agregar
-                    </Button>
                 </div>
             )}
 
@@ -272,10 +300,18 @@ export default function Alquileres({
                             <Card key={a.id} className="p-0">
                                 <CardContent className="p-4">
                                     <div className="mb-3 flex items-start justify-between gap-2">
-                                        <div>
-                                            <div className="font-medium">
+                                        <div className="min-w-0">
+                                            <div className="truncate font-medium">
                                                 {a.inquilino}
                                             </div>
+                                            {a.arrendador && (
+                                                <div className="truncate text-xs text-muted-foreground">
+                                                    Se deposita a:{' '}
+                                                    <span className="text-foreground">
+                                                        {a.arrendador}
+                                                    </span>
+                                                </div>
+                                            )}
                                             <div className="text-xs text-muted-foreground">
                                                 {soles(a.monto_mensual)} ·{' '}
                                                 {a.forma_pago_label} · desde{' '}
@@ -337,7 +373,7 @@ export default function Alquileres({
                                                 return (
                                                     <span
                                                         key={periodo}
-                                                        className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/5 px-1.5 py-0.5"
+                                                        className="inline-flex max-w-full flex-wrap items-center gap-1 rounded-md border border-primary/40 bg-primary/5 px-1.5 py-0.5"
                                                     >
                                                         <span className="text-xs font-medium">
                                                             {etiquetaPeriodo(
