@@ -1,6 +1,7 @@
 import { router, useForm } from '@inertiajs/react';
 import { CalendarPlus, Save, Trash2 } from 'lucide-react';
 import { useEffect } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
@@ -56,6 +57,7 @@ export default function DialogoEvento({
     fechaInicial,
 }: Props) {
     const esEdicion = evento !== null;
+    const { confirm, dialog } = useConfirm();
 
     const form = useForm({
         tipo: 'hito',
@@ -95,6 +97,7 @@ export default function DialogoEvento({
 
     const guardar = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (esEdicion && evento) {
             form.patch(`/obras/${obraId}/calendario/${evento.id}`, {
                 preserveScroll: true,
@@ -108,9 +111,21 @@ export default function DialogoEvento({
         }
     };
 
-    const eliminar = () => {
-        if (!evento) return;
-        if (!confirm('¿Eliminar este evento?')) return;
+    const eliminar = async () => {
+        if (!evento) {
+            return;
+        }
+
+        const ok = await confirm({
+            titulo: `¿Eliminar el evento «${evento.titulo}»?`,
+            destructivo: true,
+            confirmar: 'Eliminar evento',
+        });
+
+        if (!ok) {
+            return;
+        }
+
         router.delete(`/obras/${obraId}/calendario/${evento.id}`, {
             preserveScroll: true,
             onSuccess: () => onOpenChange(false),
@@ -118,9 +133,15 @@ export default function DialogoEvento({
     };
 
     const agregarAGoogleCalendar = () => {
-        if (!evento) return;
+        if (!evento) {
+            return;
+        }
+
         const inicio = form.data.fecha_inicio;
-        if (!inicio) return;
+
+        if (!inicio) {
+            return;
+        }
 
         const fmt = (iso: string) => iso.replace(/-/g, ''); // YYYYMMDD
         const inicioFmt = fmt(inicio);
@@ -145,7 +166,10 @@ export default function DialogoEvento({
             text: form.data.titulo || 'Evento RNFC',
             dates: fechas,
         });
-        if (form.data.descripcion) params.set('details', form.data.descripcion);
+
+        if (form.data.descripcion) {
+            params.set('details', form.data.descripcion);
+        }
 
         window.open(
             `https://calendar.google.com/calendar/render?${params.toString()}`,
@@ -156,6 +180,7 @@ export default function DialogoEvento({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
+            {dialog}
             <DialogContent className="max-w-lg">
                 <form onSubmit={guardar}>
                     <DialogHeader>
@@ -176,12 +201,16 @@ export default function DialogoEvento({
                                 </SelectTrigger>
                                 <SelectContent>
                                     {tipos.map((t) => (
-                                        <SelectItem key={t.value} value={t.value}>
+                                        <SelectItem
+                                            key={t.value}
+                                            value={t.value}
+                                        >
                                             <span className="flex items-center gap-2">
                                                 <span
                                                     className="inline-block size-2.5 rounded-full"
                                                     style={{
-                                                        backgroundColor: t.color,
+                                                        backgroundColor:
+                                                            t.color,
                                                     }}
                                                 />
                                                 {t.label}
@@ -215,10 +244,15 @@ export default function DialogoEvento({
                                     type="date"
                                     value={form.data.fecha_inicio}
                                     onChange={(e) =>
-                                        form.setData('fecha_inicio', e.target.value)
+                                        form.setData(
+                                            'fecha_inicio',
+                                            e.target.value,
+                                        )
                                     }
                                 />
-                                <InputError message={form.errors.fecha_inicio} />
+                                <InputError
+                                    message={form.errors.fecha_inicio}
+                                />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="fecha_fin">
@@ -229,7 +263,10 @@ export default function DialogoEvento({
                                     type="date"
                                     value={form.data.fecha_fin}
                                     onChange={(e) =>
-                                        form.setData('fecha_fin', e.target.value)
+                                        form.setData(
+                                            'fecha_fin',
+                                            e.target.value,
+                                        )
                                     }
                                 />
                                 <InputError message={form.errors.fecha_fin} />
@@ -269,7 +306,10 @@ export default function DialogoEvento({
                                         type="button"
                                         variant="ghost"
                                         onClick={agregarAGoogleCalendar}
-                                        disabled={form.processing || !form.data.fecha_inicio}
+                                        disabled={
+                                            form.processing ||
+                                            !form.data.fecha_inicio
+                                        }
                                         title="Abre Google Calendar con los datos del evento ya cargados"
                                     >
                                         <CalendarPlus className="size-4 text-primary" />

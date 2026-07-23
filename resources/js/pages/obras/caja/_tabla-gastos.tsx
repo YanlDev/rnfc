@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/react';
 import { Paperclip, Plus, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import { CeldaFecha, CeldaMonto, CeldaSelect, CeldaTexto } from './_celdas';
 import type { Movimiento, Opcion } from './index';
 
@@ -36,6 +37,7 @@ export default function TablaGastos({
 }: Props) {
     const hoy = new Date().toISOString().slice(0, 10);
     const puedeEditar = puedeRegistrar || puedeGestionar;
+    const { confirm, dialog } = useConfirm();
 
     const filaVacia = {
         fecha: hoy,
@@ -97,8 +99,15 @@ export default function TablaGastos({
         });
     };
 
-    const eliminar = (m: Movimiento) => {
-        if (!confirm(`¿Eliminar el gasto «${m.descripcion}»?`)) {
+    const eliminar = async (m: Movimiento) => {
+        const ok = await confirm({
+            titulo: `¿Eliminar el gasto «${m.descripcion}»?`,
+            destructivo: true,
+            confirmar: 'Eliminar gasto',
+            descripcion: `Se eliminará el gasto de ${soles(m.monto)} de forma permanente.`,
+        });
+
+        if (!ok) {
             return;
         }
 
@@ -131,6 +140,7 @@ export default function TablaGastos({
         if (archivoRef.current) {
             archivoRef.current.value = '';
         }
+
         setMovimientoAdjunto(null);
     };
 
@@ -175,6 +185,7 @@ export default function TablaGastos({
 
     return (
         <div>
+            {dialog}
             {/* input oculto para adjuntar comprobantes por fila */}
             <input
                 ref={archivoRef}
@@ -193,7 +204,7 @@ export default function TablaGastos({
             <div className="hidden overflow-x-auto md:block">
                 <table className="w-full border-collapse text-sm">
                     <thead>
-                        <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                        <tr className="border-b border-border text-left text-xs tracking-wide text-muted-foreground uppercase">
                             <th className="w-36 px-2 py-2 font-medium">
                                 Fecha
                             </th>
@@ -240,7 +251,11 @@ export default function TablaGastos({
                                         lista="proveedores-obra"
                                         deshabilitado={!puedeEditar}
                                         onConfirmar={(v) =>
-                                            actualizar(m, 'proveedor', v || null)
+                                            actualizar(
+                                                m,
+                                                'proveedor',
+                                                v || null,
+                                            )
                                         }
                                     />
                                 </td>
@@ -269,7 +284,7 @@ export default function TablaGastos({
                                     />
                                 </td>
                                 <td>
-                                    <div className="flex items-center justify-end gap-0.5 pr-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                                    <div className="flex items-center justify-end gap-0.5 pr-1 transition-opacity pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-within:opacity-100">
                                         {accionesFila(m)}
                                     </div>
                                 </td>
@@ -281,7 +296,7 @@ export default function TablaGastos({
                             <tr className="border-t border-border text-sm font-semibold">
                                 <td
                                     colSpan={4}
-                                    className="px-2 py-2 text-right text-xs uppercase tracking-wide text-muted-foreground"
+                                    className="px-2 py-2 text-right text-xs tracking-wide text-muted-foreground uppercase"
                                 >
                                     Total gastos
                                 </td>
@@ -316,13 +331,13 @@ export default function TablaGastos({
                                     }}
                                 />
                             </div>
-                            <div className="shrink-0 text-right text-base font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+                            <div className="shrink-0 text-right text-base font-semibold text-rose-600 tabular-nums dark:text-rose-400">
                                 {soles(m.monto)}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                             <label className="flex flex-col gap-0.5">
-                                <span className="px-1 text-[11px] uppercase text-muted-foreground">
+                                <span className="px-1 text-[11px] text-muted-foreground uppercase">
                                     Fecha
                                 </span>
                                 <CeldaFecha
@@ -335,7 +350,7 @@ export default function TablaGastos({
                                 />
                             </label>
                             <label className="flex flex-col gap-0.5">
-                                <span className="px-1 text-[11px] uppercase text-muted-foreground">
+                                <span className="px-1 text-[11px] text-muted-foreground uppercase">
                                     Comprobante
                                 </span>
                                 <CeldaSelect
@@ -349,7 +364,7 @@ export default function TablaGastos({
                                 />
                             </label>
                             <label className="col-span-2 flex flex-col gap-0.5">
-                                <span className="px-1 text-[11px] uppercase text-muted-foreground">
+                                <span className="px-1 text-[11px] text-muted-foreground uppercase">
                                     Proveedor
                                 </span>
                                 <CeldaTexto
@@ -362,7 +377,7 @@ export default function TablaGastos({
                                 />
                             </label>
                             <label className="flex flex-col gap-0.5">
-                                <span className="px-1 text-[11px] uppercase text-muted-foreground">
+                                <span className="px-1 text-[11px] text-muted-foreground uppercase">
                                     Monto S/
                                 </span>
                                 <CeldaMonto
@@ -383,7 +398,7 @@ export default function TablaGastos({
                 ))}
                 {gastos.length > 0 && (
                     <div className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold">
-                        <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                        <span className="text-xs tracking-wide text-muted-foreground uppercase">
                             Total gastos
                         </span>
                         <span className="tabular-nums">{soles(total)}</span>
@@ -394,7 +409,7 @@ export default function TablaGastos({
             {/* ===================== Agregar nuevo ===================== */}
             {puedeRegistrar && (
                 <div className="border-t-2 border-dashed border-border bg-primary/[0.03] p-3">
-                    <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <div className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
                         Agregar gasto
                     </div>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[9rem_8rem_1fr_8rem_auto]">

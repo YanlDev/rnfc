@@ -125,7 +125,7 @@ export default function CuadernoSelector({ obras: lista }: Props) {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex items-center justify-end gap-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                                        <div className="flex items-center justify-end gap-1 text-xs text-primary transition-opacity pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100">
                                             Abrir cuaderno
                                             <ChevronRight className="size-3.5" />
                                         </div>

@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import { CeldaFecha, CeldaMonto, CeldaSelect, CeldaTexto } from './_celdas';
 import type { Movimiento, Opcion } from './index';
 
@@ -32,8 +33,14 @@ export default function TablaDepositos({
 }: Props) {
     const hoy = new Date().toISOString().slice(0, 10);
     const puedeEditar = puedeRegistrar || puedeGestionar;
+    const { confirm, dialog } = useConfirm();
 
-    const filaVacia = { fecha: hoy, metodo: 'yape', descripcion: '', monto: '' };
+    const filaVacia = {
+        fecha: hoy,
+        metodo: 'yape',
+        descripcion: '',
+        monto: '',
+    };
     const [nueva, setNueva] = useState(filaVacia);
     const [guardando, setGuardando] = useState(false);
 
@@ -85,8 +92,15 @@ export default function TablaDepositos({
         });
     };
 
-    const eliminar = (m: Movimiento) => {
-        if (!confirm(`¿Eliminar el depósito «${m.descripcion}»?`)) {
+    const eliminar = async (m: Movimiento) => {
+        const ok = await confirm({
+            titulo: `¿Eliminar el depósito «${m.descripcion}»?`,
+            destructivo: true,
+            confirmar: 'Eliminar depósito',
+            descripcion: `Se eliminará el depósito de ${soles(m.monto)} de forma permanente.`,
+        });
+
+        if (!ok) {
             return;
         }
 
@@ -100,11 +114,12 @@ export default function TablaDepositos({
 
     return (
         <div>
+            {dialog}
             {/* ===================== DESKTOP: tabla ===================== */}
             <div className="hidden overflow-x-auto md:block">
                 <table className="w-full border-collapse text-sm">
                     <thead>
-                        <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                        <tr className="border-b border-border text-left text-xs tracking-wide text-muted-foreground uppercase">
                             <th className="w-36 px-2 py-2 font-medium">
                                 Fecha
                             </th>
@@ -166,7 +181,7 @@ export default function TablaDepositos({
                                 </td>
                                 <td>
                                     {puedeGestionar && (
-                                        <div className="flex justify-end pr-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                                        <div className="flex justify-end pr-1 transition-opacity pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-within:opacity-100">
                                             <button
                                                 type="button"
                                                 onClick={() => eliminar(m)}
@@ -186,7 +201,7 @@ export default function TablaDepositos({
                             <tr className="border-t border-border text-sm font-semibold">
                                 <td
                                     colSpan={3}
-                                    className="px-2 py-2 text-right text-xs uppercase tracking-wide text-muted-foreground"
+                                    className="px-2 py-2 text-right text-xs tracking-wide text-muted-foreground uppercase"
                                 >
                                     Total depósitos
                                 </td>
@@ -221,13 +236,13 @@ export default function TablaDepositos({
                                     }}
                                 />
                             </div>
-                            <div className="shrink-0 text-right text-base font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+                            <div className="shrink-0 text-right text-base font-semibold text-emerald-600 tabular-nums dark:text-emerald-400">
                                 {soles(m.monto)}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                             <label className="flex flex-col gap-0.5">
-                                <span className="px-1 text-[11px] uppercase text-muted-foreground">
+                                <span className="px-1 text-[11px] text-muted-foreground uppercase">
                                     Fecha
                                 </span>
                                 <CeldaFecha
@@ -240,7 +255,7 @@ export default function TablaDepositos({
                                 />
                             </label>
                             <label className="flex flex-col gap-0.5">
-                                <span className="px-1 text-[11px] uppercase text-muted-foreground">
+                                <span className="px-1 text-[11px] text-muted-foreground uppercase">
                                     Vía
                                 </span>
                                 <CeldaSelect
@@ -254,7 +269,7 @@ export default function TablaDepositos({
                                 />
                             </label>
                             <label className="flex flex-col gap-0.5">
-                                <span className="px-1 text-[11px] uppercase text-muted-foreground">
+                                <span className="px-1 text-[11px] text-muted-foreground uppercase">
                                     Monto S/
                                 </span>
                                 <CeldaMonto
@@ -282,7 +297,7 @@ export default function TablaDepositos({
                 ))}
                 {depositos.length > 0 && (
                     <div className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold">
-                        <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                        <span className="text-xs tracking-wide text-muted-foreground uppercase">
                             Total depósitos
                         </span>
                         <span className="tabular-nums">{soles(total)}</span>
@@ -293,7 +308,7 @@ export default function TablaDepositos({
             {/* ===================== Agregar nuevo ===================== */}
             {puedeRegistrar && (
                 <div className="border-t-2 border-dashed border-border bg-primary/[0.03] p-3">
-                    <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <div className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
                         Agregar depósito
                     </div>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[9rem_9rem_1fr_8rem_auto]">

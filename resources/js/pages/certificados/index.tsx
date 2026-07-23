@@ -122,7 +122,89 @@ export default function CertificadosIndex({
                     </div>
                 </Card>
 
-                <Card>
+                {/* ============ MOBILE: cards apiladas ============ */}
+                <div className="space-y-3 md:hidden">
+                    {filtrados.length === 0 && (
+                        <Card className="p-8 text-center text-sm text-muted-foreground">
+                            Sin certificados emitidos todavía.
+                        </Card>
+                    )}
+                    {filtrados.map((c) => (
+                        <Card key={c.id} className="gap-0 p-4">
+                            <div className="flex items-start justify-between gap-2">
+                                <span className="font-mono text-xs font-semibold text-primary">
+                                    {c.codigo}
+                                </span>
+                                {c.vigente ? (
+                                    <Badge className="bg-[var(--color-brand-verde)] text-white">
+                                        Vigente
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="destructive">
+                                        Revocado
+                                    </Badge>
+                                )}
+                            </div>
+                            <div className="mt-2 font-medium">
+                                {c.beneficiario_nombre}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                                {c.beneficiario_documento && (
+                                    <>DNI: {c.beneficiario_documento} · </>
+                                )}
+                                {c.tipo_label}
+                                {c.fecha_emision && <> · {c.fecha_emision}</>}
+                            </div>
+                            {c.obra && (
+                                <div className="mt-1 truncate text-xs text-muted-foreground">
+                                    <span className="font-mono">
+                                        [{c.obra.codigo}]
+                                    </span>{' '}
+                                    {c.obra.nombre}
+                                </div>
+                            )}
+                            <div className="mt-3 flex gap-2 border-t border-border pt-3">
+                                <Button
+                                    asChild
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1"
+                                >
+                                    <Link href={certificados.show(c.id).url}>
+                                        <Eye className="size-4" />
+                                        Ver
+                                    </Link>
+                                </Button>
+                                <Button
+                                    asChild
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1"
+                                >
+                                    <a
+                                        href={certificados.pdf(c.id).url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                    >
+                                        <FileDown className="size-4" />
+                                        PDF
+                                    </a>
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    aria-label={`Eliminar certificado ${c.codigo}`}
+                                    onClick={() => eliminar(c)}
+                                >
+                                    <Trash2 className="size-4 text-destructive" />
+                                </Button>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+
+                {/* ============ DESKTOP: tabla ============ */}
+                <Card className="hidden md:block">
                     <Table>
                         <TableHeader>
                             <TableRow>

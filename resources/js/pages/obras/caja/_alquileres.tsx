@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/react';
 import { Check, Plus, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -68,6 +69,7 @@ export default function Alquileres({
     puedeGestionar,
 }: Props) {
     const hoy = new Date().toISOString().slice(0, 10);
+    const { confirm, dialog } = useConfirm();
 
     const [nuevo, setNuevo] = useState({
         inquilino: '',
@@ -106,8 +108,16 @@ export default function Alquileres({
         });
     };
 
-    const eliminarAlquiler = (a: Alquiler) => {
-        if (!confirm(`¿Eliminar el alquiler de «${a.inquilino}»?`)) {
+    const eliminarAlquiler = async (a: Alquiler) => {
+        const ok = await confirm({
+            titulo: `¿Eliminar el alquiler de «${a.inquilino}»?`,
+            destructivo: true,
+            confirmar: 'Eliminar alquiler',
+            descripcion:
+                'Se eliminarán el alquiler y sus pagos registrados de forma permanente.',
+        });
+
+        if (!ok) {
             return;
         }
 
@@ -124,6 +134,7 @@ export default function Alquileres({
 
     const confirmarPago = (a: Alquiler, periodo: string) => {
         const monto = parseFloat(pago.monto);
+
         if (!(monto > 0) || pago.fecha_pago === '') {
             return;
         }
@@ -141,12 +152,15 @@ export default function Alquileres({
         );
     };
 
-    const anularPago = (a: Alquiler, pagoId: number, periodo: string) => {
-        if (
-            !confirm(
-                `¿Anular el pago de ${etiquetaPeriodo(periodo)} de «${a.inquilino}»? También se eliminará el egreso en caja.`,
-            )
-        ) {
+    const anularPago = async (a: Alquiler, pagoId: number, periodo: string) => {
+        const ok = await confirm({
+            titulo: `¿Anular el pago de ${etiquetaPeriodo(periodo)} de «${a.inquilino}»?`,
+            destructivo: true,
+            confirmar: 'Anular pago',
+            descripcion: 'También se eliminará el egreso en caja.',
+        });
+
+        if (!ok) {
             return;
         }
 
@@ -158,10 +172,11 @@ export default function Alquileres({
 
     return (
         <div className="flex flex-col gap-4">
+            {dialog}
             {/* Alta rápida */}
             {puedeRegistrar && (
                 <div className="rounded-lg border border-dashed border-border bg-primary/[0.03] p-3">
-                    <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <div className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
                         Agregar alquiler
                     </div>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -420,6 +435,7 @@ export default function Alquileres({
                                                                         periodo,
                                                                     );
                                                                 }
+
                                                                 if (
                                                                     e.key ===
                                                                     'Escape'

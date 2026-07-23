@@ -12,9 +12,9 @@ import {
     XCircle,
 } from 'lucide-react';
 import { useState } from 'react';
-import CertificadoPreview, {
-    type BrandingUrls,
-} from '@/components/certificado-preview';
+import CertificadoPreview from '@/components/certificado-preview';
+import type { BrandingUrls } from '@/components/certificado-preview';
+import { useConfirm } from '@/components/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,7 +66,9 @@ function DatoItem({
                 <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                     {label}
                 </div>
-                <div className="text-sm font-medium text-foreground">{valor}</div>
+                <div className="text-sm font-medium text-foreground">
+                    {valor}
+                </div>
             </div>
         </div>
     );
@@ -80,15 +82,31 @@ export default function CertificadoShow({ certificado }: Props) {
 
     const [revocando, setRevocando] = useState(false);
     const branding = usePage<{ branding: BrandingUrls }>().props.branding;
+    const { confirm, dialog } = useConfirm();
 
-    const eliminar = () => {
-        if (!confirm(`¿Eliminar el certificado ${certificado.codigo}?`)) return;
+    const eliminar = async () => {
+        const ok = await confirm({
+            titulo: `¿Eliminar el certificado ${certificado.codigo}?`,
+            destructivo: true,
+            confirmar: 'Eliminar certificado',
+            descripcion:
+                'El certificado y su código de verificación dejarán de ser válidos de forma permanente.',
+        });
+
+        if (!ok) {
+            return;
+        }
+
         router.delete(certificados.destroy(certificado.id).url);
     };
 
     const revocar = () => {
         const motivo = prompt('Motivo de la revocación (opcional):');
-        if (motivo === null) return;
+
+        if (motivo === null) {
+            return;
+        }
+
         setRevocando(true);
         router.post(
             certificados.revocar(certificado.id).url,
@@ -100,6 +118,7 @@ export default function CertificadoShow({ certificado }: Props) {
     return (
         <>
             <Head title={`Certificado ${certificado.codigo}`} />
+            {dialog}
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     {certificado.vigente ? (
@@ -115,19 +134,31 @@ export default function CertificadoShow({ certificado }: Props) {
                     )}
                     <div className="flex flex-wrap gap-2">
                         <Button asChild variant="outline">
-                            <a href={certificado.url_preview} target="_blank" rel="noreferrer">
+                            <a
+                                href={certificado.url_preview}
+                                target="_blank"
+                                rel="noreferrer"
+                            >
                                 <Eye className="size-4" />
                                 Previsualizar
                             </a>
                         </Button>
                         <Button asChild>
-                            <a href={certificado.url_pdf} target="_blank" rel="noreferrer">
+                            <a
+                                href={certificado.url_pdf}
+                                target="_blank"
+                                rel="noreferrer"
+                            >
                                 <FileDown className="size-4" />
                                 Descargar PDF
                             </a>
                         </Button>
                         {certificado.vigente && (
-                            <Button variant="outline" disabled={revocando} onClick={revocar}>
+                            <Button
+                                variant="outline"
+                                disabled={revocando}
+                                onClick={revocar}
+                            >
                                 <XCircle className="size-4" />
                                 Revocar
                             </Button>
@@ -148,12 +179,17 @@ export default function CertificadoShow({ certificado }: Props) {
                                 </div>
                                 {certificado.revocado_at && (
                                     <div className="text-sm text-muted-foreground">
-                                        Fecha de revocación: {new Date(certificado.revocado_at).toLocaleString('es-PE')}
+                                        Fecha de revocación:{' '}
+                                        {new Date(
+                                            certificado.revocado_at,
+                                        ).toLocaleString('es-PE')}
                                     </div>
                                 )}
                                 {certificado.motivo_revocacion && (
                                     <div className="mt-1 text-sm">
-                                        <span className="text-muted-foreground">Motivo: </span>
+                                        <span className="text-muted-foreground">
+                                            Motivo:{' '}
+                                        </span>
                                         {certificado.motivo_revocacion}
                                     </div>
                                 )}
@@ -184,16 +220,24 @@ export default function CertificadoShow({ certificado }: Props) {
                                 />
                                 <DatoItem
                                     label="Documento"
-                                    valor={certificado.beneficiario_documento ?? '—'}
+                                    valor={
+                                        certificado.beneficiario_documento ??
+                                        '—'
+                                    }
                                 />
                                 {certificado.beneficiario_profesion && (
                                     <DatoItem
                                         label="Profesión"
-                                        valor={certificado.beneficiario_profesion}
+                                        valor={
+                                            certificado.beneficiario_profesion
+                                        }
                                     />
                                 )}
                                 {certificado.cargo && (
-                                    <DatoItem label="Cargo / Actividad" valor={certificado.cargo} />
+                                    <DatoItem
+                                        label="Cargo / Actividad"
+                                        valor={certificado.cargo}
+                                    />
                                 )}
                             </CardContent>
                         </Card>
@@ -213,20 +257,26 @@ export default function CertificadoShow({ certificado }: Props) {
                                             valor={
                                                 <>
                                                     <span className="font-mono text-xs text-muted-foreground">
-                                                        [{certificado.obra.codigo}]
+                                                        [
+                                                        {
+                                                            certificado.obra
+                                                                .codigo
+                                                        }
+                                                        ]
                                                     </span>{' '}
                                                     {certificado.obra.nombre}
                                                 </>
                                             }
                                         />
                                     )}
-                                    {certificado.fecha_inicio && certificado.fecha_fin && (
-                                        <DatoItem
-                                            label="Período"
-                                            icono={Calendar}
-                                            valor={`${certificado.fecha_inicio} → ${certificado.fecha_fin}`}
-                                        />
-                                    )}
+                                    {certificado.fecha_inicio &&
+                                        certificado.fecha_fin && (
+                                            <DatoItem
+                                                label="Período"
+                                                icono={Calendar}
+                                                valor={`${certificado.fecha_inicio} → ${certificado.fecha_fin}`}
+                                            />
+                                        )}
                                     {certificado.descripcion && (
                                         <div className="sm:col-span-2">
                                             <div className="mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
@@ -251,8 +301,14 @@ export default function CertificadoShow({ certificado }: Props) {
                                     icono={Calendar}
                                     valor={certificado.fecha_emision}
                                 />
-                                <DatoItem label="Lugar" valor={certificado.lugar_emision} />
-                                <DatoItem label="Firmante" valor={certificado.emisor_nombre} />
+                                <DatoItem
+                                    label="Lugar"
+                                    valor={certificado.lugar_emision}
+                                />
+                                <DatoItem
+                                    label="Firmante"
+                                    valor={certificado.emisor_nombre}
+                                />
                                 <DatoItem
                                     label="Cargo"
                                     valor={`${certificado.emisor_cargo}${certificado.emisor_cip ? ` · CIP ${certificado.emisor_cip}` : ''}`}
@@ -286,13 +342,15 @@ export default function CertificadoShow({ certificado }: Props) {
                                     <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                                         Hash de integridad (SHA-256)
                                     </div>
-                                    <code className="block break-all font-mono text-[10px] text-muted-foreground">
+                                    <code className="block font-mono text-[10px] break-all text-muted-foreground">
                                         {certificado.hash_verificacion}
                                     </code>
                                 </div>
                             </div>
                             <div className="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">
-                                Cualquier persona con el código <strong>{certificado.codigo}</strong> o el QR del PDF puede validar este certificado en línea.
+                                Cualquier persona con el código{' '}
+                                <strong>{certificado.codigo}</strong> o el QR
+                                del PDF puede validar este certificado en línea.
                             </div>
                         </CardContent>
                     </Card>

@@ -1,9 +1,16 @@
 import { Head, router } from '@inertiajs/react';
 import { ImagePlus, Trash2, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 
 type Slot = 'firma' | 'iso1' | 'iso2' | 'iso3';
 
@@ -28,6 +35,7 @@ function SlotCard({
 }) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [subiendo, setSubiendo] = useState(false);
+    const { confirm, dialog } = useConfirm();
 
     const subir = (file: File) => {
         setSubiendo(true);
@@ -42,8 +50,18 @@ function SlotCard({
         );
     };
 
-    const eliminar = () => {
-        if (!confirm(`¿Eliminar la imagen "${titulo}"?`)) return;
+    const eliminar = async () => {
+        const ok = await confirm({
+            titulo: `¿Eliminar la imagen «${titulo}»?`,
+            destructivo: true,
+            confirmar: 'Eliminar imagen',
+            descripcion: 'Se volverá a usar la imagen por defecto.',
+        });
+
+        if (!ok) {
+            return;
+        }
+
         router.delete('/settings/branding', {
             data: { slot },
             preserveScroll: true,
@@ -52,6 +70,7 @@ function SlotCard({
 
     return (
         <Card>
+            {dialog}
             <CardHeader className="pb-3">
                 <CardTitle className="flex items-center justify-between gap-2 text-base">
                     {titulo}
@@ -96,7 +115,11 @@ function SlotCard({
                         className="hidden"
                         onChange={(e) => {
                             const file = e.target.files?.[0];
-                            if (file) subir(file);
+
+                            if (file) {
+                                subir(file);
+                            }
+
                             e.target.value = '';
                         }}
                     />

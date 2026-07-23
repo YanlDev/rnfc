@@ -120,9 +120,7 @@ function IconoArchivo({
     return (
         <div className="flex flex-col items-center gap-1">
             <Icono className={`${className} ${color}`} />
-            <span
-                className={`text-[10px] font-bold tracking-widest ${color}`}
-            >
+            <span className={`text-[10px] font-bold tracking-widest ${color}`}>
                 {etiqueta}
             </span>
         </div>

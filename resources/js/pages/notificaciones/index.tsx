@@ -12,6 +12,7 @@ import {
     XCircle,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -50,11 +51,13 @@ type Filtro = 'todas' | 'no_leidas';
 
 export default function NotificacionesIndex({ notificaciones }: Props) {
     const [filtro, setFiltro] = useState<Filtro>('todas');
+    const { confirm, dialog } = useConfirm();
 
     const filtradas = useMemo(() => {
         if (filtro === 'no_leidas') {
             return notificaciones.filter((n) => !n.leida);
         }
+
         return notificaciones;
     }, [notificaciones, filtro]);
 
@@ -65,18 +68,33 @@ export default function NotificacionesIndex({ notificaciones }: Props) {
     };
 
     const marcarTodas = () => {
-        router.post('/notificaciones/marcar-todas', {}, { preserveScroll: true });
+        router.post(
+            '/notificaciones/marcar-todas',
+            {},
+            { preserveScroll: true },
+        );
     };
 
-    const eliminar = (id: string, e: React.MouseEvent) => {
+    const eliminar = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!confirm('¿Eliminar esta notificación?')) return;
+
+        const ok = await confirm({
+            titulo: '¿Eliminar esta notificación?',
+            destructivo: true,
+            confirmar: 'Eliminar',
+        });
+
+        if (!ok) {
+            return;
+        }
+
         router.delete(`/notificaciones/${id}`, { preserveScroll: true });
     };
 
     return (
         <>
             <Head title="Notificaciones" />
+            {dialog}
             <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="inline-flex overflow-hidden rounded-md border border-border">
@@ -106,7 +124,11 @@ export default function NotificacionesIndex({ notificaciones }: Props) {
                         </button>
                     </div>
                     {totalNoLeidas > 0 && (
-                        <Button variant="outline" size="sm" onClick={marcarTodas}>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={marcarTodas}
+                        >
                             <CheckCheck className="size-4" />
                             Marcar todas como leídas
                         </Button>
@@ -122,21 +144,24 @@ export default function NotificacionesIndex({ notificaciones }: Props) {
                                 : 'No tienes notificaciones todavía'}
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                            Cuando se sube un documento, se registra un asiento o
-                            vence un evento del calendario en alguna de tus obras,
-                            aparecerá aquí.
+                            Cuando se sube un documento, se registra un asiento
+                            o vence un evento del calendario en alguna de tus
+                            obras, aparecerá aquí.
                         </p>
                     </Card>
                 ) : (
                     <ul className="space-y-2">
                         {filtradas.map((n) => {
                             const Icono = ICONOS[n.icono] ?? Bell;
+
                             return (
                                 <li key={n.id}>
                                     <Card
                                         className={
                                             'cursor-pointer transition-shadow hover:shadow-md ' +
-                                            (!n.leida ? 'border-primary/40 bg-primary/5' : '')
+                                            (!n.leida
+                                                ? 'border-primary/40 bg-primary/5'
+                                                : '')
                                         }
                                         onClick={() => irA(n.id)}
                                     >
@@ -157,12 +182,14 @@ export default function NotificacionesIndex({ notificaciones }: Props) {
                                                     </h3>
                                                     <div className="flex shrink-0 items-center gap-2">
                                                         {!n.leida && (
-                                                            <Badge className="bg-primary text-primary-foreground text-[10px]">
+                                                            <Badge className="bg-primary text-[10px] text-primary-foreground">
                                                                 Nueva
                                                             </Badge>
                                                         )}
                                                         <span className="text-xs text-muted-foreground">
-                                                            {n.created_at_relativo}
+                                                            {
+                                                                n.created_at_relativo
+                                                            }
                                                         </span>
                                                     </div>
                                                 </div>
@@ -178,13 +205,20 @@ export default function NotificacionesIndex({ notificaciones }: Props) {
                                                                 {n.obra_codigo}
                                                             </span>{' '}
                                                             {n.obra_nombre && (
-                                                                <span>· {n.obra_nombre}</span>
+                                                                <span>
+                                                                    ·{' '}
+                                                                    {
+                                                                        n.obra_nombre
+                                                                    }
+                                                                </span>
                                                             )}
                                                         </span>
                                                     )}
                                                     <button
                                                         type="button"
-                                                        onClick={(e) => eliminar(n.id, e)}
+                                                        onClick={(e) =>
+                                                            eliminar(n.id, e)
+                                                        }
                                                         className="ml-auto rounded p-1 text-muted-foreground hover:bg-muted hover:text-destructive"
                                                         title="Eliminar"
                                                     >
@@ -206,7 +240,8 @@ export default function NotificacionesIndex({ notificaciones }: Props) {
 
 NotificacionesIndex.layout = {
     title: 'Notificaciones',
-    description: 'Avisos de tu actividad en obras: documentos, asientos, vencimientos y más.',
+    description:
+        'Avisos de tu actividad en obras: documentos, asientos, vencimientos y más.',
     breadcrumbs: [
         { title: 'Panel', href: '/dashboard' },
         { title: 'Notificaciones', href: '/notificaciones' },

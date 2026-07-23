@@ -16,6 +16,7 @@ import {
     Wallet,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import { EstadoObraBadge } from '@/components/estado-obra-badge';
 import MapaUbicacion from '@/components/mapa-ubicacion';
 import { Button } from '@/components/ui/button';
@@ -127,9 +128,16 @@ function ImagenProyecto({
 }) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [subiendo, setSubiendo] = useState(false);
+    const { confirm, dialog } = useConfirm();
 
-    const eliminar = () => {
-        if (!confirm('¿Quitar la imagen del proyecto?')) {
+    const eliminar = async () => {
+        const ok = await confirm({
+            titulo: '¿Quitar la imagen del proyecto?',
+            destructivo: true,
+            confirmar: 'Quitar imagen',
+        });
+
+        if (!ok) {
             return;
         }
 
@@ -163,6 +171,7 @@ function ImagenProyecto({
 
     return (
         <div className="group relative h-56 overflow-hidden rounded-lg">
+            {dialog}
             {imagenUrl ? (
                 <img
                     src={imagenUrl}
@@ -179,7 +188,7 @@ function ImagenProyecto({
             {puedeEditar && (
                 <>
                     {imagenUrl ? (
-                        <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/45 opacity-0 backdrop-blur-[1px] transition-opacity group-hover:opacity-100">
+                        <div className="absolute inset-0 flex items-end justify-end gap-2 p-3 transition-opacity pointer-fine:items-center pointer-fine:justify-center pointer-fine:bg-black/45 pointer-fine:p-0 pointer-fine:opacity-0 pointer-fine:backdrop-blur-[1px] pointer-fine:group-hover:opacity-100">
                             <button
                                 type="button"
                                 onClick={() => inputRef.current?.click()}

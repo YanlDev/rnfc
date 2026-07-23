@@ -371,7 +371,9 @@ const NodoCarpeta = memo(function NodoCarpeta({
                     <span
                         className={
                             'shrink-0 rounded-full bg-muted px-1.5 text-[10px] font-medium text-muted-foreground tabular-nums ' +
-                            (puedeAdministrar ? 'group-hover:hidden' : '')
+                            (puedeAdministrar
+                                ? 'pointer-fine:group-hover:hidden'
+                                : '')
                         }
                         title={`${conteo.archivos} ${conteo.archivos === 1 ? 'archivo' : 'archivos'}`}
                     >
@@ -379,7 +381,7 @@ const NodoCarpeta = memo(function NodoCarpeta({
                     </span>
                 )}
                 {puedeAdministrar && !editando && (
-                    <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                    <div className="flex gap-0.5 transition-opacity pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100">
                         <button
                             type="button"
                             onClick={(e) => {

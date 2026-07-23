@@ -263,6 +263,94 @@ export default function AdminUsuarios({
         );
     };
 
+    // Estado del usuario (compartido entre la tabla desktop y las cards mobile).
+    const estadoUsuario = (u: Usuario) =>
+        u.eliminado_at ? (
+            <span
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400"
+                title={`Eliminado el ${u.eliminado_at}`}
+            >
+                <Trash2 className="size-3" />
+                En papelera
+            </span>
+        ) : u.activo ? (
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                <span className="size-2 rounded-full bg-emerald-500" />
+                Activo
+            </span>
+        ) : (
+            <span
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500"
+                title={u.motivo_desactivacion ?? 'Sin motivo registrado'}
+            >
+                <span className="size-2 rounded-full bg-slate-400" />
+                Desactivado
+            </span>
+        );
+
+    // Menú de acciones por usuario (compartido entre tabla y cards).
+    const menuAcciones = (u: Usuario) => (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={u.es_yo}
+                    aria-label={`Acciones para ${u.name}`}
+                    title={
+                        u.es_yo ? 'No puedes modificarte a ti mismo' : undefined
+                    }
+                >
+                    <MoreVertical className="size-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuLabel>{u.name}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {u.eliminado_at ? (
+                    <DropdownMenuItem onClick={() => restaurarUsuario(u)}>
+                        <RotateCcw className="size-4" />
+                        Restaurar
+                    </DropdownMenuItem>
+                ) : (
+                    <>
+                        <DropdownMenuItem
+                            onClick={() => {
+                                setUsuarioRol(u);
+                                formRol.setData('rol', u.rol ?? '');
+                            }}
+                        >
+                            <ShieldCheck className="size-4" />
+                            Cambiar rol
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => {
+                                setUsuarioObjetivo(u);
+                                formToggle.reset();
+                            }}
+                            className={
+                                u.activo
+                                    ? 'text-destructive focus:text-destructive'
+                                    : ''
+                            }
+                        >
+                            <Power className="size-4" />
+                            {u.activo ? 'Desactivar' : 'Reactivar'}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                            onClick={() => eliminarUsuario(u)}
+                            className="text-destructive focus:text-destructive"
+                        >
+                            <Trash2 className="size-4" />
+                            Eliminar
+                        </DropdownMenuItem>
+                    </>
+                )}
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+
     return (
         <>
             <Head title="Usuarios" />
@@ -422,187 +510,137 @@ export default function AdminUsuarios({
                         </p>
                     </Card>
                 ) : (
-                    <Card className="overflow-hidden p-0">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Usuario</TableHead>
-                                    <TableHead>Rol</TableHead>
-                                    <TableHead>Obras</TableHead>
-                                    <TableHead>Último acceso</TableHead>
-                                    <TableHead>Estado</TableHead>
-                                    <TableHead className="text-right">
-                                        Acciones
-                                    </TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {usuarios.data.map((u) => (
-                                    <TableRow key={u.id}>
-                                        <TableCell>
-                                            <div className="flex flex-col">
-                                                <span className="font-medium text-foreground">
-                                                    {u.name}
-                                                    {u.es_yo && (
-                                                        <span className="ml-2 text-[10px] font-bold text-primary uppercase">
-                                                            · tú
-                                                        </span>
-                                                    )}
-                                                </span>
-                                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                                    <Mail className="size-3" />{' '}
-                                                    {u.email}
-                                                </span>
+                    <>
+                        {/* ============ MOBILE: cards apiladas ============ */}
+                        <div className="space-y-3 md:hidden">
+                            {usuarios.data.map((u) => (
+                                <Card key={u.id} className="gap-0 p-4">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <div className="truncate font-medium">
+                                                {u.name}
+                                                {u.es_yo && (
+                                                    <span className="ml-2 text-[10px] font-bold text-primary uppercase">
+                                                        · tú
+                                                    </span>
+                                                )}
                                             </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            {u.rol ? (
-                                                <Badge
-                                                    className={
-                                                        ROL_COLOR[u.rol] ?? ''
-                                                    }
-                                                >
-                                                    {u.rol_label}
-                                                </Badge>
-                                            ) : (
-                                                <span className="text-xs text-muted-foreground">
-                                                    —
-                                                </span>
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className="inline-flex items-center gap-1 text-sm">
-                                                <Building2 className="size-3.5 text-muted-foreground" />
-                                                {u.obras_count}
+                                            <div className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+                                                <Mail className="size-3 shrink-0" />
+                                                {u.email}
+                                            </div>
+                                        </div>
+                                        {menuAcciones(u)}
+                                    </div>
+                                    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border pt-3">
+                                        {u.rol ? (
+                                            <Badge
+                                                className={
+                                                    ROL_COLOR[u.rol] ?? ''
+                                                }
+                                            >
+                                                {u.rol_label}
+                                            </Badge>
+                                        ) : (
+                                            <span className="text-xs text-muted-foreground">
+                                                Sin rol
                                             </span>
-                                        </TableCell>
-                                        <TableCell className="text-xs text-muted-foreground">
-                                            {u.last_login_at ? (
-                                                <span className="inline-flex items-center gap-1">
-                                                    <Clock className="size-3" />
-                                                    {u.last_login_at}
-                                                </span>
-                                            ) : (
-                                                'Nunca'
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            {u.eliminado_at ? (
-                                                <span
-                                                    className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400"
-                                                    title={`Eliminado el ${u.eliminado_at}`}
-                                                >
-                                                    <Trash2 className="size-3" />
-                                                    En papelera
-                                                </span>
-                                            ) : u.activo ? (
-                                                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                                                    <span className="size-2 rounded-full bg-emerald-500" />
-                                                    Activo
-                                                </span>
-                                            ) : (
-                                                <span
-                                                    className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500"
-                                                    title={
-                                                        u.motivo_desactivacion ??
-                                                        'Sin motivo registrado'
-                                                    }
-                                                >
-                                                    <span className="size-2 rounded-full bg-slate-400" />
-                                                    Desactivado
-                                                </span>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        disabled={u.es_yo}
-                                                        aria-label={`Acciones para ${u.name}`}
-                                                        title={
-                                                            u.es_yo
-                                                                ? 'No puedes modificarte a ti mismo'
-                                                                : undefined
+                                        )}
+                                        {estadoUsuario(u)}
+                                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                            <Building2 className="size-3" />
+                                            {u.obras_count}{' '}
+                                            {u.obras_count === 1
+                                                ? 'obra'
+                                                : 'obras'}
+                                        </span>
+                                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                            <Clock className="size-3" />
+                                            {u.last_login_at ?? 'Nunca'}
+                                        </span>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+
+                        {/* ============ DESKTOP: tabla ============ */}
+                        <Card className="hidden overflow-hidden p-0 md:block">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Usuario</TableHead>
+                                        <TableHead>Rol</TableHead>
+                                        <TableHead>Obras</TableHead>
+                                        <TableHead>Último acceso</TableHead>
+                                        <TableHead>Estado</TableHead>
+                                        <TableHead className="text-right">
+                                            Acciones
+                                        </TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {usuarios.data.map((u) => (
+                                        <TableRow key={u.id}>
+                                            <TableCell>
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium text-foreground">
+                                                        {u.name}
+                                                        {u.es_yo && (
+                                                            <span className="ml-2 text-[10px] font-bold text-primary uppercase">
+                                                                · tú
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                        <Mail className="size-3" />{' '}
+                                                        {u.email}
+                                                    </span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                {u.rol ? (
+                                                    <Badge
+                                                        className={
+                                                            ROL_COLOR[u.rol] ??
+                                                            ''
                                                         }
                                                     >
-                                                        <MoreVertical className="size-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>
-                                                        {u.name}
-                                                    </DropdownMenuLabel>
-                                                    <DropdownMenuSeparator />
-                                                    {u.eliminado_at ? (
-                                                        <DropdownMenuItem
-                                                            onClick={() =>
-                                                                restaurarUsuario(
-                                                                    u,
-                                                                )
-                                                            }
-                                                        >
-                                                            <RotateCcw className="size-4" />
-                                                            Restaurar
-                                                        </DropdownMenuItem>
-                                                    ) : (
-                                                        <>
-                                                            <DropdownMenuItem
-                                                                onClick={() => {
-                                                                    setUsuarioRol(
-                                                                        u,
-                                                                    );
-                                                                    formRol.setData(
-                                                                        'rol',
-                                                                        u.rol ??
-                                                                            '',
-                                                                    );
-                                                                }}
-                                                            >
-                                                                <ShieldCheck className="size-4" />
-                                                                Cambiar rol
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                onClick={() => {
-                                                                    setUsuarioObjetivo(
-                                                                        u,
-                                                                    );
-                                                                    formToggle.reset();
-                                                                }}
-                                                                className={
-                                                                    u.activo
-                                                                        ? 'text-destructive focus:text-destructive'
-                                                                        : ''
-                                                                }
-                                                            >
-                                                                <Power className="size-4" />
-                                                                {u.activo
-                                                                    ? 'Desactivar'
-                                                                    : 'Reactivar'}
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuSeparator />
-                                                            <DropdownMenuItem
-                                                                onClick={() =>
-                                                                    eliminarUsuario(
-                                                                        u,
-                                                                    )
-                                                                }
-                                                                className="text-destructive focus:text-destructive"
-                                                            >
-                                                                <Trash2 className="size-4" />
-                                                                Eliminar
-                                                            </DropdownMenuItem>
-                                                        </>
-                                                    )}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </Card>
+                                                        {u.rol_label}
+                                                    </Badge>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">
+                                                        —
+                                                    </span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className="inline-flex items-center gap-1 text-sm">
+                                                    <Building2 className="size-3.5 text-muted-foreground" />
+                                                    {u.obras_count}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="text-xs text-muted-foreground">
+                                                {u.last_login_at ? (
+                                                    <span className="inline-flex items-center gap-1">
+                                                        <Clock className="size-3" />
+                                                        {u.last_login_at}
+                                                    </span>
+                                                ) : (
+                                                    'Nunca'
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                {estadoUsuario(u)}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {menuAcciones(u)}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </Card>
+                    </>
                 )}
 
                 {/* Paginación */}

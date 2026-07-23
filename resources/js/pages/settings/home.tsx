@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import { ImagePlus, Trash2, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,6 +22,7 @@ export default function HomeSettings({ imagenes }: Props) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [subiendo, setSubiendo] = useState(false);
     const [titulo, setTitulo] = useState('');
+    const { confirm, dialog } = useConfirm();
 
     const subir = (file: File) => {
         setSubiendo(true);
@@ -38,14 +40,25 @@ export default function HomeSettings({ imagenes }: Props) {
         );
     };
 
-    const eliminar = (img: Imagen) => {
-        if (!confirm('¿Eliminar esta imagen de la galería?')) return;
+    const eliminar = async (img: Imagen) => {
+        const ok = await confirm({
+            titulo: '¿Eliminar esta imagen de la galería?',
+            destructivo: true,
+            confirmar: 'Eliminar imagen',
+            descripcion: 'Dejará de mostrarse en la página principal.',
+        });
+
+        if (!ok) {
+            return;
+        }
+
         router.delete(`/settings/home/${img.id}`, { preserveScroll: true });
     };
 
     return (
         <>
             <Head title="Configuración · Galería del home" />
+            {dialog}
 
             <div className="space-y-6">
                 <Heading
@@ -56,13 +69,15 @@ export default function HomeSettings({ imagenes }: Props) {
                 <Card>
                     <CardContent className="space-y-4 pt-6">
                         <div>
-                            <label className="text-sm font-semibold">Título (opcional)</label>
+                            <label className="text-sm font-semibold">
+                                Título (opcional)
+                            </label>
                             <input
                                 type="text"
                                 value={titulo}
                                 onChange={(e) => setTitulo(e.target.value)}
                                 placeholder="Ej: Carretera PE-3S, Saneamiento Azángaro..."
-                                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/40"
+                                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:border-ring focus:ring-2 focus:ring-ring/40 focus:outline-none"
                             />
                         </div>
                         <div>
@@ -73,7 +88,11 @@ export default function HomeSettings({ imagenes }: Props) {
                                 className="hidden"
                                 onChange={(e) => {
                                     const file = e.target.files?.[0];
-                                    if (file) subir(file);
+
+                                    if (file) {
+                                        subir(file);
+                                    }
+
                                     e.target.value = '';
                                 }}
                             />
@@ -87,7 +106,8 @@ export default function HomeSettings({ imagenes }: Props) {
                                 {subiendo ? 'Subiendo...' : 'Agregar imagen'}
                             </Button>
                             <p className="mt-2 text-xs text-muted-foreground">
-                                JPG, PNG o WEBP. Máx. 5 MB. Recomendado 1600×1000 px.
+                                JPG, PNG o WEBP. Máx. 5 MB. Recomendado
+                                1600×1000 px.
                             </p>
                         </div>
                     </CardContent>
@@ -102,7 +122,9 @@ export default function HomeSettings({ imagenes }: Props) {
                         <Card>
                             <CardContent className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
                                 <ImagePlus className="size-8" />
-                                <span className="text-sm">No hay imágenes en la galería.</span>
+                                <span className="text-sm">
+                                    No hay imágenes en la galería.
+                                </span>
                             </CardContent>
                         </Card>
                     ) : (

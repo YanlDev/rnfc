@@ -82,7 +82,10 @@ export default function AdminPermisos({
     };
 
     const restaurar = () => {
-        if (!obra) return;
+        if (!obra) {
+            return;
+        }
+
         router.delete(`/admin/permisos/${obra.id}`, {
             preserveScroll: true,
             onSuccess: () =>
@@ -158,7 +161,7 @@ export default function AdminPermisos({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[40%]">
+                                <TableHead className="sticky left-0 z-10 w-[40%] min-w-44 bg-card">
                                     Capacidad
                                 </TableHead>
                                 {roles.map((r) => (
@@ -179,12 +182,15 @@ export default function AdminPermisos({
                                             colSpan={roles.length + 1}
                                             className="py-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
                                         >
-                                            {g.grupo}
+                                            {/* sticky para que el nombre del grupo no se pierda al hacer scroll horizontal en mobile */}
+                                            <span className="sticky left-3 inline-block">
+                                                {g.grupo}
+                                            </span>
                                         </TableCell>
                                     </TableRow>
                                     {g.permisos.map((p) => (
                                         <TableRow key={p.key}>
-                                            <TableCell className="font-medium text-foreground">
+                                            <TableCell className="sticky left-0 z-10 min-w-44 bg-card font-medium text-foreground">
                                                 {p.label}
                                             </TableCell>
                                             {roles.map((r) => (
