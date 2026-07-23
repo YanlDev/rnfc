@@ -13,6 +13,7 @@ namespace App\Enums;
 enum RolObra: string
 {
     case Administrador = 'administrador';
+    case Supervisor = 'supervisor';
     case Residente = 'residente';
     case Especialista = 'especialista';
     case Asistente = 'asistente';
@@ -21,6 +22,7 @@ enum RolObra: string
     {
         return match ($this) {
             self::Administrador => 'Administrador de obra',
+            self::Supervisor => 'Supervisor',
             self::Residente => 'Residente',
             self::Especialista => 'Especialista',
             self::Asistente => 'Asistente',

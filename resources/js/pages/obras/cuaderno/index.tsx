@@ -66,6 +66,13 @@ export default function CuadernoIndex({
         [cuadernos, tipoActivo],
     );
 
+    // `asientos` trae ambos cuadernos: la lista muestra sólo la pestaña activa;
+    // el calendario los muestra juntos para elegir cuál documento abrir.
+    const asientosActivos = useMemo(
+        () => asientos.filter((a) => a.tipo_autor === tipoActivo),
+        [asientos, tipoActivo],
+    );
+
     const cambiarTipo = (nuevo: string) => {
         router.get(
             `/obras/${obra.id}/cuaderno`,
@@ -153,13 +160,14 @@ export default function CuadernoIndex({
                         </button>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                        {asientos.length}{' '}
-                        {asientos.length === 1 ? 'asiento' : 'asientos'} en{' '}
-                        {cuadernoActivo?.label_corto}
+                        {vista === 'calendario'
+                            ? `${asientos.length} ${asientos.length === 1 ? 'asiento' : 'asientos'} en ambos cuadernos`
+                            : `${asientosActivos.length} ${asientosActivos.length === 1 ? 'asiento' : 'asientos'} en ${cuadernoActivo?.label_corto}`}
                     </div>
                 </div>
 
-                {asientos.length === 0 ? (
+                {(vista === 'lista' ? asientosActivos : asientos).length ===
+                0 ? (
                     <Card className="p-12 text-center">
                         <NotebookPen className="mx-auto mb-3 size-10 text-muted-foreground" />
                         <h3 className="mb-1 text-lg font-semibold">
@@ -182,7 +190,7 @@ export default function CuadernoIndex({
                     </Card>
                 ) : vista === 'lista' ? (
                     <div className="space-y-2">
-                        {asientos.map((a) => (
+                        {asientosActivos.map((a) => (
                             <Card
                                 key={a.id}
                                 className="cursor-pointer p-4 transition-shadow hover:shadow-md"
@@ -243,6 +251,7 @@ export default function CuadernoIndex({
                             asientos={asientos.map((a) => ({
                                 id: a.id,
                                 numero: a.numero,
+                                tipo_autor: a.tipo_autor,
                                 fecha: a.fecha,
                                 contenido: a.contenido,
                                 tiene_archivo: a.tiene_archivo,
@@ -265,7 +274,6 @@ export default function CuadernoIndex({
             <AsientoDetalleModal
                 asiento={seleccionado}
                 obraId={obra.id}
-                tipoLabel={cuadernoActivo?.label ?? ''}
                 puedeEliminar={puedeEliminar}
                 onClose={() => setSeleccionado(null)}
             />

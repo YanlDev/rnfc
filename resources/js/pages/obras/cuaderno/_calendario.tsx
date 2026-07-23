@@ -5,10 +5,28 @@ import { Button } from '@/components/ui/button';
 type Asiento = {
     id: number;
     numero: number;
+    tipo_autor: string;
     fecha: string;
     contenido: string;
     tiene_archivo: boolean;
 };
+
+// Colores por cuaderno para distinguirlos dentro del mismo día.
+const ESTILO_TIPO: Record<string, { chip: string; punto: string; corto: string }> = {
+    supervisor: {
+        chip: 'bg-primary/10 text-primary hover:bg-primary/20',
+        punto: 'bg-primary',
+        corto: 'Sup.',
+    },
+    residente: {
+        chip: 'bg-amber-500/15 text-amber-700 hover:bg-amber-500/25 dark:text-amber-400',
+        punto: 'bg-amber-500',
+        corto: 'Res.',
+    },
+};
+
+const estiloTipo = (tipo: string) =>
+    ESTILO_TIPO[tipo] ?? ESTILO_TIPO.supervisor;
 
 type Props = {
     asientos: Asiento[];
@@ -89,9 +107,21 @@ export default function CalendarioAsientos({ asientos, onSeleccionarAsiento }: P
     return (
         <div className="space-y-3">
             <div className="flex items-center justify-between">
-                <h3 className="text-base font-semibold">
-                    {MESES[mes]} {anio}
-                </h3>
+                <div className="flex items-center gap-4">
+                    <h3 className="text-base font-semibold">
+                        {MESES[mes]} {anio}
+                    </h3>
+                    <div className="hidden items-center gap-3 text-[11px] text-muted-foreground sm:flex">
+                        <span className="flex items-center gap-1">
+                            <span className="size-2 rounded-full bg-primary" />
+                            Supervisor
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <span className="size-2 rounded-full bg-amber-500" />
+                            Residente
+                        </span>
+                    </div>
+                </div>
                 <div className="flex gap-1">
                     <Button size="sm" variant="outline" onClick={irMesAnterior}>
                         <ChevronLeft className="size-4" />
@@ -144,22 +174,28 @@ export default function CalendarioAsientos({ asientos, onSeleccionarAsiento }: P
                                 {dia}
                             </div>
                             <div className="space-y-0.5">
-                                {asientosDelDia.slice(0, 3).map((a) => (
-                                    <button
-                                        key={a.id}
-                                        type="button"
-                                        onClick={() => onSeleccionarAsiento(a.id)}
-                                        className="flex w-full items-center gap-1 truncate rounded bg-primary/10 px-1 py-0.5 text-left text-[10px] font-medium text-primary hover:bg-primary/20"
-                                        title={`N° ${a.numero} · ${a.contenido}`}
-                                    >
-                                        {a.tiene_archivo && (
-                                            <FileText className="size-2.5 shrink-0" />
-                                        )}
-                                        <span className="truncate">
-                                            #{a.numero}
-                                        </span>
-                                    </button>
-                                ))}
+                                {asientosDelDia.slice(0, 3).map((a) => {
+                                    const estilo = estiloTipo(a.tipo_autor);
+
+                                    return (
+                                        <button
+                                            key={a.id}
+                                            type="button"
+                                            onClick={() =>
+                                                onSeleccionarAsiento(a.id)
+                                            }
+                                            className={`flex w-full items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[10px] font-medium ${estilo.chip}`}
+                                            title={`${estilo.corto} N° ${a.numero} · ${a.contenido}`}
+                                        >
+                                            {a.tiene_archivo && (
+                                                <FileText className="size-2.5 shrink-0" />
+                                            )}
+                                            <span className="truncate">
+                                                {estilo.corto} #{a.numero}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
                                 {asientosDelDia.length > 3 && (
                                     <div className="text-[10px] text-muted-foreground">
                                         +{asientosDelDia.length - 3} más

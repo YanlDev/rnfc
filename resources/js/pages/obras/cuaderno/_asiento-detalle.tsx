@@ -1,11 +1,14 @@
 import { router } from '@inertiajs/react';
 import { Calendar, Download, FileText, Trash2, User, X } from 'lucide-react';
+import { useConfirm } from '@/components/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 export type AsientoDetalle = {
     id: number;
     numero: number;
+    tipo_autor: string;
+    tipo_label: string;
     fecha: string;
     contenido: string;
     autor: string | null;
@@ -21,7 +24,6 @@ export type AsientoDetalle = {
 type Props = {
     asiento: AsientoDetalle | null;
     obraId: number;
-    tipoLabel: string;
     puedeEliminar: boolean;
     onClose: () => void;
 };
@@ -29,20 +31,26 @@ type Props = {
 export default function AsientoDetalleModal({
     asiento,
     obraId,
-    tipoLabel,
     puedeEliminar,
     onClose,
 }: Props) {
+    const { confirm, dialog } = useConfirm();
+
     if (!asiento) return null;
 
-    const eliminar = () => {
-        if (
-            !confirm(
-                `¿Eliminar el asiento N° ${asiento.numero}? Esto deja un registro de auditoría pero oculta el contenido.`,
-            )
-        ) {
+    const eliminar = async () => {
+        const ok = await confirm({
+            titulo: `¿Eliminar el asiento N° ${asiento.numero}?`,
+            destructivo: true,
+            confirmar: 'Eliminar asiento',
+            descripcion:
+                'Esto deja un registro de auditoría pero oculta el contenido.',
+        });
+
+        if (!ok) {
             return;
         }
+
         router.delete(`/obras/${obraId}/cuaderno/${asiento.id}`, {
             preserveScroll: true,
             onSuccess: onClose,
@@ -54,6 +62,7 @@ export default function AsientoDetalleModal({
             className="fixed inset-0 z-50 flex flex-col bg-black/80 backdrop-blur-sm"
             onClick={onClose}
         >
+            {dialog}
             <div
                 className="flex items-center justify-between gap-3 border-b border-white/10 bg-black/40 px-4 py-3 text-white"
                 onClick={(e) => e.stopPropagation()}
@@ -63,8 +72,15 @@ export default function AsientoDetalleModal({
                         <Badge className="bg-primary text-primary-foreground">
                             N° {asiento.numero}
                         </Badge>
-                        <span>{tipoLabel}</span>
+                        <span>{asiento.tipo_label}</span>
                     </div>
+                    {/* El contenido es sólo una referencia: el documento manda. */}
+                    <p
+                        className="mt-0.5 truncate text-xs text-white/70"
+                        title={asiento.contenido}
+                    >
+                        {asiento.contenido}
+                    </p>
                     <div className="mt-0.5 flex items-center gap-3 text-[11px] text-white/60">
                         <span className="flex items-center gap-1">
                             <Calendar className="size-3" />
@@ -89,12 +105,18 @@ export default function AsientoDetalleModal({
                         <Button asChild variant="secondary" size="sm">
                             <a href={asiento.url_descarga}>
                                 <Download className="size-4" />
-                                Descargar
+                                <span className="hidden sm:inline">
+                                    Descargar
+                                </span>
                             </a>
                         </Button>
                     )}
                     {puedeEliminar && (
-                        <Button variant="destructive" size="sm" onClick={eliminar}>
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={eliminar}
+                        >
                             <Trash2 className="size-4" />
                         </Button>
                     )}
@@ -107,43 +129,37 @@ export default function AsientoDetalleModal({
                 </div>
             </div>
 
+            {/* El documento ocupa todo el espacio disponible. */}
             <div
-                className="grid flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[1fr_2fr]"
+                className="flex-1 overflow-hidden p-2 sm:p-4"
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="overflow-auto rounded-md bg-card p-4">
-                    <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                        Resumen del asiento
-                    </h3>
-                    <p className="text-sm leading-relaxed whitespace-pre-line">
-                        {asiento.contenido}
-                    </p>
-                </div>
-
-                <div className="overflow-hidden rounded-md bg-card">
-                    {!asiento.tiene_archivo ? (
-                        <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-muted-foreground">
-                            <FileText className="size-10" />
-                            <p className="text-sm">
-                                Este asiento no tiene PDF adjunto.
-                            </p>
-                        </div>
-                    ) : asiento.es_pdf ? (
-                        <iframe
+                {!asiento.tiene_archivo ? (
+                    <div className="mx-auto flex h-full max-w-2xl flex-col items-center justify-center gap-4 rounded-md bg-card p-8">
+                        <FileText className="size-10 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                            Este asiento no tiene documento adjunto. Contenido
+                            registrado:
+                        </p>
+                        <p className="max-h-full overflow-auto text-sm leading-relaxed whitespace-pre-line">
+                            {asiento.contenido}
+                        </p>
+                    </div>
+                ) : asiento.es_pdf ? (
+                    <iframe
+                        src={asiento.url_preview ?? ''}
+                        title={asiento.archivo_nombre ?? 'PDF'}
+                        className="size-full rounded-md border-0 bg-card"
+                    />
+                ) : (
+                    <div className="flex h-full items-center justify-center overflow-auto rounded-md bg-card p-4">
+                        <img
                             src={asiento.url_preview ?? ''}
-                            title={asiento.archivo_nombre ?? 'PDF'}
-                            className="size-full border-0"
+                            alt={asiento.archivo_nombre ?? ''}
+                            className="max-h-full max-w-full rounded-md object-contain"
                         />
-                    ) : (
-                        <div className="flex h-full items-center justify-center bg-muted/20 p-4">
-                            <img
-                                src={asiento.url_preview ?? ''}
-                                alt={asiento.archivo_nombre ?? ''}
-                                className="max-h-full max-w-full rounded-md object-contain"
-                            />
-                        </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
         </div>
     );

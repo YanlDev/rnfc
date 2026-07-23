@@ -29,24 +29,21 @@ class AsientoCuadernoController extends Controller
         $tipoParam = request()->string('tipo', 'supervisor')->toString();
         $tipo = TipoAutorCuaderno::tryFrom($tipoParam) ?? TipoAutorCuaderno::Supervisor;
 
-        $asientos = AsientoCuaderno::query()
+        // Cargamos AMBOS cuadernos: la lista filtra por pestaña en el cliente
+        // y el calendario los muestra juntos (supervisor + residente).
+        $todos = AsientoCuaderno::query()
             ->where('obra_id', $obra->id)
-            ->where('tipo_autor', $tipo->value)
             ->with('autor:id,name')
             ->orderByDesc('fecha')
             ->orderByDesc('numero')
-            ->get()
+            ->get();
+
+        $asientos = $todos
             ->map(fn (AsientoCuaderno $a) => $this->serializar($a))
+            ->values()
             ->all();
 
-        // Conteo de todos los tipos en una sola consulta agregada (evita una
-        // query por cada caso del enum).
-        $totales = AsientoCuaderno::query()
-            ->where('obra_id', $obra->id)
-            ->selectRaw('tipo_autor, count(*) as total')
-            ->groupBy('tipo_autor')
-            ->pluck('total', 'tipo_autor')
-            ->all();
+        $totales = $todos->countBy(fn (AsientoCuaderno $a) => $a->tipo_autor->value)->all();
 
         $resumenPorTipo = collect(TipoAutorCuaderno::cases())->map(fn (TipoAutorCuaderno $t) => [
             'value' => $t->value,
@@ -211,6 +208,8 @@ class AsientoCuadernoController extends Controller
         return [
             'id' => $a->id,
             'numero' => $a->numero,
+            'tipo_autor' => $a->tipo_autor->value,
+            'tipo_label' => $a->tipo_autor->label(),
             'fecha' => $a->fecha?->format('Y-m-d'),
             'contenido' => $a->contenido,
             'autor' => $a->autor?->name,
