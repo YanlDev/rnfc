@@ -126,6 +126,84 @@ it('el admin de plataforma puede aunque la matriz esté vacía', function () {
         ->assertRedirect();
 });
 
+// =============== Matriz personalizada por obra ===============
+
+it('una obra con matriz propia usa esa matriz y no la global', function () {
+    $obraCustom = Obra::factory()->create();
+    $obraNormal = Obra::factory()->create();
+
+    // En la obra personalizada, el asistente SÍ puede escribir el cuaderno.
+    $matriz = PermisosObra::estadoCompleto();
+    $matriz['asistente']['cuaderno.escribir'] = true;
+    PermisosObra::sincronizar($matriz, $obraCustom);
+
+    $asistenteCustom = usuarioEnObra($obraCustom, RolObra::Asistente);
+    $asistenteNormal = usuarioEnObra($obraNormal, RolObra::Asistente);
+
+    expect(PermisosObra::tieneMatrizPropia($obraCustom))->toBeTrue()
+        ->and(PermisosObra::tieneMatrizPropia($obraNormal))->toBeFalse()
+        ->and(PermisosObra::puede($asistenteCustom, $obraCustom, 'cuaderno.escribir'))->toBeTrue()
+        ->and(PermisosObra::puede($asistenteNormal, $obraNormal, 'cuaderno.escribir'))->toBeFalse();
+});
+
+it('la matriz propia reemplaza por completo a la global (también revoca)', function () {
+    $obra = Obra::factory()->create();
+
+    // En esta obra el residente NO puede escribir el cuaderno.
+    $matriz = PermisosObra::estadoCompleto();
+    $matriz['residente']['cuaderno.escribir'] = false;
+    PermisosObra::sincronizar($matriz, $obra);
+
+    $residente = usuarioEnObra($obra, RolObra::Residente);
+
+    $this->actingAs($residente)
+        ->post(route('obras.cuaderno.store', $obra), [
+            'tipo_autor' => TipoAutorCuaderno::Residente->value,
+            'fecha' => '2026-05-10',
+            'contenido' => 'Intento',
+        ])
+        ->assertForbidden();
+});
+
+it('restaurar por defecto elimina la matriz propia de la obra', function () {
+    $obra = Obra::factory()->create();
+
+    $matriz = PermisosObra::estadoCompleto();
+    $matriz['asistente']['cuaderno.escribir'] = true;
+    PermisosObra::sincronizar($matriz, $obra);
+
+    $this->actingAs(usuarioConRol(RolGlobal::Admin))
+        ->delete(route('admin.permisos.destroy', $obra))
+        ->assertRedirect();
+
+    expect(PermisosObra::tieneMatrizPropia($obra))->toBeFalse();
+
+    $asistente = usuarioEnObra($obra, RolObra::Asistente);
+    expect(PermisosObra::puede($asistente, $obra, 'cuaderno.escribir'))->toBeFalse();
+});
+
+it('guardar la matriz de una obra no toca la global ni a otras obras', function () {
+    $obra = Obra::factory()->create();
+
+    $matriz = PermisosObra::estadoCompleto();
+    $matriz['asistente']['cuaderno.escribir'] = true;
+
+    $this->actingAs(usuarioConRol(RolGlobal::Admin))
+        ->put(route('admin.permisos.update'), ['matriz' => $matriz, 'obra' => $obra->id])
+        ->assertRedirect();
+
+    expect(PermisosObra::tieneMatrizPropia($obra))->toBeTrue()
+        ->and(in_array('cuaderno.escribir', PermisosObra::matriz()['asistente'] ?? [], true))->toBeFalse();
+});
+
+it('un usuario normal NO puede restaurar la matriz de una obra', function () {
+    $obra = Obra::factory()->create();
+
+    $this->actingAs(usuarioConRol(RolGlobal::Usuario))
+        ->delete(route('admin.permisos.destroy', $obra))
+        ->assertForbidden();
+});
+
 // =============== Defaults sembrados ===============
 
 it('los defaults de la matriz son los esperados', function () {

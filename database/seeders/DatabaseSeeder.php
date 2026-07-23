@@ -13,11 +13,22 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(RolesSeeder::class);
 
+        // En producción nunca se crea un admin con credenciales conocidas:
+        // el primer administrador se crea con `php artisan admin:crear` (pide
+        // una contraseña segura de forma interactiva).
+        if (app()->isProduction()) {
+            $this->command?->warn('Producción: omitido el admin de conveniencia. Crea el primer admin con `php artisan admin:crear`.');
+
+            return;
+        }
+
+        // Sólo en entornos no productivos (local/testing): admin de conveniencia.
+        // Las credenciales son configurables por entorno para no fijarlas en el repo.
         $admin = User::updateOrCreate(
-            ['email' => 'admin@rnfc.test'],
+            ['email' => env('SEED_ADMIN_EMAIL', 'admin@rnfc.test')],
             [
-                'name' => 'Roger Neptali Flores Coaquira',
-                'password' => Hash::make('rnfc2026'),
+                'name' => env('SEED_ADMIN_NAME', 'Administrador RNFC'),
+                'password' => Hash::make(env('SEED_ADMIN_PASSWORD', 'rnfc2026')),
                 'email_verified_at' => now(),
             ],
         );

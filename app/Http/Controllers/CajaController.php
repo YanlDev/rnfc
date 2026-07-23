@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\CategoriaCaja;
+use App\Enums\FormaPagoAlquiler;
+use App\Enums\MetodoIngreso;
+use App\Enums\TipoComprobante;
 use App\Enums\TipoMovimientoCaja;
 use App\Http\Requests\StoreCajaMovimientoRequest;
+use App\Http\Requests\UpdateCajaMovimientoRequest;
+use App\Models\Alquiler;
 use App\Models\CajaMovimiento;
 use App\Models\Obra;
 use App\Support\PermisosObra;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -30,7 +35,27 @@ class CajaController extends Controller
             ->get();
 
         $ingresos = (float) $movimientos->where('tipo', TipoMovimientoCaja::Ingreso)->sum('monto');
-        $egresos = (float) $movimientos->where('tipo', TipoMovimientoCaja::Egreso)->sum('monto');
+        $egresosCol = $movimientos->where('tipo', TipoMovimientoCaja::Egreso);
+        $egresos = (float) $egresosCol->sum('monto');
+
+        // Subtotales de la rendición, como en el formato de obra.
+        $porComprobante = [];
+        foreach (TipoComprobante::cases() as $tc) {
+            $porComprobante[$tc->value] = round(
+                (float) $egresosCol->where('tipo_comprobante', $tc)->sum('monto'),
+                2,
+            );
+        }
+        $porComprobante['sin_tipo'] = round(
+            (float) $egresosCol->whereNull('tipo_comprobante')->sum('monto'),
+            2,
+        );
+
+        $alquileres = $obra->alquileres()
+            ->with('pagos')
+            ->orderByDesc('activo')
+            ->orderBy('inquilino')
+            ->get();
 
         return Inertia::render('obras/caja/index', [
             'obra' => [
@@ -43,8 +68,14 @@ class CajaController extends Controller
                 'ingresos' => round($ingresos, 2),
                 'egresos' => round($egresos, 2),
                 'saldo' => round($ingresos - $egresos, 2),
+                'por_comprobante' => $porComprobante,
             ],
-            'categorias' => CategoriaCaja::opciones(),
+            'alquileres' => $alquileres->map(fn (Alquiler $a) => $this->serializarAlquiler($a))->all(),
+            // Autocompletado de proveedores ya usados en esta obra.
+            'proveedores' => $egresosCol->pluck('proveedor')->filter()->unique()->sort()->values()->all(),
+            'tiposComprobante' => TipoComprobante::opciones(),
+            'metodos' => MetodoIngreso::opciones(),
+            'formasPago' => FormaPagoAlquiler::opciones(),
             'puedeRegistrar' => request()->user()?->can('create', [CajaMovimiento::class, $obra]) ?? false,
             'puedeGestionar' => $this->puedeGestionar($obra),
         ]);
@@ -59,24 +90,17 @@ class CajaController extends Controller
         // Comprobante opcional: lo persistimos en disco antes de la BD.
         $comprobante = [];
         if ($archivo = $request->file('comprobante')) {
-            $ext = strtolower($archivo->getClientOriginalExtension()) ?: 'bin';
-            $nombre = Str::ulid().'.'.$ext;
-            $ruta = Storage::disk(self::DISCO)->putFileAs("obras/{$obra->id}/_caja", $archivo, $nombre);
-
-            abort_if($ruta === false || $ruta === '', 500, 'No se pudo almacenar el comprobante.');
-
-            $comprobante = [
-                'comprobante_path' => $ruta,
-                'comprobante_nombre_original' => $archivo->getClientOriginalName(),
-                'comprobante_mime' => $archivo->getMimeType() ?? 'application/octet-stream',
-                'comprobante_tamano' => $archivo->getSize() ?? 0,
-            ];
+            $comprobante = $this->guardarComprobante($obra, $archivo);
         }
 
         try {
             $obra->cajaMovimientos()->create([
                 'tipo' => $data['tipo'],
                 'categoria' => $data['categoria'] ?? null,
+                'tipo_comprobante' => $data['tipo_comprobante'] ?? null,
+                'numero_comprobante' => $data['numero_comprobante'] ?? null,
+                'proveedor' => $data['proveedor'] ?? null,
+                'metodo' => $data['metodo'] ?? null,
                 'monto' => $data['monto'],
                 'descripcion' => $data['descripcion'],
                 'fecha' => $data['fecha'],
@@ -91,6 +115,44 @@ class CajaController extends Controller
         }
 
         return back()->with('success', 'Movimiento registrado.');
+    }
+
+    /**
+     * Edición inline de una celda/fila de la tabla.
+     */
+    public function update(UpdateCajaMovimientoRequest $request, Obra $obra, CajaMovimiento $movimiento): RedirectResponse
+    {
+        abort_unless($movimiento->obra_id === $obra->id, 404);
+        $this->authorize('update', $movimiento);
+
+        $movimiento->update($request->validated());
+
+        return back();
+    }
+
+    /**
+     * Adjuntar (o reemplazar) el comprobante de un movimiento existente.
+     */
+    public function subirComprobante(Request $request, Obra $obra, CajaMovimiento $movimiento): RedirectResponse
+    {
+        abort_unless($movimiento->obra_id === $obra->id, 404);
+        $this->authorize('update', $movimiento);
+
+        $request->validate([
+            'comprobante' => ['required', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,webp'],
+        ]);
+
+        $anterior = $movimiento->comprobante_path;
+        $datos = $this->guardarComprobante($obra, $request->file('comprobante'));
+
+        $movimiento->update($datos);
+
+        // El archivo anterior deja de referenciarse: lo limpiamos.
+        if ($anterior && $anterior !== $datos['comprobante_path']) {
+            Storage::disk(self::DISCO)->delete($anterior);
+        }
+
+        return back()->with('success', 'Comprobante adjuntado.');
     }
 
     public function destroy(Obra $obra, CajaMovimiento $movimiento): RedirectResponse
@@ -113,11 +175,31 @@ class CajaController extends Controller
         $disk = Storage::disk(self::DISCO);
         abort_unless($disk->exists($movimiento->comprobante_path), 404, 'El comprobante ya no está disponible.');
 
-        return $disk->response(
+        return $this->servirArchivoSeguro(
+            $disk,
             $movimiento->comprobante_path,
             $movimiento->comprobante_nombre_original ?? 'comprobante',
-            ['Content-Type' => $movimiento->comprobante_mime ?? 'application/octet-stream'],
+            $movimiento->comprobante_mime,
         );
+    }
+
+    /**
+     * @return array{comprobante_path: string, comprobante_nombre_original: string, comprobante_mime: string, comprobante_tamano: int}
+     */
+    private function guardarComprobante(Obra $obra, \Illuminate\Http\UploadedFile $archivo): array
+    {
+        $ext = strtolower($archivo->getClientOriginalExtension()) ?: 'bin';
+        $nombre = Str::ulid().'.'.$ext;
+        $ruta = Storage::disk(self::DISCO)->putFileAs("obras/{$obra->id}/_caja", $archivo, $nombre);
+
+        abort_if($ruta === false || $ruta === '', 500, 'No se pudo almacenar el comprobante.');
+
+        return [
+            'comprobante_path' => $ruta,
+            'comprobante_nombre_original' => $archivo->getClientOriginalName(),
+            'comprobante_mime' => $archivo->getMimeType() ?? 'application/octet-stream',
+            'comprobante_tamano' => $archivo->getSize() ?? 0,
+        ];
     }
 
     private function puedeGestionar(Obra $obra): bool
@@ -135,8 +217,10 @@ class CajaController extends Controller
         return [
             'id' => $m->id,
             'tipo' => $m->tipo->value,
-            'categoria' => $m->categoria?->value,
-            'categoria_label' => $m->categoria?->label(),
+            'tipo_comprobante' => $m->tipo_comprobante?->value,
+            'numero_comprobante' => $m->numero_comprobante,
+            'proveedor' => $m->proveedor,
+            'metodo' => $m->metodo?->value,
             'monto' => (float) $m->monto,
             'descripcion' => $m->descripcion,
             'fecha' => $m->fecha?->format('Y-m-d'),
@@ -147,6 +231,28 @@ class CajaController extends Controller
                 ? route('obras.caja.comprobante', [$m->obra_id, $m])
                 : null,
             'created_at' => $m->created_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializarAlquiler(Alquiler $a): array
+    {
+        return [
+            'id' => $a->id,
+            'inquilino' => $a->inquilino,
+            'monto_mensual' => (float) $a->monto_mensual,
+            'forma_pago' => $a->forma_pago->value,
+            'forma_pago_label' => $a->forma_pago->label(),
+            'fecha_inicio' => $a->fecha_inicio->format('Y-m-d'),
+            'activo' => $a->activo,
+            'pagos' => $a->pagos->map(fn ($p) => [
+                'id' => $p->id,
+                'periodo' => $p->periodo->format('Y-m'),
+                'fecha_pago' => $p->fecha_pago->format('Y-m-d'),
+                'monto' => (float) $p->monto,
+            ])->all(),
         ];
     }
 }

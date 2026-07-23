@@ -102,7 +102,9 @@ class Certificado extends Model
 
     public function estaVigente(): bool
     {
-        return $this->revocado_at === null;
+        // Un certificado eliminado (soft delete) también deja de ser válido:
+        // su código público debe mostrarse como anulado, no como inexistente.
+        return $this->revocado_at === null && ! $this->trashed();
     }
 
     /**
@@ -120,7 +122,10 @@ class Certificado extends Model
                 $sufijo .= $alfabeto[random_int(0, strlen($alfabeto) - 1)];
             }
             $codigo = "RNFC-{$anio}-{$sufijo}";
-        } while (self::where('codigo', $codigo)->exists());
+            // withTrashed: el índice unique de `codigo` incluye los certificados
+            // soft-deleted; sin esto podríamos generar un código "libre" que
+            // colisiona en la BD.
+        } while (self::withTrashed()->where('codigo', $codigo)->exists());
 
         return $codigo;
     }

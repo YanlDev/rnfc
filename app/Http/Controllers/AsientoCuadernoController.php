@@ -178,9 +178,11 @@ class AsientoCuadernoController extends Controller
         $disk = Storage::disk(self::DISCO);
         abort_unless($disk->exists($asiento->archivo_path), 404, 'El archivo ya no está disponible.');
 
-        return $disk->download(
+        return $disk->response(
             $asiento->archivo_path,
             $asiento->archivo_nombre_original ?? 'asiento.pdf',
+            ['Content-Type' => $asiento->archivo_mime ?: 'application/octet-stream', 'X-Content-Type-Options' => 'nosniff'],
+            'attachment',
         );
     }
 
@@ -193,10 +195,11 @@ class AsientoCuadernoController extends Controller
         $disk = Storage::disk(self::DISCO);
         abort_unless($disk->exists($asiento->archivo_path), 404, 'El archivo ya no está disponible.');
 
-        return $disk->response(
+        return $this->servirArchivoSeguro(
+            $disk,
             $asiento->archivo_path,
             $asiento->archivo_nombre_original ?? 'asiento.pdf',
-            ['Content-Type' => $asiento->archivo_mime ?? 'application/pdf'],
+            $asiento->archivo_mime,
         );
     }
 

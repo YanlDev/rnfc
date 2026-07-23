@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\CategoriaCaja;
+use App\Enums\MetodoIngreso;
+use App\Enums\TipoComprobante;
 use App\Enums\TipoMovimientoCaja;
 use App\Support\Bytes;
 use Illuminate\Database\Eloquent\Model;
@@ -19,6 +21,10 @@ class CajaMovimiento extends Model
         'obra_id',
         'tipo',
         'categoria',
+        'tipo_comprobante',
+        'numero_comprobante',
+        'proveedor',
+        'metodo',
         'monto',
         'descripcion',
         'fecha',
@@ -34,6 +40,8 @@ class CajaMovimiento extends Model
         return [
             'tipo' => TipoMovimientoCaja::class,
             'categoria' => CategoriaCaja::class,
+            'tipo_comprobante' => TipoComprobante::class,
+            'metodo' => MetodoIngreso::class,
             'monto' => 'decimal:2',
             'fecha' => 'date',
         ];

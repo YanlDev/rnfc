@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\InvitacionGlobalController;
 use App\Http\Controllers\Admin\PermisosController;
 use App\Http\Controllers\Admin\UsuariosController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AlquilerController;
 use App\Http\Controllers\AsientoCuadernoController;
 use App\Http\Controllers\CajaController;
 use App\Http\Controllers\CalendarioSelectorController;
@@ -61,11 +62,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('admin.usuarios.restaurar')
             ->withTrashed();
 
-        // Matriz de permisos por rol de obra
+        // Matriz de permisos por rol de obra (global o personalizada por obra)
         Route::get('admin/permisos', [PermisosController::class, 'index'])
             ->name('admin.permisos.index');
         Route::put('admin/permisos', [PermisosController::class, 'update'])
             ->name('admin.permisos.update');
+        Route::delete('admin/permisos/{obra}', [PermisosController::class, 'destroy'])
+            ->name('admin.permisos.destroy');
 
         // Invitaciones globales (throttle: cada intento puede enviar un correo)
         Route::post('admin/invitar', [InvitacionGlobalController::class, 'store'])
@@ -107,8 +110,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Caja chica por obra
     Route::get('obras/{obra}/caja', [CajaController::class, 'index'])->name('obras.caja.index');
     Route::post('obras/{obra}/caja', [CajaController::class, 'store'])->name('obras.caja.store');
+    Route::patch('obras/{obra}/caja/{movimiento}', [CajaController::class, 'update'])->name('obras.caja.update');
     Route::delete('obras/{obra}/caja/{movimiento}', [CajaController::class, 'destroy'])->name('obras.caja.destroy');
     Route::get('obras/{obra}/caja/{movimiento}/comprobante', [CajaController::class, 'comprobante'])->name('obras.caja.comprobante');
+    Route::post('obras/{obra}/caja/{movimiento}/comprobante', [CajaController::class, 'subirComprobante'])->name('obras.caja.comprobante.subir');
+
+    // Alquileres recurrentes (parte del módulo de caja chica)
+    Route::post('obras/{obra}/alquileres', [AlquilerController::class, 'store'])->name('obras.alquileres.store');
+    Route::patch('obras/{obra}/alquileres/{alquiler}', [AlquilerController::class, 'update'])->name('obras.alquileres.update');
+    Route::delete('obras/{obra}/alquileres/{alquiler}', [AlquilerController::class, 'destroy'])->name('obras.alquileres.destroy');
+    Route::post('obras/{obra}/alquileres/{alquiler}/pagos', [AlquilerController::class, 'pagar'])->name('obras.alquileres.pagar');
+    Route::delete('obras/{obra}/alquileres/{alquiler}/pagos/{pago}', [AlquilerController::class, 'anularPago'])->name('obras.alquileres.pagos.anular');
 
     // Cuaderno de Obra Digital — selector global (sidebar)
     Route::get('cuaderno', CuadernoSelectorController::class)->name('cuaderno.selector');

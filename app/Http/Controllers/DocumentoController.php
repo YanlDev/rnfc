@@ -8,6 +8,7 @@ use App\Models\Obra;
 use App\Models\User;
 use App\Notifications\DocumentoSubido;
 use App\Services\DocumentoService;
+use App\Support\TipoDocumento;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -25,7 +26,7 @@ class DocumentoController extends Controller
         $this->authorize('create', [Documento::class, $carpeta]);
 
         $request->validate([
-            'archivo' => ['required', 'file', 'max:51200'], // 50 MB por archivo
+            'archivo' => ['required', 'file', 'max:51200', TipoDocumento::reglaMimes()], // 50 MB por archivo
         ]);
 
         $documento = $this->service->subir($carpeta, $request->file('archivo'), $request->user()?->id);
@@ -42,7 +43,7 @@ class DocumentoController extends Controller
         $this->authorize('update', $documento);
 
         $request->validate([
-            'archivo' => ['required', 'file', 'max:51200'],
+            'archivo' => ['required', 'file', 'max:51200', TipoDocumento::reglaMimes()],
         ]);
 
         $actualizado = $this->service->subirNuevaVersion($documento, $request->file('archivo'), $request->user()?->id);
@@ -80,9 +81,12 @@ class DocumentoController extends Controller
         $disk = Storage::disk('documentos');
         abort_unless($disk->exists($documento->archivo_path), 404, 'El archivo ya no está disponible.');
 
-        return $disk->download(
+        // La descarga siempre fuerza attachment; nosniff evita reinterpretación.
+        return $disk->response(
             $documento->archivo_path,
             $documento->nombre_original,
+            ['Content-Type' => $documento->mime ?: 'application/octet-stream', 'X-Content-Type-Options' => 'nosniff'],
+            'attachment',
         );
     }
 
@@ -114,10 +118,11 @@ class DocumentoController extends Controller
         $disk = Storage::disk('documentos');
         abort_unless($disk->exists($documento->archivo_path), 404, 'El archivo ya no está disponible.');
 
-        return $disk->response(
+        return $this->servirArchivoSeguro(
+            $disk,
             $documento->archivo_path,
             $documento->nombre_original,
-            ['Content-Type' => $documento->mime],
+            $documento->mime,
         );
     }
 }

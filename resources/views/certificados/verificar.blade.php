@@ -390,8 +390,8 @@
                                 <dt>Beneficiario</dt>
                                 <dd class="featured">{{ $certificado->beneficiario_nombre }}</dd>
 
-                                <dt>Revocado el</dt>
-                                <dd>{{ $certificado->revocado_at?->format('d/m/Y H:i') }}</dd>
+                                <dt>Anulado el</dt>
+                                <dd>{{ ($certificado->revocado_at ?? $certificado->deleted_at)?->format('d/m/Y H:i') }}</dd>
 
                                 @if ($certificado->motivo_revocacion)
                                     <dt>Motivo</dt>
@@ -404,6 +404,35 @@
                             <code>{{ substr($certificado->hash_verificacion, 0, 32) }}…</code>
                         </div>
                     </div>
+                </div>
+
+            @elseif (! $hashValido)
+                {{-- ============ INTEGRIDAD NO VERIFICADA ============ --}}
+                <div class="status error">
+                    <div class="status-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 9v4"/>
+                            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/>
+                            <circle cx="12" cy="17" r="0.5" fill="currentColor"/>
+                        </svg>
+                    </div>
+                    <div class="status-text">
+                        <div class="status-label">Integridad no verificada</div>
+                        <div class="status-title">No se pudo verificar este certificado</div>
+                        <div class="status-sub">Los datos del documento no coinciden con su hash de integridad.</div>
+                    </div>
+                </div>
+                <div class="codigo-wrap">
+                    <div class="codigo-label">Código consultado</div>
+                    <div class="codigo-valor">{{ $certificado->codigo }}</div>
+                </div>
+                <div class="empty">
+                    Por seguridad no se muestran los datos del documento.
+                    Escribe a
+                    <a href="mailto:contacto@rnfcconsultoria.com">contacto@rnfcconsultoria.com</a>
+                    indicando este código para confirmar su autenticidad.
+                    <br>
+                    <a href="{{ route('verificar.form') }}" class="btn-volver">Verificar otro código</a>
                 </div>
 
             @else

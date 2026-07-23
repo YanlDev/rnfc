@@ -8,8 +8,8 @@ import {
 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { formatearBytes } from '@/lib/bytes';
-import { subirEnChunks } from '@/lib/chunked-upload';
 import type { FaseSubida } from '@/lib/chunked-upload';
+import { ACCEPT_ATTR, subirDocumento } from '@/lib/subir-documento';
 
 type ArchivoEnSubida = {
     id: string;
@@ -42,7 +42,7 @@ export default function Dropzone({ obraId, carpetaId, onComplete }: Props) {
 
     const subirArchivo = async (item: ArchivoEnSubida) => {
         try {
-            await subirEnChunks({
+            await subirDocumento({
                 obraId,
                 carpetaId,
                 file: item.file,
@@ -114,6 +114,7 @@ export default function Dropzone({ obraId, carpetaId, onComplete }: Props) {
                     ref={inputRef}
                     type="file"
                     multiple
+                    accept={ACCEPT_ATTR}
                     className="hidden"
                     onChange={(e) => {
                         if (e.target.files) {

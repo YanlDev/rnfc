@@ -10,6 +10,7 @@ use App\Models\CajaMovimiento;
 use App\Models\Obra;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -140,7 +141,25 @@ class ObraController extends Controller
         $codigo = $obra->codigo;
         $obraId = $obra->id;
         $imagenPath = $obra->imagen_path;
-        $obra->delete();
+
+        DB::transaction(function () use ($obra) {
+            // Los certificados son permanentes (verificación pública). Antes de
+            // que la FK los desvincule (nullOnDelete), copiamos el nombre y la
+            // entidad de la obra a sus campos "libres" para que sigan siendo
+            // autodescriptivos. Se truncan a 255 (obra.nombre es TEXT; el campo
+            // libre es VARCHAR(255)) y sólo se rellenan si estaban vacíos.
+            $obra->certificados()->whereNull('obra_nombre_libre')->update([
+                'obra_nombre_libre' => mb_substr((string) $obra->nombre, 0, 255),
+            ]);
+
+            if ($obra->entidad_contratante !== null) {
+                $obra->certificados()->whereNull('obra_entidad_libre')->update([
+                    'obra_entidad_libre' => mb_substr($obra->entidad_contratante, 0, 255),
+                ]);
+            }
+
+            $obra->delete();
+        });
 
         // Todos los archivos de la obra (documentos, _caja, _cuaderno) viven
         // bajo obras/{id}; la portada vive aparte en obras/imagenes/. Borrar
@@ -161,7 +180,7 @@ class ObraController extends Controller
 
         return redirect()
             ->route('obras.index')
-            ->with('success', "Obra {$codigo} eliminada junto con sus certificados.");
+            ->with('success', "Obra {$codigo} eliminada. Sus certificados se conservan para verificación.");
     }
 
     /**
@@ -237,7 +256,13 @@ class ObraController extends Controller
         $disk = Storage::disk('documentos');
         abort_unless($obra->imagen_path && $disk->exists($obra->imagen_path), 404);
 
-        return $disk->response($obra->imagen_path);
+        // Portada restringida a imágenes rasterizadas al subir (mimes:jpg,png,webp),
+        // por lo que inline es seguro. La URL ya lleva ?v=timestamp, así que
+        // podemos cachear de forma inmutable. nosniff por defensa en profundidad.
+        return $disk->response($obra->imagen_path, null, [
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, max-age=31536000, immutable',
+        ]);
     }
 
     private function serializarObra(Obra $obra): array

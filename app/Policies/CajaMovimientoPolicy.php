@@ -26,6 +26,16 @@ class CajaMovimientoPolicy
     }
 
     /**
+     * Editar un movimiento (inline en la tabla). Puede quien registra —para
+     * corregir errores de tipeo— o quien gestiona la caja.
+     */
+    public function update(User $user, CajaMovimiento $movimiento): bool
+    {
+        return PermisosObra::puede($user, $movimiento->obra, 'caja.registrar')
+            || PermisosObra::puede($user, $movimiento->obra, 'caja.gestionar');
+    }
+
+    /**
      * Eliminar un movimiento (gestión de caja).
      */
     public function delete(User $user, CajaMovimiento $movimiento): bool

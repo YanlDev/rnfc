@@ -28,3 +28,36 @@ it('la página pública de verificación no expone el documento completo', funct
         ->assertSee('87••••21')
         ->assertDontSee('87654321');
 });
+
+it('un certificado válido muestra "Certificado válido"', function () {
+    $cert = Certificado::factory()->create();
+
+    $this->get(route('verificar', $cert->codigo))
+        ->assertOk()
+        ->assertSee('Certificado válido');
+});
+
+it('un certificado eliminado se muestra como anulado, no como inexistente', function () {
+    $cert = Certificado::factory()->create();
+    $cert->delete();
+
+    $this->get(route('verificar', $cert->codigo))
+        ->assertOk()
+        ->assertSee('Certificado revocado')
+        ->assertDontSee('Certificado no encontrado');
+});
+
+it('un certificado con datos alterados NO se muestra como válido', function () {
+    $cert = Certificado::factory()->create();
+
+    // Alteración directa en BD (sin pasar por el modelo): el hash ya no coincide.
+    Illuminate\Support\Facades\DB::table('certificados')
+        ->where('id', $cert->id)
+        ->update(['beneficiario_nombre' => 'Nombre Falsificado']);
+
+    $this->get(route('verificar', $cert->codigo))
+        ->assertOk()
+        ->assertSee('No se pudo verificar este certificado')
+        ->assertDontSee('Certificado válido')
+        ->assertDontSee('Nombre Falsificado');
+});

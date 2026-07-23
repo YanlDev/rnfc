@@ -106,16 +106,47 @@ it('admin puede actualizar una obra', function () {
     expect($obra->fresh()->estado)->toBe(EstadoObra::EnEjecucion);
 });
 
-it('admin puede eliminar una obra (cascada a certificados)', function () {
-    $obra = Obra::factory()->create();
-    $cert = Certificado::factory()->create(['obra_id' => $obra->id]);
+it('admin puede eliminar una obra y sus certificados se conservan', function () {
+    $obra = Obra::factory()->create([
+        'nombre' => 'Mejoramiento vial Av. Perú',
+        'entidad_contratante' => 'Municipalidad de Puno',
+    ]);
+    // Certificado ligado a la obra (sin nombre libre: lo tomaba de la relación).
+    $cert = Certificado::factory()->create([
+        'obra_id' => $obra->id,
+        'obra_nombre_libre' => null,
+        'obra_entidad_libre' => null,
+    ]);
 
     $this->actingAs(adminUser())
         ->delete(route('obras.destroy', $obra))
         ->assertRedirect();
 
+    // La obra se elimina; el certificado NO (documento permanente).
     expect(Obra::find($obra->id))->toBeNull();
-    expect(Certificado::find($cert->id))->toBeNull();
+
+    $cert->refresh();
+    expect($cert->obra_id)->toBeNull();
+    // El nombre/entidad de la obra quedó preservado en los campos libres,
+    // así el certificado sigue siendo autodescriptivo y verificable.
+    expect($cert->obra_nombre_efectivo)->toBe('Mejoramiento vial Av. Perú');
+    expect($cert->obra_entidad_efectiva)->toBe('Municipalidad de Puno');
+});
+
+it('al eliminar la obra, la verificación pública del certificado sigue funcionando', function () {
+    $obra = Obra::factory()->create(['nombre' => 'Puente Chullpa']);
+    $cert = Certificado::factory()->create([
+        'obra_id' => $obra->id,
+        'obra_nombre_libre' => null,
+    ]);
+
+    $this->actingAs(adminUser())->delete(route('obras.destroy', $obra));
+
+    // El certificado (y su código público) siguen existiendo y verificables.
+    $this->get(route('verificar', $cert->codigo))
+        ->assertOk()
+        ->assertSee($cert->codigo)
+        ->assertSee('Certificado válido');
 });
 
 it('invitado no puede crear obras', function () {

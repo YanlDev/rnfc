@@ -8,6 +8,7 @@ use App\Http\Requests\StoreCertificadoRequest;
 use App\Models\Certificado;
 use App\Models\Obra;
 use App\Models\User;
+use App\Notifications\CertificadoEliminado as CertificadoEliminadoNotif;
 use App\Notifications\CertificadoRevocado as CertificadoRevocadoNotif;
 use App\Services\BrandingService;
 use App\Services\QrService;
@@ -128,11 +129,24 @@ class CertificadoController extends Controller
         ]);
     }
 
-    public function destroy(Certificado $certificado): RedirectResponse
+    public function destroy(Request $request, Certificado $certificado): RedirectResponse
     {
         $this->authorize('delete', $certificado);
 
         $certificado->delete();
+
+        // Auditoría: eliminar es más drástico que revocar (el código público
+        // pasa a mostrarse como anulado) — se registra y notifica igual.
+        Log::info('Certificado eliminado', [
+            'certificado_id' => $certificado->id,
+            'codigo' => $certificado->codigo,
+            'eliminado_por' => $request->user()?->id,
+        ]);
+
+        $admins = User::role(RolGlobal::rolesAdministrativos())->get();
+        if ($admins->isNotEmpty()) {
+            Notification::send($admins, new CertificadoEliminadoNotif($certificado));
+        }
 
         return redirect()
             ->route('certificados.index')

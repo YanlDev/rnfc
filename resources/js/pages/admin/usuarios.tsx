@@ -103,6 +103,8 @@ type Props = {
 
 const ROL_COLOR: Record<string, string> = {
     admin: 'bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300',
+    gerente:
+        'bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300',
     usuario:
         'bg-slate-100 text-slate-700 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300',
 };
@@ -119,6 +121,10 @@ export default function AdminUsuarios({
         estado: filtros.estado,
         rol: filtros.rol,
     });
+
+    // Roles que se pueden otorgar por invitación global (todos menos "usuario",
+    // que es el rol base y depende de la obra).
+    const rolesInvitables = roles.filter((r) => r.value !== 'usuario');
 
     // Modal desactivar — useForm da processing/errors y evita doble submit.
     const [usuarioObjetivo, setUsuarioObjetivo] = useState<Usuario | null>(
@@ -344,7 +350,7 @@ export default function AdminUsuarios({
                         onClick={() => setInvitarOpen(true)}
                     >
                         <UserPlus className="mr-2 size-4" />
-                        Invitar administrador
+                        Invitar usuario
                     </Button>
                 </div>
 
@@ -760,13 +766,12 @@ export default function AdminUsuarios({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>
-                            Invitar administrador
-                        </DialogTitle>
+                        <DialogTitle>Invitar usuario de plataforma</DialogTitle>
                         <DialogDescription>
-                            Crea una cuenta con permisos de administrador de
-                            plataforma. Para sumar gente a una obra, hazlo desde
-                            el equipo de la obra. El enlace expira en 7 días.
+                            Crea una cuenta con un rol global (Administrador o
+                            Gerente General). Para sumar gente a una obra, hazlo
+                            desde el equipo de la obra. El enlace expira en 7
+                            días.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -785,6 +790,37 @@ export default function AdminUsuarios({
                                 placeholder="correo@ejemplo.com"
                                 autoFocus
                             />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="invitar-rol">
+                                Rol de plataforma
+                            </Label>
+                            <Select
+                                value={formInvitar.data.rol_global}
+                                onValueChange={(v) =>
+                                    formInvitar.setData('rol_global', v)
+                                }
+                            >
+                                <SelectTrigger id="invitar-rol">
+                                    <SelectValue placeholder="Selecciona un rol" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {rolesInvitables.map((r) => (
+                                        <SelectItem
+                                            key={r.value}
+                                            value={r.value}
+                                        >
+                                            {r.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                                El <strong>Gerente General</strong> ve todas las
+                                obras y emite certificados, sin administrar la
+                                plataforma. El <strong>Administrador</strong>{' '}
+                                puede todo.
+                            </p>
                         </div>
                     </div>
 

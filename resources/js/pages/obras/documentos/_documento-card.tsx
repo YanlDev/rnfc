@@ -15,8 +15,8 @@ import { useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { subirEnChunks } from '@/lib/chunked-upload';
 import type { FaseSubida } from '@/lib/chunked-upload';
+import { ACCEPT_ATTR, subirDocumento } from '@/lib/subir-documento';
 import type { DocumentoPreview } from './_preview-modal';
 
 export type DocumentoCardData = DocumentoPreview & {
@@ -84,7 +84,7 @@ export default function DocumentoCard({
         try {
             setVersionPct(0);
             setVersionFase('iniciando');
-            await subirEnChunks({
+            await subirDocumento({
                 obraId,
                 documentoId: documento.id,
                 file,
@@ -119,6 +119,7 @@ export default function DocumentoCard({
         <input
             ref={versionInputRef}
             type="file"
+            accept={ACCEPT_ATTR}
             className="hidden"
             onChange={(e) => {
                 const file = e.target.files?.[0];

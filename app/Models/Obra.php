@@ -87,6 +87,11 @@ class Obra extends Model
         return $this->hasMany(CajaMovimiento::class);
     }
 
+    public function alquileres(): HasMany
+    {
+        return $this->hasMany(Alquiler::class);
+    }
+
     public function certificados(): HasMany
     {
         return $this->hasMany(Certificado::class);

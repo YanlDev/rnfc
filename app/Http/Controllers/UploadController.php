@@ -7,6 +7,7 @@ use App\Models\Carpeta;
 use App\Models\Documento;
 use App\Models\Obra;
 use App\Models\UploadSession;
+use App\Support\TipoDocumento;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -24,6 +25,13 @@ class UploadController extends Controller
             'carpeta_id' => ['nullable', 'integer', 'required_without:documento_id'],
             'documento_id' => ['nullable', 'integer', 'required_without:carpeta_id'],
         ]);
+
+        // Rechazo temprano por extensión (el MIME real se revalida al reensamblar).
+        abort_unless(
+            TipoDocumento::permitidoEnsamblado(null, $data['nombre']),
+            422,
+            'Tipo de archivo no permitido.',
+        );
 
         $carpeta = null;
         $documento = null;
@@ -102,6 +110,18 @@ class UploadController extends Controller
     public function completar(Request $request, UploadSession $sesion): JsonResponse
     {
         $this->autorizarSesion($request, $sesion);
+
+        // Re-evaluar el permiso al finalizar: entre iniciar y completar el
+        // usuario pudo perder el acceso a la carpeta/documento destino.
+        if ($sesion->documento_id !== null) {
+            $documento = Documento::whereNull('documento_padre_id')->find($sesion->documento_id);
+            abort_if($documento === null, 422, 'El documento destino ya no existe.');
+            $this->authorize('update', $documento);
+        } else {
+            $carpeta = Carpeta::find($sesion->carpeta_id);
+            abort_if($carpeta === null, 422, 'La carpeta destino ya no existe.');
+            $this->authorize('create', [Documento::class, $carpeta]);
+        }
 
         if (in_array($sesion->estado, ['procesando', 'completado'], true)) {
             return response()->json(['estado' => $sesion->estado]);

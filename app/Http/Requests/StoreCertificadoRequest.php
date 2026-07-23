@@ -19,12 +19,22 @@ class StoreCertificadoRequest extends FormRequest
      */
     public function rules(): array
     {
+        // Los tipos ligados a una obra (todos salvo capacitación) exigen obra:
+        // registrada (obra_id) o escrita manualmente (obra_nombre_libre).
+        $requiereObra = TipoCertificado::tryFrom((string) $this->input('tipo'))
+            ?->requiereObra() ?? false;
+
         return [
             'tipo' => ['required', Rule::enum(TipoCertificado::class)],
             'beneficiario_nombre' => ['required', 'string', 'max:255'],
             'beneficiario_documento' => ['nullable', 'string', 'max:30'],
             'beneficiario_profesion' => ['nullable', 'string', 'max:255'],
-            'obra_id' => ['nullable', 'integer', Rule::exists('obras', 'id')],
+            'obra_id' => [
+                Rule::requiredIf($requiereObra && ! $this->filled('obra_nombre_libre')),
+                'nullable',
+                'integer',
+                Rule::exists('obras', 'id'),
+            ],
             'obra_nombre_libre' => ['nullable', 'string', 'max:255'],
             'obra_entidad_libre' => ['nullable', 'string', 'max:255'],
             'cargo' => ['nullable', 'string', 'max:255'],
@@ -46,6 +56,7 @@ class StoreCertificadoRequest extends FormRequest
     {
         return [
             'beneficiario_nombre.required' => 'El nombre del beneficiario es obligatorio.',
+            'obra_id.required' => 'Este tipo de certificado requiere una obra: selecciona una registrada o escribe su nombre manualmente.',
             'tipo.required' => 'Selecciona el tipo de certificado.',
             'fecha_emision.required' => 'La fecha de emisión es obligatoria.',
             'fecha_fin.after_or_equal' => 'La fecha fin debe ser posterior a la fecha de inicio.',

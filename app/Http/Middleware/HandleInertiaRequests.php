@@ -60,6 +60,9 @@ class HandleInertiaRequests extends Middleware
                 'two_factor_confirmed_at' => $user->two_factor_confirmed_at?->toIso8601String(),
                 'rol_global' => $user->roles->first()?->name,
                 'es_admin' => $user->hasAnyRole(RolGlobal::rolesAdministrativos()),
+                'es_gerente' => $user->hasRole(RolGlobal::Gerente->value),
+                // Visión global (Admin o Gerente): ve todas las obras y certificados.
+                'vision_global' => $user->hasAnyRole(RolGlobal::rolesVisionGlobal()),
             ];
         }
 

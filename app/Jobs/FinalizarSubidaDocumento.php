@@ -7,6 +7,7 @@ use App\Models\UploadSession;
 use App\Models\User;
 use App\Notifications\DocumentoSubido;
 use App\Services\DocumentoService;
+use App\Support\TipoDocumento;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -49,6 +50,13 @@ class FinalizarSubidaDocumento implements ShouldQueue
             $this->ensamblar($sesion, $dir, $ensamblado);
 
             $mime = $this->detectarMime($ensamblado, $sesion->nombre_original);
+
+            // Lista blanca de tipos: un archivo ejecutable (SVG/HTML) reensamblado
+            // no debe llegar a crear un Documento servible.
+            if (! TipoDocumento::permitidoEnsamblado($mime, $sesion->nombre_original)) {
+                throw new \RuntimeException('Tipo de archivo no permitido.');
+            }
+
             $tamano = (int) filesize($ensamblado);
 
             $documento = $sesion->esVersion()

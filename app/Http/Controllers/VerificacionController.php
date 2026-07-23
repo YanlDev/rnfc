@@ -39,13 +39,20 @@ class VerificacionController extends Controller
      */
     public function mostrar(string $codigo): View
     {
-        $certificado = Certificado::with('obra:id,nombre,codigo,entidad_contratante')
+        // withTrashed: un certificado eliminado se muestra como ANULADO, no
+        // como inexistente — su código ya circula impreso con QR.
+        $certificado = Certificado::withTrashed()
+            ->with('obra:id,nombre,codigo,entidad_contratante')
             ->where('codigo', $codigo)
             ->first();
 
         return view('certificados.verificar', [
             'certificado' => $certificado,
             'codigo' => $codigo,
+            // Integridad: el hash guardado debe coincidir con el recalculado
+            // sobre los datos actuales; si no, alguien alteró el registro.
+            'hashValido' => $certificado !== null
+                && hash_equals($certificado->calcularHash(), $certificado->hash_verificacion),
         ]);
     }
 }

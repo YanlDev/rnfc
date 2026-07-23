@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use App\Enums\CategoriaCaja;
+use App\Enums\MetodoIngreso;
+use App\Enums\TipoComprobante;
 use App\Enums\TipoMovimientoCaja;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,21 +28,29 @@ class StoreCajaMovimientoRequest extends FormRequest
             'monto' => ['required', 'numeric', 'gt:0', 'max:9999999999.99'],
             'descripcion' => ['required', 'string', 'max:255'],
             'fecha' => ['required', 'date', 'before_or_equal:today'],
-            // La categoría sólo aplica (y se exige) a los egresos.
-            'categoria' => [
+            // Los gastos se rinden por tipo de comprobante (factura/boleta/recibo).
+            'tipo_comprobante' => [
                 'nullable',
                 Rule::requiredIf(fn () => $this->input('tipo') === TipoMovimientoCaja::Egreso->value),
-                Rule::in(CategoriaCaja::values()),
+                Rule::in(TipoComprobante::values()),
             ],
-            'comprobante' => ['nullable', 'file', 'max:51200'], // 50 MB
+            'numero_comprobante' => ['nullable', 'string', 'max:50'],
+            'proveedor' => ['nullable', 'string', 'max:255'],
+            // Vía del depósito, sólo para ingresos.
+            'metodo' => ['nullable', Rule::in(MetodoIngreso::values())],
+            // Categoría opcional (clasificación interna, ya no se exige).
+            'categoria' => ['nullable', Rule::in(CategoriaCaja::values())],
+            'comprobante' => ['nullable', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,webp'], // 10 MB, boleta/factura
         ];
     }
 
     protected function prepareForValidation(): void
     {
-        // En ingresos no guardamos categoría.
+        // En ingresos no aplican los campos de gasto, y viceversa.
         if ($this->input('tipo') === TipoMovimientoCaja::Ingreso->value) {
-            $this->merge(['categoria' => null]);
+            $this->merge(['categoria' => null, 'tipo_comprobante' => null, 'proveedor' => null]);
+        } elseif ($this->input('tipo') === TipoMovimientoCaja::Egreso->value) {
+            $this->merge(['metodo' => null]);
         }
     }
 }

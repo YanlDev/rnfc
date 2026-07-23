@@ -25,11 +25,13 @@ import obras from '@/routes/obras';
 import type { NavGroup } from '@/types';
 
 /**
- * Construye el menú según el rol global. Solo hay dos roles de plataforma
- * (admin / usuario); la diferenciación fina entre los 4 roles de obra ocurre
- * DENTRO de cada obra (matriz de permisos), no en este sidebar global.
+ * Construye el menú según el rol global de plataforma:
+ *  - Visión global (Admin o Gerente): ve Certificados y las vistas globales.
+ *  - Admin: además, el grupo de Administración (usuarios, permisos, panel).
+ *  - Usuario: solo Panel y Obras; la diferenciación fina entre los 4 roles de
+ *    obra ocurre DENTRO de cada obra (matriz de permisos).
  */
-function construirGrupos(esAdmin: boolean): NavGroup[] {
+function construirGrupos(esAdmin: boolean, visionGlobal: boolean): NavGroup[] {
     // Todos: navegan el panel y sus obras.
     const general: NavGroup = {
         label: 'General',
@@ -39,16 +41,18 @@ function construirGrupos(esAdmin: boolean): NavGroup[] {
         ],
     };
 
+    // Certificados es una función de visión global: Admin y Gerente la ven.
+    if (visionGlobal) {
+        general.items.push({
+            title: 'Certificados',
+            href: certificados.index().url,
+            icon: Award,
+        });
+    }
+
     if (!esAdmin) {
         return [general];
     }
-
-    // Certificados es una función de plataforma (admin-only): solo el admin la ve.
-    general.items.push({
-        title: 'Certificados',
-        href: certificados.index().url,
-        icon: Award,
-    });
 
     const administracion: NavGroup = {
         label: 'Administración',
@@ -64,11 +68,14 @@ function construirGrupos(esAdmin: boolean): NavGroup[] {
 
 export function AppSidebar() {
     const { auth } = usePage<{
-        auth: { user: { es_admin?: boolean } | null };
+        auth: {
+            user: { es_admin?: boolean; vision_global?: boolean } | null;
+        };
     }>().props;
     const esAdmin = auth?.user?.es_admin === true;
+    const visionGlobal = auth?.user?.vision_global === true;
 
-    const groups = construirGrupos(esAdmin);
+    const groups = construirGrupos(esAdmin, visionGlobal);
 
     return (
         <Sidebar collapsible="icon" variant="inset">

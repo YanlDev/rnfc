@@ -1,28 +1,28 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import {
     ArrowDownCircle,
     ArrowLeft,
     ArrowUpCircle,
-    Paperclip,
-    Plus,
-    Trash2,
     Wallet,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import obras from '@/routes/obras';
-import NuevoMovimientoDialog from './_nuevo-movimiento';
-import type { CategoriaOpcion } from './_nuevo-movimiento';
+import Alquileres from './_alquileres';
+import TablaDepositos from './_tabla-depositos';
+import TablaGastos from './_tabla-gastos';
 
 type ObraResumen = { id: number; codigo: string; nombre: string };
 
-type Movimiento = {
+export type Opcion = { value: string; label: string };
+
+export type Movimiento = {
     id: number;
     tipo: 'ingreso' | 'egreso';
-    categoria: string | null;
-    categoria_label: string | null;
+    tipo_comprobante: string | null;
+    numero_comprobante: string | null;
+    proveedor: string | null;
+    metodo: string | null;
     monto: number;
     descripcion: string;
     fecha: string | null;
@@ -32,13 +32,40 @@ type Movimiento = {
     created_at: string | null;
 };
 
-type Resumen = { ingresos: number; egresos: number; saldo: number };
+export type AlquilerPago = {
+    id: number;
+    periodo: string; // YYYY-MM
+    fecha_pago: string;
+    monto: number;
+};
+
+export type Alquiler = {
+    id: number;
+    inquilino: string;
+    monto_mensual: number;
+    forma_pago: string;
+    forma_pago_label: string;
+    fecha_inicio: string;
+    activo: boolean;
+    pagos: AlquilerPago[];
+};
+
+type Resumen = {
+    ingresos: number;
+    egresos: number;
+    saldo: number;
+    por_comprobante: Record<string, number>;
+};
 
 type Props = {
     obra: ObraResumen;
     movimientos: Movimiento[];
     resumen: Resumen;
-    categorias: CategoriaOpcion[];
+    alquileres: Alquiler[];
+    proveedores: string[];
+    tiposComprobante: Opcion[];
+    metodos: Opcion[];
+    formasPago: Opcion[];
     puedeRegistrar: boolean;
     puedeGestionar: boolean;
 };
@@ -49,59 +76,49 @@ const soles = (n: number) =>
         currency: 'PEN',
     }).format(n);
 
-function formatearFecha(fecha: string | null) {
-    if (!fecha) {
-        return '—';
-    }
+const PESTANAS = [
+    { id: 'gastos', label: 'Gastos' },
+    { id: 'depositos', label: 'Depósitos' },
+    { id: 'alquileres', label: 'Alquileres' },
+] as const;
 
-    return new Date(`${fecha}T00:00:00`).toLocaleDateString('es-PE', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-    });
-}
+type Pestana = (typeof PESTANAS)[number]['id'];
 
 export default function CajaIndex({
     obra,
     movimientos,
     resumen,
-    categorias,
+    alquileres,
+    proveedores,
+    tiposComprobante,
+    metodos,
+    formasPago,
     puedeRegistrar,
     puedeGestionar,
 }: Props) {
-    const [mostrandoNuevo, setMostrandoNuevo] = useState(false);
+    const [pestana, setPestana] = useState<Pestana>('gastos');
 
-    const eliminar = (m: Movimiento) => {
-        if (!confirm(`¿Eliminar el movimiento «${m.descripcion}»?`)) {
-            return;
-        }
+    const gastos = movimientos.filter((m) => m.tipo === 'egreso');
+    const depositos = movimientos.filter((m) => m.tipo === 'ingreso');
 
-        router.delete(`/obras/${obra.id}/caja/${m.id}`, {
-            preserveScroll: true,
-            onSuccess: () =>
-                router.reload({ only: ['movimientos', 'resumen'] }),
-        });
-    };
+    const subtotales = tiposComprobante
+        .map((t) => ({
+            label: `${t.label}s`,
+            monto: resumen.por_comprobante[t.value] ?? 0,
+        }))
+        .filter((s) => s.monto > 0);
 
     return (
         <>
             <Head title={`Caja chica · ${obra.codigo}`} />
             <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <Link
-                        href={obras.show(obra.id).url}
-                        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-                    >
-                        <ArrowLeft className="size-3.5" />
-                        Volver a la obra
-                    </Link>
-                    {puedeRegistrar && (
-                        <Button onClick={() => setMostrandoNuevo(true)}>
-                            <Plus className="size-4" />
-                            Registrar movimiento
-                        </Button>
-                    )}
-                </div>
+                <Link
+                    href={obras.show(obra.id).url}
+                    className="inline-flex items-center gap-1 self-start text-sm text-muted-foreground hover:text-foreground"
+                >
+                    <ArrowLeft className="size-3.5" />
+                    Volver a la obra
+                </Link>
 
                 {/* Resumen */}
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -134,7 +151,7 @@ export default function CajaIndex({
                             </span>
                             <div>
                                 <div className="text-xs text-muted-foreground">
-                                    Ingresos
+                                    Depósitos
                                 </div>
                                 <div className="text-xl font-semibold tabular-nums">
                                     {soles(resumen.ingresos)}
@@ -147,127 +164,100 @@ export default function CajaIndex({
                             <span className="flex size-10 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
                                 <ArrowDownCircle className="size-5" />
                             </span>
-                            <div>
+                            <div className="min-w-0">
                                 <div className="text-xs text-muted-foreground">
-                                    Egresos
+                                    Gastos
                                 </div>
                                 <div className="text-xl font-semibold tabular-nums">
                                     {soles(resumen.egresos)}
                                 </div>
+                                {subtotales.length > 0 && (
+                                    <div className="truncate text-[11px] text-muted-foreground">
+                                        {subtotales
+                                            .map(
+                                                (s) =>
+                                                    `${s.label} ${soles(s.monto)}`,
+                                            )
+                                            .join(' · ')}
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Lista de movimientos */}
-                {movimientos.length === 0 ? (
-                    <Card className="p-10 text-center">
-                        <p className="text-sm text-muted-foreground">
-                            Aún no hay movimientos en la caja de esta obra.
-                        </p>
-                    </Card>
-                ) : (
-                    <Card className="overflow-hidden p-0">
-                        <ul className="divide-y divide-border">
-                            {movimientos.map((m) => (
-                                <li
-                                    key={m.id}
-                                    className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40"
-                                >
-                                    <span
-                                        className={
-                                            'flex size-9 shrink-0 items-center justify-center rounded-full ' +
-                                            (m.tipo === 'ingreso'
-                                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400')
-                                        }
-                                    >
-                                        {m.tipo === 'ingreso' ? (
-                                            <ArrowUpCircle className="size-5" />
-                                        ) : (
-                                            <ArrowDownCircle className="size-5" />
-                                        )}
-                                    </span>
+                {/* Pestañas */}
+                <div className="flex gap-1 border-b border-border">
+                    {PESTANAS.map((p) => (
+                        <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setPestana(p.id)}
+                            className={
+                                '-mb-px rounded-t-md border-b-2 px-4 py-2 text-sm font-medium transition-colors ' +
+                                (pestana === p.id
+                                    ? 'border-primary text-foreground'
+                                    : 'border-transparent text-muted-foreground hover:text-foreground')
+                            }
+                        >
+                            {p.label}
+                            {p.id === 'alquileres' &&
+                                alquileres.length > 0 &&
+                                ` (${alquileres.length})`}
+                        </button>
+                    ))}
+                </div>
 
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="truncate text-sm font-medium">
-                                                {m.descripcion}
-                                            </span>
-                                            {m.categoria_label && (
-                                                <Badge
-                                                    variant="secondary"
-                                                    className="shrink-0"
-                                                >
-                                                    {m.categoria_label}
-                                                </Badge>
-                                            )}
-                                        </div>
-                                        <div className="truncate text-xs text-muted-foreground">
-                                            {formatearFecha(m.fecha)}
-                                            {m.registrado_por
-                                                ? ` · ${m.registrado_por}`
-                                                : ''}
-                                        </div>
-                                    </div>
+                <Card className="overflow-hidden p-0">
+                    <CardContent className="p-0">
+                        {pestana === 'gastos' && (
+                            <TablaGastos
+                                obraId={obra.id}
+                                gastos={gastos}
+                                tiposComprobante={tiposComprobante}
+                                proveedores={proveedores}
+                                puedeRegistrar={puedeRegistrar}
+                                puedeGestionar={puedeGestionar}
+                            />
+                        )}
+                        {pestana === 'depositos' && (
+                            <TablaDepositos
+                                obraId={obra.id}
+                                depositos={depositos}
+                                metodos={metodos}
+                                puedeRegistrar={puedeRegistrar}
+                                puedeGestionar={puedeGestionar}
+                            />
+                        )}
+                        {pestana === 'alquileres' && (
+                            <div className="p-4">
+                                <Alquileres
+                                    obraId={obra.id}
+                                    alquileres={alquileres}
+                                    formasPago={formasPago}
+                                    puedeRegistrar={puedeRegistrar}
+                                    puedeGestionar={puedeGestionar}
+                                />
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
 
-                                    {m.tiene_comprobante &&
-                                        m.url_comprobante && (
-                                            <a
-                                                href={m.url_comprobante}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                                                title="Ver comprobante"
-                                            >
-                                                <Paperclip className="size-4" />
-                                            </a>
-                                        )}
-
-                                    <div
-                                        className={
-                                            'shrink-0 text-sm font-semibold tabular-nums ' +
-                                            (m.tipo === 'ingreso'
-                                                ? 'text-emerald-600 dark:text-emerald-400'
-                                                : 'text-rose-600 dark:text-rose-400')
-                                        }
-                                    >
-                                        {m.tipo === 'ingreso' ? '+' : '−'}
-                                        {soles(m.monto)}
-                                    </div>
-
-                                    {puedeGestionar && (
-                                        <button
-                                            type="button"
-                                            onClick={() => eliminar(m)}
-                                            className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
-                                            title="Eliminar"
-                                        >
-                                            <Trash2 className="size-4" />
-                                        </button>
-                                    )}
-                                </li>
-                            ))}
-                        </ul>
-                    </Card>
+                {puedeRegistrar && pestana !== 'alquileres' && (
+                    <p className="text-xs text-muted-foreground">
+                        Escribe directo en la tabla, como en Excel: la última
+                        fila agrega un registro nuevo (Enter para guardar) y
+                        cualquier celda se corrige haciendo clic sobre ella.
+                    </p>
                 )}
             </div>
-
-            {puedeRegistrar && (
-                <NuevoMovimientoDialog
-                    open={mostrandoNuevo}
-                    onOpenChange={setMostrandoNuevo}
-                    obraId={obra.id}
-                    categorias={categorias}
-                />
-            )}
         </>
     );
 }
 
 CajaIndex.layout = {
     title: 'Caja chica',
-    description: 'Control de ingresos y gastos de la obra.',
+    description: 'Rendición de gastos, depósitos y alquileres de la obra.',
     breadcrumbs: [
         { title: 'Panel', href: '/dashboard' },
         { title: 'Obras', href: '/obras' },

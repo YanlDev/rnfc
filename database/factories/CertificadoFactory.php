@@ -45,7 +45,18 @@ class CertificadoFactory extends Factory
             'emisor_nombre' => 'Ing. Roger Neptali Flores Coaquira',
             'emisor_cargo' => 'Consultor de Obras',
             'fecha_emision' => fake()->dateTimeBetween('-3 months', 'now'),
+            // Placeholder: se reemplaza por el hash real en afterMaking().
             'hash_verificacion' => hash('sha256', fake()->uuid()),
         ];
+    }
+
+    public function configure(): static
+    {
+        // El hash depende de codigo/tipo/beneficiario/fecha, así que se calcula
+        // sobre los atributos finales; si no, la verificación de integridad de
+        // la página pública fallaría con datos de factory.
+        return $this->afterMaking(function (Certificado $certificado) {
+            $certificado->hash_verificacion = $certificado->calcularHash();
+        });
     }
 }
