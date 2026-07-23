@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\EstadoObra;
 use App\Enums\RolGlobal;
+use App\Enums\RolObra;
 use App\Http\Requests\StoreObraRequest;
 use App\Http\Requests\UpdateObraRequest;
 use App\Models\CajaMovimiento;
@@ -64,6 +65,7 @@ class ObraController extends Controller
             'obras' => $obras,
             'filtros' => $filtros,
             'estados' => $this->estadosOpciones(),
+            'puedeCrear' => $user?->can('create', Obra::class) ?? false,
         ]);
     }
 
@@ -78,11 +80,22 @@ class ObraController extends Controller
 
     public function store(StoreObraRequest $request): RedirectResponse
     {
+        $user = $request->user();
+
         $obra = Obra::create([
             ...$request->validated(),
             'codigo' => Obra::generarCodigo(),
-            'creado_por' => $request->user()?->id,
+            'creado_por' => $user?->id,
         ]);
+
+        // Si el creador no es Admin de plataforma (que ya ve todo), lo sumamos
+        // al equipo como Administrador de obra: es SU obra y la maneja él.
+        if ($user !== null && ! $user->hasAnyRole(RolGlobal::rolesAdministrativos())) {
+            $obra->usuarios()->attach($user->id, [
+                'rol_obra' => RolObra::Administrador->value,
+                'asignado_at' => now(),
+            ]);
+        }
 
         return redirect()
             ->route('obras.show', $obra)

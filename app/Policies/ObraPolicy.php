@@ -27,11 +27,13 @@ class ObraPolicy
     }
 
     /**
-     * Crear obras es una acción de plataforma (sólo Admin).
+     * Crear obras: el Admin de plataforma siempre, y los usuarios habilitados
+     * individualmente (administradoras que crean y manejan sus propias obras).
      */
     public function create(User $user): bool
     {
-        return $user->hasAnyRole(RolGlobal::rolesAdministrativos());
+        return $user->hasAnyRole(RolGlobal::rolesAdministrativos())
+            || $user->puede_crear_obras;
     }
 
     public function update(User $user, Obra $obra): bool

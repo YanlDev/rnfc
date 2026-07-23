@@ -56,6 +56,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('admin.usuarios.toggle-activo');
         Route::patch('admin/usuarios/{usuario}/rol', [UsuariosController::class, 'cambiarRol'])
             ->name('admin.usuarios.rol');
+        Route::patch('admin/usuarios/{usuario}/crear-obras', [UsuariosController::class, 'togglePuedeCrearObras'])
+            ->name('admin.usuarios.crear-obras');
         Route::delete('admin/usuarios/{usuario}', [UsuariosController::class, 'eliminar'])
             ->name('admin.usuarios.eliminar');
         Route::patch('admin/usuarios/{usuario}/restaurar', [UsuariosController::class, 'restaurar'])

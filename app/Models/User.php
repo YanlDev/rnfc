@@ -35,6 +35,7 @@ class User extends Authenticatable
             'two_factor_confirmed_at' => 'datetime',
             'desactivado_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'puede_crear_obras' => 'boolean',
         ];
     }
 

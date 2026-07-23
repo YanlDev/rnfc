@@ -66,6 +66,7 @@ type Usuario = {
     rol: string | null;
     rol_label: string;
     obras_count: number;
+    puede_crear_obras: boolean;
     last_login_at: string | null;
     activo: boolean;
     desactivado_at: string | null;
@@ -324,6 +325,20 @@ export default function AdminUsuarios({
                             Cambiar rol
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                            onClick={() =>
+                                router.patch(
+                                    `/admin/usuarios/${u.id}/crear-obras`,
+                                    {},
+                                    { preserveScroll: true },
+                                )
+                            }
+                        >
+                            <Building2 className="size-4" />
+                            {u.puede_crear_obras
+                                ? 'Quitar permiso de crear obras'
+                                : 'Permitir crear obras'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                             onClick={() => {
                                 setUsuarioObjetivo(u);
                                 formToggle.reset();
@@ -554,6 +569,15 @@ export default function AdminUsuarios({
                                                 ? 'obra'
                                                 : 'obras'}
                                         </span>
+                                        {u.puede_crear_obras && (
+                                            <Badge
+                                                variant="secondary"
+                                                className="text-[10px]"
+                                                title="Puede crear sus propias obras"
+                                            >
+                                                Crea obras
+                                            </Badge>
+                                        )}
                                         <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                                             <Clock className="size-3" />
                                             {u.last_login_at ?? 'Nunca'}
@@ -617,6 +641,15 @@ export default function AdminUsuarios({
                                                 <span className="inline-flex items-center gap-1 text-sm">
                                                     <Building2 className="size-3.5 text-muted-foreground" />
                                                     {u.obras_count}
+                                                    {u.puede_crear_obras && (
+                                                        <Badge
+                                                            variant="secondary"
+                                                            className="ml-1 text-[10px]"
+                                                            title="Puede crear sus propias obras"
+                                                        >
+                                                            Crea obras
+                                                        </Badge>
+                                                    )}
                                                 </span>
                                             </TableCell>
                                             <TableCell className="text-xs text-muted-foreground">

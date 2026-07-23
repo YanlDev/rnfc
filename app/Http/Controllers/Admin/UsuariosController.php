@@ -88,6 +88,7 @@ class UsuariosController extends Controller
                         'rol' => $rolNombre,
                         'rol_label' => $rolEnum?->label() ?? '—',
                         'obras_count' => $u->obras_count,
+                        'puede_crear_obras' => (bool) $u->puede_crear_obras,
                         'last_login_at' => $u->last_login_at?->format('Y-m-d H:i'),
                         'activo' => $u->estaActivo(),
                         'desactivado_at' => $u->desactivado_at?->format('Y-m-d H:i'),
@@ -200,6 +201,29 @@ class UsuariosController extends Controller
         }
 
         return redirect()->route('admin.usuarios.index')->with('success', $mensaje);
+    }
+
+    /**
+     * Habilita o deshabilita al usuario para crear sus propias obras
+     * (quedará como Administrador de obra de las que cree).
+     */
+    public function togglePuedeCrearObras(Request $request, User $usuario): RedirectResponse
+    {
+        $nuevo = ! $usuario->puede_crear_obras;
+        $usuario->forceFill(['puede_crear_obras' => $nuevo])->save();
+
+        Log::info('Permiso crear obras cambiado', [
+            'usuario_id' => $usuario->id,
+            'puede_crear_obras' => $nuevo,
+            'por' => $request->user()->id,
+        ]);
+
+        return redirect()->route('admin.usuarios.index')->with(
+            'success',
+            $nuevo
+                ? "{$usuario->name} ahora puede crear obras."
+                : "{$usuario->name} ya no puede crear obras.",
+        );
     }
 
     /**

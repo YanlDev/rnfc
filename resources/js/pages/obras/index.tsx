@@ -45,6 +45,7 @@ type Props = {
     obras: Paginado<Obra>;
     filtros: { q?: string; estado?: string };
     estados: EstadoOpcion[];
+    puedeCrear: boolean;
 };
 
 const MESES = [
@@ -180,7 +181,12 @@ function ObraCard({ obra }: { obra: Obra }) {
     );
 }
 
-export default function ObrasIndex({ obras: paginado, filtros, estados }: Props) {
+export default function ObrasIndex({
+    obras: paginado,
+    filtros,
+    estados,
+    puedeCrear,
+}: Props) {
     const { filtros: f, set } = useFiltrosUrl(obras.index().url, {
         q: filtros.q ?? '',
         estado: filtros.estado ?? 'todos',
@@ -220,12 +226,14 @@ export default function ObrasIndex({ obras: paginado, filtros, estados }: Props)
                             </SelectContent>
                         </Select>
                     </div>
-                    <Button asChild>
-                        <Link href={obras.create().url}>
-                            <Plus className="size-4" />
-                            Nueva obra
-                        </Link>
-                    </Button>
+                    {puedeCrear && (
+                        <Button asChild>
+                            <Link href={obras.create().url}>
+                                <Plus className="size-4" />
+                                Nueva obra
+                            </Link>
+                        </Button>
+                    )}
                 </div>
 
                 {paginado.data.length === 0 ? (
