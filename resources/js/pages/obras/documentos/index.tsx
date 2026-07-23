@@ -17,6 +17,7 @@ import {
     Trash2,
 } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -170,6 +171,7 @@ const NodoCarpeta = memo(function NodoCarpeta({
 }) {
     const [mostrandoNueva, setMostrandoNueva] = useState(false);
     const [editando, setEditando] = useState(false);
+    const { confirm, dialog } = useConfirm();
     const form = useForm({ nombre: '', parent_id: nodo.id });
     const formRename = useForm({ nombre: nodo.nombre });
     const expandido = expandidos.has(nodo.id);
@@ -211,7 +213,7 @@ const NodoCarpeta = memo(function NodoCarpeta({
         });
     };
 
-    const eliminar = (e: React.MouseEvent) => {
+    const eliminar = async (e: React.MouseEvent) => {
         e.stopPropagation();
 
         const { archivos, subcarpetas } = contarContenido(nodo);
@@ -229,11 +231,24 @@ const NodoCarpeta = memo(function NodoCarpeta({
             );
         }
 
-        const detalle = partes.length
-            ? `\n\nSe eliminarán también ${partes.join(' y ')} de forma permanente. Esta acción no se puede deshacer.`
-            : '';
+        const ok = await confirm({
+            titulo: `¿Eliminar la carpeta «${nodo.nombre}»?`,
+            destructivo: true,
+            confirmar: 'Eliminar carpeta',
+            descripcion: partes.length ? (
+                <>
+                    Se eliminarán también{' '}
+                    <strong className="text-foreground">
+                        {partes.join(' y ')}
+                    </strong>{' '}
+                    de forma permanente. Esta acción no se puede deshacer.
+                </>
+            ) : (
+                'La carpeta está vacía. Esta acción no se puede deshacer.'
+            ),
+        });
 
-        if (!confirm(`¿Eliminar la carpeta «${nodo.nombre}»?${detalle}`)) {
+        if (!ok) {
             return;
         }
 
@@ -267,6 +282,7 @@ const NodoCarpeta = memo(function NodoCarpeta({
 
     return (
         <li>
+            {dialog}
             <div
                 className={
                     'group flex cursor-pointer items-center gap-1 rounded-md px-1 py-1 text-sm transition-colors ' +

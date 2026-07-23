@@ -15,6 +15,7 @@ import {
     Upload,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -54,9 +55,11 @@ function tipoVisual(nombre: string, mime: string): TipoVisual {
     if (mime.startsWith('image/')) {
         return { Icono: FileImage, color: 'text-violet-500', etiqueta };
     }
+
     if (ext === 'pdf' || mime === 'application/pdf') {
         return { Icono: FileText, color: 'text-red-500', etiqueta: 'PDF' };
     }
+
     if (
         ['xls', 'xlsx', 'csv'].includes(ext) ||
         mime.includes('spreadsheet') ||
@@ -65,12 +68,15 @@ function tipoVisual(nombre: string, mime: string): TipoVisual {
     ) {
         return { Icono: FileSpreadsheet, color: 'text-emerald-600', etiqueta };
     }
+
     if (['doc', 'docx'].includes(ext) || mime.includes('word')) {
         return { Icono: FileText, color: 'text-blue-600', etiqueta };
     }
+
     if (['ppt', 'pptx'].includes(ext) || mime.includes('presentation')) {
         return { Icono: Presentation, color: 'text-orange-500', etiqueta };
     }
+
     if (
         ['zip', 'rar', '7z'].includes(ext) ||
         mime.includes('zip') ||
@@ -78,9 +84,11 @@ function tipoVisual(nombre: string, mime: string): TipoVisual {
     ) {
         return { Icono: FileArchive, color: 'text-amber-600', etiqueta };
     }
+
     if (['dwg', 'dxf'].includes(ext)) {
         return { Icono: DraftingCompass, color: 'text-cyan-600', etiqueta };
     }
+
     if (ext === 'txt') {
         return { Icono: FileText, color: 'text-muted-foreground', etiqueta };
     }
@@ -130,6 +138,7 @@ export default function DocumentoCard({
     variant = 'grid',
 }: Props) {
     const versionInputRef = useRef<HTMLInputElement>(null);
+    const { confirm, dialog } = useConfirm();
     const [versionFase, setVersionFase] = useState<FaseSubida | null>(null);
     const [versionPct, setVersionPct] = useState(0);
 
@@ -161,10 +170,18 @@ export default function DocumentoCard({
         }
     };
 
-    const eliminar = () => {
-        if (
-            !confirm(`¿Eliminar «${documento.nombre}» y todas sus versiones?`)
-        ) {
+    const eliminar = async () => {
+        const ok = await confirm({
+            titulo: `¿Eliminar «${documento.nombre}»?`,
+            destructivo: true,
+            confirmar: 'Eliminar archivo',
+            descripcion:
+                documento.version > 1
+                    ? `Se eliminarán el archivo y sus ${documento.version - 1} versión(es) anterior(es) de forma permanente.`
+                    : 'El archivo se eliminará de forma permanente.',
+        });
+
+        if (!ok) {
             return;
         }
 
@@ -194,6 +211,7 @@ export default function DocumentoCard({
     if (variant === 'lista') {
         return (
             <div className="flex items-center gap-3 border-b border-border px-3 py-2 last:border-0 hover:bg-muted/40">
+                {dialog}
                 <button
                     type="button"
                     onClick={onPreview}
@@ -289,6 +307,7 @@ export default function DocumentoCard({
 
     return (
         <Card className="group overflow-hidden p-0 transition-all hover:shadow-md">
+            {dialog}
             {/* Thumbnail / preview */}
             <button
                 type="button"

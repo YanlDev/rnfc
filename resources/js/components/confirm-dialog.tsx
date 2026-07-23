@@ -1,3 +1,4 @@
+import { TriangleAlert } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
@@ -53,14 +54,23 @@ export function useConfirm() {
             open={!!opts}
             onOpenChange={(abierto) => !abierto && cerrar(false)}
         >
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{opts?.titulo}</DialogTitle>
-                    {opts?.descripcion && (
-                        <DialogDescription>
-                            {opts.descripcion}
-                        </DialogDescription>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader className="items-center gap-3 sm:flex-row sm:items-start">
+                    {opts?.destructivo && (
+                        <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                            <TriangleAlert className="size-5 text-destructive" />
+                        </div>
                     )}
+                    <div className="space-y-1.5">
+                        <DialogTitle className="leading-snug">
+                            {opts?.titulo}
+                        </DialogTitle>
+                        {opts?.descripcion && (
+                            <DialogDescription asChild>
+                                <div>{opts.descripcion}</div>
+                            </DialogDescription>
+                        )}
+                    </div>
                 </DialogHeader>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => cerrar(false)}>
