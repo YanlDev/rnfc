@@ -181,6 +181,28 @@ class PermisosObra
     }
 
     /**
+     * ¿El usuario es Administrador dentro de esta obra concreta?
+     * (o Admin de plataforma, que administra cualquier obra).
+     */
+    public static function esAdministradorDeObra(User $user, Obra $obra): bool
+    {
+        return $user->hasAnyRole(RolGlobal::rolesAdministrativos())
+            || self::rolEnObra($user, $obra) === RolObra::Administrador->value;
+    }
+
+    /**
+     * ¿El usuario es Administrador en al menos una obra? Determina si ve
+     * funciones transversales de administradora de obra (certificados y la
+     * configuración de permisos de sus obras) sin ser Admin de plataforma.
+     */
+    public static function esAdministradorDeAlgunaObra(User $user): bool
+    {
+        return $user->obras()
+            ->wherePivot('rol_obra', RolObra::Administrador->value)
+            ->exists();
+    }
+
+    /**
      * Rol del usuario dentro de la obra (o null si no pertenece).
      */
     public static function rolEnObra(User $user, Obra $obra): ?string
@@ -267,6 +289,25 @@ class PermisosObra
         });
 
         Cache::forget(self::CACHE_KEY);
+    }
+
+    /**
+     * Sincroniza la matriz de UNA obra manteniendo intacto el rol
+     * Administrador: la administradora configura a su equipo (Residente,
+     * Supervisor, Especialista, Asistente), no sus propios poderes. Además,
+     * `sincronizar()` ya impide conceder la caja chica a otros roles.
+     *
+     * @param  array<string, array<string, bool>>  $datos
+     */
+    public static function sincronizarObra(array $datos, Obra $obra): void
+    {
+        $adminDefault = self::matriz()[RolObra::Administrador->value] ?? [];
+        $datos[RolObra::Administrador->value] = [];
+        foreach (self::permisosValidos() as $permiso) {
+            $datos[RolObra::Administrador->value][$permiso] = in_array($permiso, $adminDefault, true);
+        }
+
+        self::sincronizar($datos, $obra);
     }
 
     /**

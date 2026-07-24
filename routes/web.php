@@ -20,6 +20,7 @@ use App\Http\Controllers\InvitacionController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\ObraController;
+use App\Http\Controllers\ObraPermisosController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\VerificacionController;
@@ -116,6 +117,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('obras/{obra}/caja/{movimiento}', [CajaController::class, 'destroy'])->name('obras.caja.destroy');
     Route::get('obras/{obra}/caja/{movimiento}/comprobante', [CajaController::class, 'comprobante'])->name('obras.caja.comprobante');
     Route::post('obras/{obra}/caja/{movimiento}/comprobante', [CajaController::class, 'subirComprobante'])->name('obras.caja.comprobante.subir');
+
+    // Permisos del equipo por obra (los configura el Administrador de obra)
+    Route::get('obras/{obra}/permisos', [ObraPermisosController::class, 'index'])->name('obras.permisos.index');
+    Route::put('obras/{obra}/permisos', [ObraPermisosController::class, 'update'])->name('obras.permisos.update');
+    Route::delete('obras/{obra}/permisos', [ObraPermisosController::class, 'destroy'])->name('obras.permisos.destroy');
 
     // Alquileres recurrentes (parte del módulo de caja chica)
     Route::post('obras/{obra}/alquileres', [AlquilerController::class, 'store'])->name('obras.alquileres.store');

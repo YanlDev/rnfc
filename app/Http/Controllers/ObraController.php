@@ -125,6 +125,7 @@ class ObraController extends Controller
             ],
             'puedeAdministrar' => request()->user()?->can('update', $obra) ?? false,
             'puedeVerCaja' => request()->user()?->can('viewAny', [CajaMovimiento::class, $obra]) ?? false,
+            'puedeGestionarPermisos' => request()->user()?->can('gestionarPermisos', $obra) ?? false,
         ]);
     }
 

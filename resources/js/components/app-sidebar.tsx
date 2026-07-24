@@ -31,7 +31,11 @@ import type { NavGroup } from '@/types';
  *  - Usuario: solo Panel y Obras; la diferenciación fina entre los 4 roles de
  *    obra ocurre DENTRO de cada obra (matriz de permisos).
  */
-function construirGrupos(esAdmin: boolean, visionGlobal: boolean): NavGroup[] {
+function construirGrupos(
+    esAdmin: boolean,
+    visionGlobal: boolean,
+    esAdminObra: boolean,
+): NavGroup[] {
     // Todos: navegan el panel y sus obras.
     const general: NavGroup = {
         label: 'General',
@@ -41,8 +45,9 @@ function construirGrupos(esAdmin: boolean, visionGlobal: boolean): NavGroup[] {
         ],
     };
 
-    // Certificados es una función de visión global: Admin y Gerente la ven.
-    if (visionGlobal) {
+    // Certificados: los ven Admin y Gerente (visión global) y las
+    // administradoras de obra (para emitir a su personal).
+    if (visionGlobal || esAdminObra) {
         general.items.push({
             title: 'Certificados',
             href: certificados.index().url,
@@ -69,13 +74,18 @@ function construirGrupos(esAdmin: boolean, visionGlobal: boolean): NavGroup[] {
 export function AppSidebar() {
     const { auth } = usePage<{
         auth: {
-            user: { es_admin?: boolean; vision_global?: boolean } | null;
+            user: {
+                es_admin?: boolean;
+                vision_global?: boolean;
+                es_admin_obra?: boolean;
+            } | null;
         };
     }>().props;
     const esAdmin = auth?.user?.es_admin === true;
     const visionGlobal = auth?.user?.vision_global === true;
+    const esAdminObra = auth?.user?.es_admin_obra === true;
 
-    const groups = construirGrupos(esAdmin, visionGlobal);
+    const groups = construirGrupos(esAdmin, visionGlobal, esAdminObra);
 
     return (
         <Sidebar collapsible="icon" variant="inset">

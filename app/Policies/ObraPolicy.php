@@ -46,6 +46,15 @@ class ObraPolicy
         return PermisosObra::puede($user, $obra, 'equipo.gestionar');
     }
 
+    /**
+     * Configurar la matriz de permisos del equipo de ESTA obra: el Admin de
+     * obra (o el Admin de plataforma). No afecta a otras obras ni a la global.
+     */
+    public function gestionarPermisos(User $user, Obra $obra): bool
+    {
+        return PermisosObra::esAdministradorDeObra($user, $obra);
+    }
+
     public function delete(User $user, Obra $obra): bool
     {
         return $user->hasAnyRole(RolGlobal::rolesAdministrativos());

@@ -37,9 +37,23 @@ it('residente NO ve certificados', function () {
         ->assertForbidden();
 });
 
-it('administrador de obra NO accede al módulo de certificados', function () {
+it('administrador de obra SÍ accede al módulo de certificados', function () {
     $obra = Obra::factory()->create();
     $user = usuarioEnObra($obra, RolObra::Administrador);
+
+    // La administradora de obra emite certificados para su personal.
+    $this->actingAs($user)
+        ->get(route('certificados.index'))
+        ->assertOk();
+
+    $this->actingAs($user)
+        ->get(route('certificados.create'))
+        ->assertOk();
+});
+
+it('miembro de obra no administrador NO accede a certificados', function () {
+    $obra = Obra::factory()->create();
+    $user = usuarioEnObra($obra, RolObra::Asistente);
 
     $this->actingAs($user)
         ->get(route('certificados.index'))

@@ -13,6 +13,7 @@ import {
     Trash2,
     User,
     Users,
+    ShieldCheck,
     Wallet,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
@@ -54,6 +55,7 @@ type ShowProps = {
     contadores: Contadores;
     puedeAdministrar: boolean;
     puedeVerCaja: boolean;
+    puedeGestionarPermisos: boolean;
 };
 
 function formatearMonto(monto: number | null): string {
@@ -241,7 +243,7 @@ function AccesoDirecto({
     href: string;
     icono: React.ComponentType<{ className?: string }>;
     label: string;
-    valor: number;
+    valor: number | null;
     unidad: string;
 }) {
     return (
@@ -255,9 +257,11 @@ function AccesoDirecto({
             <div className="min-w-0 flex-1">
                 <div className="font-semibold text-foreground">{label}</div>
                 <div className="text-sm text-muted-foreground">
-                    <span className="font-semibold text-foreground tabular-nums">
-                        {valor}
-                    </span>{' '}
+                    {valor !== null && (
+                        <span className="font-semibold text-foreground tabular-nums">
+                            {valor}{' '}
+                        </span>
+                    )}
                     {unidad}
                 </div>
             </div>
@@ -271,6 +275,7 @@ export default function ObraShow({
     contadores,
     puedeAdministrar,
     puedeVerCaja,
+    puedeGestionarPermisos,
 }: ShowProps) {
     const eliminar = () => {
         const ok = confirm(
@@ -451,6 +456,15 @@ export default function ObraShow({
                             label="Caja chica"
                             valor={contadores.caja}
                             unidad="movimientos"
+                        />
+                    )}
+                    {puedeGestionarPermisos && (
+                        <AccesoDirecto
+                            href={`/obras/${obra.id}/permisos`}
+                            icono={ShieldCheck}
+                            label="Permisos del equipo"
+                            valor={null}
+                            unidad="configurar roles"
                         />
                     )}
                 </div>

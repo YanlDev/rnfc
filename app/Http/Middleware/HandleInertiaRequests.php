@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Enums\RolGlobal;
 use App\Services\BrandingService;
+use App\Support\PermisosObra;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -63,6 +64,10 @@ class HandleInertiaRequests extends Middleware
                 'es_gerente' => $user->hasRole(RolGlobal::Gerente->value),
                 // Visión global (Admin o Gerente): ve todas las obras y certificados.
                 'vision_global' => $user->hasAnyRole(RolGlobal::rolesVisionGlobal()),
+                // Administradora de obra: controla sus obras (permisos de equipo)
+                // y puede emitir certificados, sin ser Admin de plataforma.
+                'es_admin_obra' => PermisosObra::esAdministradorDeAlgunaObra($user),
+                'puede_crear_obras' => (bool) $user->puede_crear_obras,
             ];
         }
 
