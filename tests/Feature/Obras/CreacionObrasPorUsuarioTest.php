@@ -87,6 +87,41 @@ it('cada creadora ve solo sus obras; el admin general ve todas', function () {
     $this->actingAs($admin)->get(route('obras.show', $obraB))->assertOk();
 });
 
+it('el diálogo de rol habilita crear obras, incluso en un usuario restaurado', function () {
+    $u = User::factory()->create(['email_verified_at' => now()]);
+    $u->assignRole(RolGlobal::Usuario->value);
+    $u->delete();
+    $u->restore();
+
+    // Mismo rol Usuario, pero marcando la casilla "podrá crear obras".
+    $this->actingAs(admin())
+        ->patch(route('admin.usuarios.rol', $u), [
+            'rol' => RolGlobal::Usuario->value,
+            'puede_crear_obras' => true,
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    expect($u->fresh()->puede_crear_obras)->toBeTrue();
+});
+
+it('el flag crear-obras se limpia si el rol deja de ser Usuario', function () {
+    $u = User::factory()->create([
+        'email_verified_at' => now(),
+        'puede_crear_obras' => true,
+    ]);
+    $u->assignRole(RolGlobal::Usuario->value);
+
+    $this->actingAs(admin())
+        ->patch(route('admin.usuarios.rol', $u), [
+            'rol' => RolGlobal::Gerente->value,
+            'puede_crear_obras' => true,
+        ])
+        ->assertRedirect();
+
+    expect($u->fresh()->puede_crear_obras)->toBeFalse();
+});
+
 it('el admin puede activar y desactivar el permiso de crear obras', function () {
     $u = User::factory()->create(['email_verified_at' => now()]);
     $u->assignRole(RolGlobal::Usuario->value);

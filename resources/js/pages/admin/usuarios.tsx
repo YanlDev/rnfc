@@ -138,7 +138,18 @@ export default function AdminUsuarios({
 
     // Modal cambiar rol
     const [usuarioRol, setUsuarioRol] = useState<Usuario | null>(null);
-    const formRol = useForm<{ rol: string }>({ rol: '' });
+    const formRol = useForm<{ rol: string; puede_crear_obras: boolean }>({
+        rol: '',
+        puede_crear_obras: false,
+    });
+
+    const abrirCambioRol = (u: Usuario) => {
+        setUsuarioRol(u);
+        formRol.setData({
+            rol: u.rol ?? '',
+            puede_crear_obras: u.puede_crear_obras,
+        });
+    };
 
     // Modal invitar usuario global
     const [invitarOpen, setInvitarOpen] = useState(false);
@@ -323,28 +334,9 @@ export default function AdminUsuarios({
                     </DropdownMenuItem>
                 ) : (
                     <>
-                        <DropdownMenuItem
-                            onClick={() => {
-                                setUsuarioRol(u);
-                                formRol.setData('rol', u.rol ?? '');
-                            }}
-                        >
+                        <DropdownMenuItem onClick={() => abrirCambioRol(u)}>
                             <ShieldCheck className="size-4" />
-                            Cambiar rol
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() =>
-                                router.patch(
-                                    `/admin/usuarios/${u.id}/crear-obras`,
-                                    {},
-                                    { preserveScroll: true },
-                                )
-                            }
-                        >
-                            <Building2 className="size-4" />
-                            {u.puede_crear_obras
-                                ? 'Quitar permiso de crear obras'
-                                : 'Permitir crear obras'}
+                            Rol y permisos
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onClick={() => {
@@ -782,31 +774,63 @@ export default function AdminUsuarios({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Cambiar rol global</DialogTitle>
+                        <DialogTitle>Rol y permisos</DialogTitle>
                         <DialogDescription>
-                            Selecciona el nuevo rol para{' '}
+                            Rol de plataforma de{' '}
                             <strong>{usuarioRol?.name}</strong>. Rol actual:{' '}
                             <strong>{usuarioRol?.rol_label}</strong>.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="grid gap-2">
-                        <Label>Nuevo rol</Label>
-                        <Select
-                            value={formRol.data.rol}
-                            onValueChange={(v) => formRol.setData('rol', v)}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Selecciona un rol" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {roles.map((r) => (
-                                    <SelectItem key={r.value} value={r.value}>
-                                        {r.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    <div className="grid gap-4">
+                        <div className="grid gap-2">
+                            <Label>Rol de plataforma</Label>
+                            <Select
+                                value={formRol.data.rol}
+                                onValueChange={(v) =>
+                                    formRol.setData('rol', v)
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecciona un rol" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {roles.map((r) => (
+                                        <SelectItem
+                                            key={r.value}
+                                            value={r.value}
+                                        >
+                                            {r.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {formRol.data.rol === 'usuario' && (
+                            <label className="flex items-start gap-2 rounded-md border border-border bg-muted/30 p-3">
+                                <Checkbox
+                                    checked={formRol.data.puede_crear_obras}
+                                    onCheckedChange={(v) =>
+                                        formRol.setData(
+                                            'puede_crear_obras',
+                                            v === true,
+                                        )
+                                    }
+                                    className="mt-0.5"
+                                />
+                                <span className="text-sm">
+                                    <span className="font-medium">
+                                        Podrá crear sus propias obras
+                                    </span>
+                                    <span className="block text-xs text-muted-foreground">
+                                        Queda como Administrador de obra de las
+                                        que cree (caja, equipo, cuaderno,
+                                        certificados).
+                                    </span>
+                                </span>
+                            </label>
+                        )}
                     </div>
 
                     <DialogFooter>
@@ -824,7 +848,9 @@ export default function AdminUsuarios({
                             disabled={
                                 formRol.processing ||
                                 !formRol.data.rol ||
-                                formRol.data.rol === usuarioRol?.rol
+                                (formRol.data.rol === usuarioRol?.rol &&
+                                    formRol.data.puede_crear_obras ===
+                                        usuarioRol?.puede_crear_obras)
                             }
                         >
                             Confirmar

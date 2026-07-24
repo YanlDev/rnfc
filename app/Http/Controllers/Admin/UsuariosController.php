@@ -200,7 +200,7 @@ class UsuariosController extends Controller
             $mensaje = "Usuario {$usuario->name} reactivado.";
         }
 
-        return redirect()->route('admin.usuarios.index')->with('success', $mensaje);
+        return back()->with('success', $mensaje);
     }
 
     /**
@@ -218,7 +218,7 @@ class UsuariosController extends Controller
             'por' => $request->user()->id,
         ]);
 
-        return redirect()->route('admin.usuarios.index')->with(
+        return back()->with(
             'success',
             $nuevo
                 ? "{$usuario->name} ahora puede crear obras."
@@ -233,38 +233,51 @@ class UsuariosController extends Controller
     {
         $validated = $request->validate([
             'rol' => ['required', Rule::in(RolGlobal::values())],
+            'puede_crear_obras' => ['boolean'],
         ]);
 
         $nuevoRol = $validated['rol'];
         $rolActual = $usuario->roles->first()?->name;
 
-        if ($rolActual === $nuevoRol) {
-            return redirect()->route('admin.usuarios.index');
+        // El permiso de crear obras sólo aplica al rol Usuario.
+        $puedeCrearObras = $nuevoRol === RolGlobal::Usuario->value
+            && $request->boolean('puede_crear_obras');
+
+        $cambiaRol = $rolActual !== $nuevoRol;
+        $cambiaFlag = (bool) $usuario->puede_crear_obras !== $puedeCrearObras;
+
+        if (! $cambiaRol && ! $cambiaFlag) {
+            return back();
         }
 
-        DB::transaction(function () use ($usuario, $rolActual, $nuevoRol) {
-            // Si está quitando admin, validar que quede al menos otro admin activo
-            if ($rolActual === RolGlobal::Admin->value && $nuevoRol !== RolGlobal::Admin->value) {
-                $this->bloquearOperacionesDeAdmin();
+        DB::transaction(function () use ($usuario, $rolActual, $nuevoRol, $cambiaRol, $puedeCrearObras) {
+            if ($cambiaRol) {
+                // Si está quitando admin, validar que quede al menos otro admin activo
+                if ($rolActual === RolGlobal::Admin->value && $nuevoRol !== RolGlobal::Admin->value) {
+                    $this->bloquearOperacionesDeAdmin();
 
-                if (! $this->hayOtroAdminActivo($usuario)) {
-                    throw ValidationException::withMessages([
-                        'rol' => 'No puedes quitar el rol de Administrador al único admin del sistema.',
-                    ]);
+                    if (! $this->hayOtroAdminActivo($usuario)) {
+                        throw ValidationException::withMessages([
+                            'rol' => 'No puedes quitar el rol de Administrador al único admin del sistema.',
+                        ]);
+                    }
                 }
+
+                $usuario->syncRoles([$nuevoRol]);
             }
 
-            $usuario->syncRoles([$nuevoRol]);
+            $usuario->forceFill(['puede_crear_obras' => $puedeCrearObras])->save();
         });
 
         Log::info('Rol global actualizado', [
             'usuario_id' => $usuario->id,
             'rol_anterior' => $rolActual,
             'rol_nuevo' => $nuevoRol,
+            'puede_crear_obras' => $puedeCrearObras,
             'por' => $request->user()->id,
         ]);
 
-        return redirect()->route('admin.usuarios.index')
+        return back()
             ->with('success', "Rol de {$usuario->name} actualizado a ".RolGlobal::from($nuevoRol)->label().'.');
     }
 
@@ -311,7 +324,7 @@ class UsuariosController extends Controller
             'por' => $request->user()->id,
         ]);
 
-        return redirect()->route('admin.usuarios.index')
+        return back()
             ->with('success', "Usuario {$usuario->name} enviado a la papelera.");
     }
 
@@ -321,7 +334,7 @@ class UsuariosController extends Controller
     public function restaurar(Request $request, User $usuario): RedirectResponse
     {
         if (! $usuario->trashed()) {
-            return redirect()->route('admin.usuarios.index');
+            return back();
         }
 
         $usuario->restore();
@@ -331,7 +344,7 @@ class UsuariosController extends Controller
             'por' => $request->user()->id,
         ]);
 
-        return redirect()->route('admin.usuarios.index')
+        return back()
             ->with('success', "Usuario {$usuario->name} restaurado.");
     }
 
