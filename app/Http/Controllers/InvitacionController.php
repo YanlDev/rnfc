@@ -114,6 +114,11 @@ class InvitacionController extends Controller
             if (! $user->hasRole($invitacion->rol_global->value)) {
                 $user->assignRole($invitacion->rol_global->value);
             }
+
+            // Usuario habilitado para crear sus propias obras.
+            if ($invitacion->puede_crear_obras && ! $user->puede_crear_obras) {
+                $user->forceFill(['puede_crear_obras' => true])->save();
+            }
         } else {
             if (! $invitacion->obra->usuarios()->where('users.id', $user->id)->exists()) {
                 $invitacion->obra->usuarios()->attach($user->id, [

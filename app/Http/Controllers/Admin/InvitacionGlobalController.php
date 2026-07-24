@@ -24,6 +24,9 @@ class InvitacionGlobalController extends Controller
     {
         $email = strtolower($request->validated('email'));
         $rolGlobal = RolGlobal::from($request->validated('rol_global'));
+        // El permiso de crear obras sólo tiene sentido para el rol Usuario.
+        $puedeCrearObras = $rolGlobal === RolGlobal::Usuario
+            && $request->boolean('puede_crear_obras');
 
         $yaInvitado = Invitacion::where('email', $email)
             ->whereNotNull('rol_global')
@@ -43,6 +46,7 @@ class InvitacionGlobalController extends Controller
         $invitacion = Invitacion::create([
             'email' => $email,
             'rol_global' => $rolGlobal->value,
+            'puede_crear_obras' => $puedeCrearObras,
             'token' => Invitacion::hashToken($token),
             'invitado_por' => $request->user()?->id,
             'expira_at' => now()->addDays(7),

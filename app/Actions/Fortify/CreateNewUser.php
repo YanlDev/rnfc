@@ -82,6 +82,10 @@ class CreateNewUser implements CreatesNewUsers
             if ($invitacion->esGlobal()) {
                 $user->assignRole($invitacion->rol_global->value);
 
+                if ($invitacion->puede_crear_obras) {
+                    $user->forceFill(['puede_crear_obras' => true])->save();
+                }
+
                 $invitacion->update(['aceptada_at' => now()]);
 
                 continue;

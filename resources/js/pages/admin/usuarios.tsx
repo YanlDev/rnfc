@@ -22,6 +22,7 @@ import Paginacion from '@/components/paginacion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -125,7 +126,9 @@ export default function AdminUsuarios({
 
     // Roles que se pueden otorgar por invitación global (todos menos "usuario",
     // que es el rol base y depende de la obra).
-    const rolesInvitables = roles.filter((r) => r.value !== 'usuario');
+    // Todos los roles globales son invitables, incluido "usuario" (personal
+    // de obra, p. ej. administradoras que crearán sus propias obras).
+    const rolesInvitables = roles;
 
     // Modal desactivar — useForm da processing/errors y evita doble submit.
     const [usuarioObjetivo, setUsuarioObjetivo] = useState<Usuario | null>(
@@ -139,9 +142,14 @@ export default function AdminUsuarios({
 
     // Modal invitar usuario global
     const [invitarOpen, setInvitarOpen] = useState(false);
-    const formInvitar = useForm<{ email: string; rol_global: string }>({
+    const formInvitar = useForm<{
+        email: string;
+        rol_global: string;
+        puede_crear_obras: boolean;
+    }>({
         email: '',
         rol_global: 'admin',
+        puede_crear_obras: false,
     });
 
     const { confirm, dialog } = useConfirm();
@@ -839,10 +847,9 @@ export default function AdminUsuarios({
                     <DialogHeader>
                         <DialogTitle>Invitar usuario de plataforma</DialogTitle>
                         <DialogDescription>
-                            Crea una cuenta con un rol global (Administrador o
-                            Gerente General). Para sumar gente a una obra, hazlo
-                            desde el equipo de la obra. El enlace expira en 7
-                            días.
+                            Crea una cuenta de plataforma. Para sumar gente a una
+                            obra que ya existe, hazlo desde el equipo de la obra.
+                            El enlace expira en 7 días.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -887,12 +894,39 @@ export default function AdminUsuarios({
                                 </SelectContent>
                             </Select>
                             <p className="text-xs text-muted-foreground">
-                                El <strong>Gerente General</strong> ve todas las
-                                obras y emite certificados, sin administrar la
-                                plataforma. El <strong>Administrador</strong>{' '}
-                                puede todo.
+                                El <strong>Usuario</strong> es personal de obra;
+                                su acceso depende de las obras a las que
+                                pertenece. El <strong>Gerente General</strong> ve
+                                todas las obras y emite certificados. El{' '}
+                                <strong>Administrador</strong> puede todo.
                             </p>
                         </div>
+
+                        {formInvitar.data.rol_global === 'usuario' && (
+                            <label className="flex items-start gap-2 rounded-md border border-border bg-muted/30 p-3">
+                                <Checkbox
+                                    checked={formInvitar.data.puede_crear_obras}
+                                    onCheckedChange={(v) =>
+                                        formInvitar.setData(
+                                            'puede_crear_obras',
+                                            v === true,
+                                        )
+                                    }
+                                    className="mt-0.5"
+                                />
+                                <span className="text-sm">
+                                    <span className="font-medium">
+                                        Podrá crear sus propias obras
+                                    </span>
+                                    <span className="block text-xs text-muted-foreground">
+                                        Al crear una obra queda como Administrador
+                                        de obra y la gestiona (caja, equipo,
+                                        cuaderno). Ideal para las administradoras
+                                        que manejan sus proyectos.
+                                    </span>
+                                </span>
+                            </label>
+                        )}
                     </div>
 
                     <DialogFooter>

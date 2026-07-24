@@ -17,6 +17,7 @@ class Invitacion extends Model
         'email',
         'rol_obra',
         'rol_global',
+        'puede_crear_obras',
         'token',
         'invitado_por',
         'expira_at',
@@ -29,6 +30,7 @@ class Invitacion extends Model
         return [
             'rol_obra' => RolObra::class,
             'rol_global' => RolGlobal::class,
+            'puede_crear_obras' => 'boolean',
             'expira_at' => 'datetime',
             'aceptada_at' => 'datetime',
             'cancelada_at' => 'datetime',

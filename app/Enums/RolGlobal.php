@@ -50,14 +50,16 @@ enum RolGlobal: string
     }
 
     /**
-     * Roles globales que un administrador puede otorgar por invitación
-     * (el rol "usuario" no se invita: es el rol base que depende de la obra).
+     * Roles globales que un administrador puede otorgar por invitación.
+     * Se incluye "usuario" para poder crear cuentas de personal de obra
+     * (p. ej. una administradora que creará y manejará sus propias obras)
+     * antes de que exista obra alguna a la que sumarlas.
      *
      * @return array<int, string>
      */
     public static function rolesGlobalesAsignables(): array
     {
-        return [self::Admin->value, self::Gerente->value];
+        return [self::Admin->value, self::Gerente->value, self::Usuario->value];
     }
 
     /**

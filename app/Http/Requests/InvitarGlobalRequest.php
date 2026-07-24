@@ -24,6 +24,8 @@ class InvitarGlobalRequest extends FormRequest
         return [
             'email' => ['required', 'email', 'max:255'],
             'rol_global' => ['required', Rule::in(RolGlobal::rolesGlobalesAsignables())],
+            // Sólo aplica al rol Usuario (para los demás se ignora).
+            'puede_crear_obras' => ['boolean'],
         ];
     }
 

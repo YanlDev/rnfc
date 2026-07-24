@@ -38,18 +38,42 @@ it('admin puede enviar invitación global a un correo sin cuenta', function () {
     Mail::assertQueued(InvitacionGlobal::class, fn ($m) => $m->hasTo('nuevo@externo.com'));
 });
 
-it('rechaza invitación global con rol no administrativo (residente, ingeniero, invitado)', function (string $rolInvalido) {
+it('rechaza invitación global con un rol inexistente', function (string $rolInvalido) {
     $this->actingAs(admin())
         ->post(route('admin.invitar'), [
             'email' => 'alguien@externo.com',
             'rol_global' => $rolInvalido,
         ])
         ->assertSessionHasErrors('rol_global');
-})->with([
-    RolGlobal::Usuario->value,
-    RolGlobal::Usuario->value,
-    RolGlobal::Usuario->value,
-]);
+})->with(['residente', 'ingeniero', 'superadmin']);
+
+it('admin puede invitar a un Usuario habilitado para crear obras', function () {
+    $this->actingAs(admin())
+        ->post(route('admin.invitar'), [
+            'email' => 'administradora@obra.com',
+            'rol_global' => RolGlobal::Usuario->value,
+            'puede_crear_obras' => true,
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $inv = Invitacion::where('email', 'administradora@obra.com')->first();
+    expect($inv->rol_global)->toBe(RolGlobal::Usuario);
+    expect($inv->puede_crear_obras)->toBeTrue();
+});
+
+it('el flag crear-obras se ignora para roles que no son Usuario', function () {
+    $this->actingAs(admin())
+        ->post(route('admin.invitar'), [
+            'email' => 'gerente@obra.com',
+            'rol_global' => RolGlobal::Gerente->value,
+            'puede_crear_obras' => true,
+        ])
+        ->assertRedirect();
+
+    expect(Invitacion::where('email', 'gerente@obra.com')->first()->puede_crear_obras)
+        ->toBeFalse();
+});
 
 it('no permite invitar global a un correo que ya tiene cuenta', function () {
     User::factory()->create(['email' => 'existente@rnfc.test']);
@@ -111,6 +135,28 @@ it('aceptar invitación global al registrarse asigna el rol correctamente', func
 
     $inv = Invitacion::where('email', 'gerente@externo.com')->first();
     expect($inv->fresh()->aceptada_at)->not->toBeNull();
+});
+
+it('la administradora invitada queda habilitada para crear obras al registrarse', function () {
+    Invitacion::create([
+        'email' => 'admin.obra@externo.com',
+        'rol_global' => RolGlobal::Usuario->value,
+        'puede_crear_obras' => true,
+        'token' => Invitacion::generarToken(),
+        'expira_at' => now()->addDays(7),
+    ]);
+
+    $this->post('/register', [
+        'name' => 'Administradora de Obra',
+        'email' => 'admin.obra@externo.com',
+        'password' => 'Password123!',
+        'password_confirmation' => 'Password123!',
+    ]);
+
+    $user = User::where('email', 'admin.obra@externo.com')->first();
+    expect($user->hasRole(RolGlobal::Usuario->value))->toBeTrue();
+    expect($user->puede_crear_obras)->toBeTrue();
+    expect($user->can('create', App\Models\Obra::class))->toBeTrue();
 });
 
 it('usuario con invitación global es redirigido al dashboard al aceptar con sesión activa', function () {
